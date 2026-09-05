@@ -82,3 +82,34 @@ iPhone Safari may block popups; redirect fallback is automatic.
 Vite + vanilla TypeScript + **three** (GLTFLoader). Small WebGL canvas overlaid
 on the viewfinder (pixel ratio capped at 2). No backend. Relative asset base for
 HTTPS hosting. `allowedHosts: true` on the Vite server for tunnel hostnames.
+
+## Hosting (Cloudflare) and local dev
+
+The API lives in `server/core.mjs` (runtime-agnostic). Two hosts wrap it:
+
+| Host | Command | State | Uploads | Static |
+|------|---------|-------|---------|--------|
+| Node (local dev) | `npm run build && node server.mjs` | `data/*.json` | `data/uploads/` | `dist/` |
+| Cloudflare Worker (production) | `npm run deploy` | one Durable Object (`IdolStore`, SQLite-backed) | R2 bucket `axie-idol-uploads` | Workers static assets from `dist/` |
+
+Local Worker (same code path as production, everything simulated on your machine):
+
+```bash
+npm run build
+npm run dev:worker          # http://127.0.0.1:8788
+```
+
+Tests (12 characterization tests, run against either host):
+
+```bash
+npm test                                          # starts node server.mjs on a temp data dir
+BASE_URL=http://127.0.0.1:8788 npm test           # against wrangler dev
+```
+
+Secrets and variables:
+
+- `.env` (git-ignored) — `VITE_WAYPOINT_CLIENT_ID` (baked into the client at build time) and `SKYMAVIS_API_KEY` (Node host reads it at boot).
+- `.dev.vars` (git-ignored) — `SKYMAVIS_API_KEY` for `wrangler dev`.
+- Production — `npx wrangler secret put SKYMAVIS_API_KEY`; `SEED_POSTS` lives in `wrangler.toml` `[vars]`.
+
+First deploy: `npx wrangler r2 bucket create axie-idol-uploads`, then `npm run deploy`. Add the deployed origin (workers.dev and later the custom domain) to the Ronin Waypoint allowlist in the Ronin Developer Console or Connect will fail.

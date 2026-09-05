@@ -9,12 +9,15 @@
     "preview": "vite preview",
     "start": "node server.mjs",
     "serve": "node server.mjs",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "dev:worker": "wrangler dev --port 8788",
+    "deploy": "npm run build && wrangler deploy"
   },
   "devDependencies": {
     "@types/three": "^0.185.4",
     "typescript": "~5.7.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "wrangler": "^4.129.0"
   },
   "dependencies": {
     "@axieinfinity/mixer": "1.4.9",
