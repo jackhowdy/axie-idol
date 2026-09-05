@@ -1,0 +1,165 @@
+{
+  "mode": "ledger",
+  "settledDays": [
+    "2026-09-03",
+    "2026-09-04"
+  ],
+  "records": [
+    {
+      "id": "fab17d2b-1032-4691-a2ec-2d5e9677927a",
+      "dayKey": "2026-09-04",
+      "axieId": "90",
+      "amount": 100,
+      "kind": "fan",
+      "funder": "0x1111111111111111111111111111111111111111",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788489093622,
+      "mode": "ledger"
+    },
+    {
+      "id": "cd614d12-875f-49dd-9f30-b65e35e38dd8",
+      "dayKey": "2026-09-04",
+      "axieId": "90",
+      "amount": 50,
+      "kind": "spark",
+      "funder": "treasury",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788489103676,
+      "mode": "ledger"
+    },
+    {
+      "id": "82c0275f-8c9b-4064-a32e-275a03d6ae73",
+      "dayKey": "2026-09-04",
+      "axieId": "90",
+      "amount": 50,
+      "kind": "fan",
+      "funder": "0x2222222222222222222222222222222222222222",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788489103784,
+      "mode": "ledger"
+    },
+    {
+      "id": "6f93b854-d6f4-485f-8dab-c11b0693cf89",
+      "dayKey": "2026-09-04",
+      "axieId": "90",
+      "amount": 50,
+      "kind": "fan",
+      "funder": "0x2222222222222222222222222222222222222222",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788489103806,
+      "mode": "ledger"
+    },
+    {
+      "id": "5508953e-61eb-417e-8452-e7e7e2e5437f",
+      "dayKey": "2026-09-03",
+      "axieId": "90",
+      "amount": 7000,
+      "kind": "crown",
+      "funder": "treasury",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788489121297,
+      "mode": "ledger"
+    },
+    {
+      "id": "9e1ae974-eeb9-4292-a426-2970bee41c12",
+      "dayKey": "2026-09-03",
+      "axieId": "100",
+      "amount": 3000,
+      "kind": "crown",
+      "funder": "treasury",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788489121297,
+      "mode": "ledger"
+    },
+    {
+      "id": "d4a13617-fb52-4488-8535-78582fa60ce2",
+      "dayKey": "2026-09-04",
+      "axieId": "375200",
+      "amount": 50,
+      "kind": "spark",
+      "funder": "treasury",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788489145725,
+      "mode": "ledger"
+    },
+    {
+      "id": "676b62df-3f99-4b86-9268-26a71af3ad0f",
+      "dayKey": "2026-09-04",
+      "axieId": "622119",
+      "amount": 50,
+      "kind": "spark",
+      "funder": "treasury",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788489210623,
+      "mode": "ledger"
+    },
+    {
+      "id": "8f9f5487-8974-4532-9b4c-976aff0baf73",
+      "dayKey": "2026-09-04",
+      "axieId": "622119",
+      "amount": 50,
+      "kind": "spark",
+      "funder": "treasury",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788491772547,
+      "mode": "ledger"
+    },
+    {
+      "id": "6e207ee7-4d1c-49bc-9410-20fed2f360fa",
+      "dayKey": "2026-09-04",
+      "axieId": "375200",
+      "amount": 50,
+      "kind": "spark",
+      "funder": "treasury",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788498072182,
+      "mode": "ledger"
+    },
+    {
+      "id": "4730a095-e8dd-476e-9abf-fb12ffdaa289",
+      "dayKey": "2026-09-04",
+      "axieId": "375200",
+      "amount": 6825,
+      "kind": "crown",
+      "funder": "treasury",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788556397291,
+      "mode": "ledger"
+    },
+    {
+      "id": "525c8201-2481-4eb6-91e9-461cc632e4ca",
+      "dayKey": "2026-09-04",
+      "axieId": "90",
+      "amount": 2145,
+      "kind": "crown",
+      "funder": "treasury",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788556397291,
+      "mode": "ledger"
+    },
+    {
+      "id": "ff723568-36d7-467d-a866-be1d05954591",
+      "dayKey": "2026-09-04",
+      "axieId": "622119",
+      "amount": 780,
+      "kind": "crown",
+      "funder": "treasury",
+      "status": "pending",
+      "txHash": null,
+      "createdAt": 1788556397291,
+      "mode": "ledger"
+    }
+  ]
+}

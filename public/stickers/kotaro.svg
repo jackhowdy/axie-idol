@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 280" width="256" height="280">
+  <!-- Placeholder Axie sticker — swap for official Builder Kit / 2D mixer art here -->
+  <defs>
+    <linearGradient id="body" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffb347"/>
+      <stop offset="100%" stop-color="#ff7a18"/>
+    </linearGradient>
+    <linearGradient id="belly" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#ffe6b8"/>
+      <stop offset="100%" stop-color="#ffd28a"/>
+    </linearGradient>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <g filter="url(#soft)">
+    <!-- ears -->
+    <ellipse cx="70" cy="58" rx="28" ry="36" fill="#e86810" transform="rotate(-18 70 58)"/>
+    <ellipse cx="186" cy="58" rx="28" ry="36" fill="#e86810" transform="rotate(18 186 58)"/>
+    <ellipse cx="70" cy="62" rx="14" ry="20" fill="#ffd28a" transform="rotate(-18 70 62)"/>
+    <ellipse cx="186" cy="62" rx="14" ry="20" fill="#ffd28a" transform="rotate(18 186 62)"/>
+    <!-- body -->
+    <ellipse cx="128" cy="150" rx="88" ry="78" fill="url(#body)"/>
+    <ellipse cx="128" cy="168" rx="52" ry="42" fill="url(#belly)"/>
+    <!-- eyes -->
+    <circle cx="98" cy="132" r="22" fill="#fff"/>
+    <circle cx="158" cy="132" r="22" fill="#fff"/>
+    <circle cx="102" cy="136" r="12" fill="#1a1a2e"/>
+    <circle cx="162" cy="136" r="12" fill="#1a1a2e"/>
+    <circle cx="106" cy="130" r="4" fill="#fff"/>
+    <circle cx="166" cy="130" r="4" fill="#fff"/>
+    <!-- smile -->
+    <path d="M108 168 Q128 186 148 168" fill="none" stroke="#8a3a0a" stroke-width="5" stroke-linecap="round"/>
+    <!-- cheeks -->
+    <circle cx="78" cy="156" r="10" fill="#ff6b6b" opacity="0.55"/>
+    <circle cx="178" cy="156" r="10" fill="#ff6b6b" opacity="0.55"/>
+    <!-- little horns / tuft -->
+    <path d="M118 78 Q128 48 138 78" fill="#c44e0a"/>
+  </g>
+  <!-- label -->
+  <rect x="58" y="236" width="140" height="32" rx="16" fill="#1a1a2e" opacity="0.85"/>
+  <text x="128" y="258" text-anchor="middle" font-family="system-ui,Segoe UI,sans-serif" font-size="18" font-weight="700" fill="#ffe6b8">Kotaro</text>
+</svg>

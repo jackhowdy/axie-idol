@@ -1,0 +1,13 @@
+Kotaro sticker art for Axie Idol (Vibeathon).
+
+Source: https://github.com/jaatster/axie-3d-assets
+- Preview still: previews/kotaro.png (Sky Mavis / Axie Vibeathon kit)
+- 3D model: public/models/kotaro.glb (assets/mascots/kotaro.glb)
+
+Usage: limited to Axie Vibeathon / Sky Mavis-approved Axie programs.
+See RIGHTS.md and vendor/axie-3d-assets/RIGHTS.md.
+
+Files:
+- public/stickers/kotaro.png — transparent AR overlay (~896px), from official preview
+- public/stickers/kotaro.svg — placeholder fallback (not official art)
+- public/models/kotaro.glb — official animated mascot GLB

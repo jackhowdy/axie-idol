@@ -1,0 +1,37 @@
+{
+  "name": "axie-idol-composer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "start": "node server.mjs",
+    "serve": "node server.mjs"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.4",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.3"
+  },
+  "dependencies": {
+    "@axieinfinity/mixer": "1.4.9",
+    "@sky-mavis/waypoint": "4.2.2",
+    "pixi-spine": "4.0.3",
+    "pixi.js": "7.2.4",
+    "sirv": "^2.0.4",
+    "three": "^0.185.1"
+  },
+  "overrides": {
+    "pixi.js": "7.2.4",
+    "@pixi/core": "7.2.4",
+    "@pixi/display": "7.2.4",
+    "@pixi/math": "7.2.4",
+    "@pixi/utils": "7.2.4",
+    "@pixi/sprite": "7.2.4",
+    "@pixi/constants": "7.2.4",
+    "@pixi/ticker": "7.2.4",
+    "@pixi/assets": "7.2.4"
+  }
+}
