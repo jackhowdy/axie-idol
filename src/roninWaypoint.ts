@@ -8,6 +8,8 @@ export type WaypointConnectResult = {
   token?: string
 }
 
+type Scope = 'openid' | 'profile' | 'email' | 'wallet'
+
 const TOKEN_SS = 'axieIdol.waypointToken'
 
 let waypointModPromise: Promise<typeof import('@sky-mavis/waypoint')> | null = null
@@ -98,7 +100,7 @@ export function shouldPreferWaypointRedirect(): boolean {
 
 async function authorizeRedirect(
   authorize: (typeof import('@sky-mavis/waypoint'))['authorize'],
-  base: { clientId: string; scopes: string[] },
+  base: { clientId: string; scopes: Scope[] },
 ): Promise<WaypointConnectResult> {
   await authorize({
     ...base,
@@ -122,10 +124,10 @@ export async function connectWithWaypoint(): Promise<WaypointConnectResult> {
 
   const { authorize } = await loadWaypointSdk()
 
-  const scopes = ['openid', 'profile', 'wallet'] as const
+  const scopes: Scope[] = ['openid', 'profile', 'wallet']
   const base = {
     clientId,
-    scopes: [...scopes],
+    scopes,
   }
 
   if (shouldPreferWaypointRedirect()) {

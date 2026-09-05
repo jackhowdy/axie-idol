@@ -26,9 +26,9 @@ const CAST_MASCOTS = [
   { id: 'tripp', label: 'Tripp', glb: 'tripp.glb', preview: 'tripp.png', sticker: 'tripp.png', prop: 'tripp-sword' as const, kind: 'kit' as const },
   { id: 'xia', label: 'Xia', glb: 'xia.glb', preview: 'xia.png', sticker: 'xia.png', prop: 'xia-axe' as const, kind: 'kit' as const },
   // Starters — sticker/preview may be placeholders
-  { id: 'buba', label: 'Buba', glb: '', preview: 'buba.png', sticker: 'buba.png', prop: null, kind: 'starter' as const },
+  { id: 'buba', label: 'Buba', glb: 'buba.glb', preview: 'buba.png', sticker: 'buba.png', prop: null, kind: 'starter' as const },
   { id: 'olek', label: 'Olek', glb: '', preview: 'olek.png', sticker: 'olek.png', prop: null, kind: 'starter' as const },
-  { id: 'puffy', label: 'Puffy', glb: '', preview: 'puffy.png', sticker: 'puffy.png', prop: null, kind: 'starter' as const },
+  { id: 'puffy', label: 'Puffy', glb: 'puffy.glb', preview: 'puffy.png', sticker: 'puffy.png', prop: null, kind: 'starter' as const },
   // Numeric idol faces — CDN preview
   { id: '4154', label: 'Axie #4154', glb: '', preview: '', sticker: '', prop: null, kind: 'axie' as const },
   { id: '4155', label: 'Axie #4155', glb: '', preview: '', sticker: '', prop: null, kind: 'axie' as const },
@@ -41,9 +41,6 @@ const CAST_MASCOTS = [
 ] as const
 
 type CastId = (typeof CAST_MASCOTS)[number]['id']
-const KIT_CAST_IDS = new Set(
-  CAST_MASCOTS.filter((c) => c.kind === 'kit').map((c) => c.id),
-)
 
 /** Vibeathon kit equipment props (jaatster/axie-3d-assets). */
 const EQUIPMENT_PROPS = [
@@ -58,8 +55,18 @@ const EQUIPMENT_PROPS = [
 
 type PropId = (typeof EQUIPMENT_PROPS)[number]['id']
 
-function castMeta(id: string) {
-  return CAST_MASCOTS.find((c) => c.id === id) || null
+type CastDef = {
+  id: string
+  label: string
+  glb: string
+  preview: string
+  sticker: string
+  prop: PropId | null
+  kind: 'kit' | 'starter' | 'axie' | 'villain'
+}
+
+function castMeta(id: string): CastDef | null {
+  return (CAST_MASCOTS as readonly CastDef[]).find((c) => c.id === id) || null
 }
 
 function mascotGlbUrl(id: CastId): string {
@@ -510,10 +517,6 @@ const feedBurnMeter = document.querySelector<HTMLElement>('#feed-burn-meter')
 const boardBurnMeta = document.querySelector<HTMLElement>('#board-burn-meta')
 const castUnlock = document.querySelector<HTMLElement>('#cast-unlock')
 const castUnlockConfetti = document.querySelector<HTMLCanvasElement>('#cast-unlock-confetti')
-const castUnlockTitle = document.querySelector<HTMLElement>('#cast-unlock-title')
-const castUnlockBody = document.querySelector<HTMLElement>('#cast-unlock-body')
-const castUnlockAvatar = document.querySelector<HTMLImageElement>('#cast-unlock-avatar')
-const btnCastUnlockOk = document.querySelector<HTMLButtonElement>('#btn-cast-unlock-ok')
 const profileCastCrew = document.querySelector<HTMLElement>('#profile-cast-crew')
 const profileCastCrewGrid = document.querySelector<HTMLElement>('#profile-cast-crew-grid')
 const profileCastCrewCount = document.querySelector<HTMLElement>('#profile-cast-crew-count')
@@ -3341,7 +3344,7 @@ function renderCreateTrays(): void {
     'tripp-sword': '🗡',
     'xia-axe': '⛏',
   }
-  const propHtml = EQUIPMENT_PROPS.filter((p) => unlockedProps.has(p.id))
+  const propHtml = (EQUIPMENT_PROPS as readonly { id: PropId; file: string; label: string; short?: string }[]).filter((p) => unlockedProps.has(p.id))
     .map((p) => {
       const on = equippedProp === p.id
       return `<button type="button" class="prop-chip" data-prop="${p.id}" aria-pressed="${on ? 'true' : 'false'}" title="${escapeHtml(p.label)}">
