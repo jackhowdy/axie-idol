@@ -21,6 +21,20 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
+
+/** Load .env next to server.mjs (git-ignored). Existing process.env wins. */
+try {
+  const envPath = resolve(fileURLToPath(new URL('.', import.meta.url)), '.env')
+  if (existsSync(envPath)) {
+    for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/)
+      if (!m || line.trim().startsWith('#')) continue
+      if (process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '')
+    }
+  }
+} catch {
+  /* ignore */
+}
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const DIST = resolve(__dirname, 'dist')
 const DATA_DIR = resolve(__dirname, 'data')
@@ -1083,7 +1097,11 @@ function applyCastCrewOnPost(postsStore, post, posterKey) {
 
 
 
+/** Legacy public gateway (Cloudflare-challenged; curl fallback only). */
 const GRAPHQL_URL = 'https://graphql-gateway.axieinfinity.com/graphql'
+/** Official Sky Mavis gateway; needs SKYMAVIS_API_KEY (Ronin Developer Console). */
+const SKYMAVIS_GRAPHQL_URL = 'https://api-gateway.skymavis.com/graphql/axie-marketplace'
+const SKYMAVIS_API_KEY = (process.env.SKYMAVIS_API_KEY || '').trim()
 
 /** Normalize Ronin/EVM address: strip ronin: prefix, lowercase. */
 function normalizeAddress(raw) {
@@ -1103,6 +1121,7 @@ function normalizeAddress(raw) {
  */
 async function graphqlRequest(query, variables = {}) {
   const payload = JSON.stringify({ query, variables })
+  if (SKYMAVIS_API_KEY) return graphqlRequestKeyed(payload)
   const tmpPath = join(tmpdir(), `axie-idol-gql-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.json`)
   writeFileSync(tmpPath, payload)
   let stdout
@@ -1153,6 +1172,42 @@ async function graphqlRequest(query, variables = {}) {
     throw Object.assign(new Error(json.errors[0].message || 'GraphQL error'), {
       statusCode: 502,
     })
+  }
+  if (!json?.data) {
+    throw Object.assign(new Error('Empty GraphQL data'), { statusCode: 502 })
+  }
+  return json.data
+}
+
+/** Official gateway via fetch + X-API-Key. Throws with statusCode on failure. */
+async function graphqlRequestKeyed(payload) {
+  let res
+  try {
+    res = await fetch(SKYMAVIS_GRAPHQL_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-API-Key': SKYMAVIS_API_KEY,
+      },
+      body: payload,
+      signal: AbortSignal.timeout(25_000),
+    })
+  } catch (err) {
+    throw Object.assign(new Error(err?.message || 'GraphQL fetch failed'), { statusCode: 502 })
+  }
+  const text = await res.text()
+  let json
+  try {
+    json = JSON.parse(text || '{}')
+  } catch {
+    throw Object.assign(new Error('Invalid GraphQL JSON response'), { statusCode: 502 })
+  }
+  if (res.status === 401 || res.status === 403) {
+    throw Object.assign(new Error(json?.message || 'Sky Mavis API key rejected'), { statusCode: 502 })
+  }
+  if (json?.errors?.length) {
+    throw Object.assign(new Error(json.errors[0].message || 'GraphQL error'), { statusCode: 502 })
   }
   if (!json?.data) {
     throw Object.assign(new Error('Empty GraphQL data'), { statusCode: 502 })
