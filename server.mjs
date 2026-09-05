@@ -37,7 +37,7 @@ try {
 }
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const DIST = resolve(__dirname, 'dist')
-const DATA_DIR = resolve(__dirname, 'data')
+const DATA_DIR = process.env.DATA_DIR ? resolve(process.env.DATA_DIR) : resolve(__dirname, 'data')
 const UPLOADS_DIR = resolve(DATA_DIR, 'uploads')
 const POSTS_FILE = resolve(DATA_DIR, 'posts.json')
 const FOLLOWS_FILE = resolve(DATA_DIR, 'follows.json')
