@@ -27,8 +27,7 @@ export class IdolStore extends DurableObject {
         set: (name, obj) => this.set(name, obj),
       },
       blobs: {
-        put: (name, bytes, mime) =>
-          env.UPLOADS.put(name, bytes, { httpMetadata: { contentType: mime || 'image/png' } }),
+        put: (name, bytes, mime) => this.putBlob(name, bytes, mime || 'image/png'),
       },
       env: {
         SEED_POSTS: env.SEED_POSTS || '0',
@@ -46,6 +45,36 @@ export class IdolStore extends DurableObject {
   set(name, obj) {
     this.cache.set(name, obj)
     this.dirty.add(name)
+  }
+
+  /** Photos go to R2 when the bucket is bound; otherwise chunked into DO storage (<1 MB per key). */
+  async putBlob(name, bytes, mime) {
+    if (this.env.UPLOADS) {
+      await this.env.UPLOADS.put(name, bytes, { httpMetadata: { contentType: mime } })
+      return
+    }
+    const CHUNK = 1024 * 1024
+    const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
+    const parts = Math.ceil(u8.length / CHUNK)
+    const puts = { [`blob:${name}:meta`]: { mime, parts, size: u8.length } }
+    for (let i = 0; i < parts; i++) puts[`blob:${name}:${i}`] = u8.slice(i * CHUNK, (i + 1) * CHUNK)
+    await this.ctx.storage.put(puts)
+  }
+
+  async getBlob(name) {
+    const meta = await this.ctx.storage.get(`blob:${name}:meta`)
+    if (!meta) return null
+    const keys = Array.from({ length: meta.parts }, (_, i) => `blob:${name}:${i}`)
+    const rows = await this.ctx.storage.get(keys)
+    const out = new Uint8Array(meta.size)
+    let off = 0
+    for (const k of keys) {
+      const part = rows.get(k)
+      if (!part) return null
+      out.set(part, off)
+      off += part.length
+    }
+    return { bytes: out, mime: meta.mime }
   }
 
   async load() {
@@ -120,6 +149,15 @@ export class IdolStore extends DurableObject {
   async fetch(request) {
     await this.load()
     const url = new URL(request.url)
+    if (url.pathname.startsWith('/uploads/')) {
+      const name = url.pathname.slice('/uploads/'.length)
+      if (!name || name.includes('/') || name.includes('..')) return new Response('Not Found', { status: 404 })
+      const blob = await this.getBlob(name)
+      if (!blob) return new Response('Not Found', { status: 404 })
+      return new Response(blob.bytes, {
+        headers: { 'Content-Type': blob.mime, 'Cache-Control': 'public, max-age=86400' },
+      })
+    }
     const method = request.method
     const body =
       method === 'GET' || method === 'HEAD' ? null : Buffer.from(await request.arrayBuffer())

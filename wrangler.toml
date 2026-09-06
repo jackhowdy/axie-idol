@@ -20,6 +20,8 @@ class_name = "IdolStore"
 tag = "v1"
 new_sqlite_classes = ["IdolStore"]
 
-[[r2_buckets]]
-binding = "UPLOADS"
-bucket_name = "axie-idol-uploads"
+# R2 for photos — re-enable once the API token has "Workers R2 Storage: Edit" and the bucket exists.
+# Until then photos are chunked into the Durable Object (worker/store.mjs putBlob).
+# [[r2_buckets]]
+# binding = "UPLOADS"
+# bucket_name = "axie-idol-uploads"

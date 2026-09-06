@@ -23,6 +23,11 @@ export default {
     }
 
     if (url.pathname.startsWith('/uploads/')) {
+      if (!env.UPLOADS) {
+        // No R2 bucket bound: photos live in the Durable Object
+        const stub = env.STORE.get(env.STORE.idFromName('main'))
+        return stub.fetch(request)
+      }
       const name = url.pathname.slice('/uploads/'.length)
       if (!name || name.includes('/') || name.includes('..')) {
         return new Response('Not Found', { status: 404 })
