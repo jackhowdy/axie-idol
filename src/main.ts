@@ -3629,7 +3629,7 @@ function renderCreateTrays(): void {
   const unlockedProps = new Set(myCastCrew?.unlockedProps || [])
 
   // Cast tray: every face; locked ones greyed with the level that unlocks them
-  const castHtml = CAST_MASCOTS.filter((c) => c.id !== 'golden' || unlockedCast.has('golden')).map((c) => {
+  const castHtml = CAST_MASCOTS.filter((c) => c.id !== 'golden' || unlockedCast.has('golden') || isDevMode()).map((c) => {
     const src = castPreviewSrc(c.id)
     const locked = !unlockedCast.has(c.id)
     const pressed = !locked && !customAxieId && activeCast === c.id

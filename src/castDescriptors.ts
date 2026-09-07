@@ -18,9 +18,9 @@ export function isCustomFace(id: string): id is CustomFaceId {
   return id === 'olek' || id === 'agonia-echo' || id === 'golden'
 }
 
-/** Olek stand-in: fuzzy brown Beast with an all-Beast part set. */
+/** Olek stand-in: fuzzy orange Beast with an all-Beast part set. */
 const OLEK: AxieDescriptor = {
-  colorVariant: 1, // beast-01 (brown / cream)
+  colorVariant: 4, // beast-04 (orange / cream)
   body: 'fuzzy',
   parts: [
     { type: 'eye', skin: 0, class: 'Beast', variant: 2, level: 1 },
@@ -40,7 +40,8 @@ function villainDescriptor(mixer: ThreeAxieMixer3D): AxieDescriptor {
   const base = createDefaultAxieCreatorState(catalog)
   const showcase = createAxieSpecialShowcaseState(catalog, base, 'nightmare-parts')
   const manual = manualizeAxieCreatorState(showcase, catalog)
-  villainCache = manual.descriptor
+  // Nightmare parts on a dark purple body (reptile-01) so the villain reads as a villain
+  villainCache = { ...manual.descriptor, colorVariant: 28, body: 'spiky' }
   return villainCache
 }
 
