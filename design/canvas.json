@@ -1,20 +1,107 @@
 {
   "artboards": [
-    { "file": "Onboarding.dc.html", "x": 0, "y": 0, "w": 375, "h": 812, "title": "1 · First minute" },
-    { "file": "Main.dc.html", "x": 475, "y": 0, "w": 375, "h": 812, "title": "2 · Feed + quest HUD" },
-    { "file": "Create.dc.html", "x": 950, "y": 0, "w": 375, "h": 812, "title": "3 · Snap (light theme)" },
-    { "file": "Unlock.dc.html", "x": 1425, "y": 0, "w": 375, "h": 812, "title": "4 · Unlock moment" },
-    { "file": "Ladder.dc.html", "x": 1900, "y": 0, "w": 375, "h": 812, "title": "5 · Ladder" },
-    { "file": "Crew.dc.html", "x": 2375, "y": 0, "w": 375, "h": 812, "title": "6 · Crew (profile)" },
-    { "file": "Tokens.dc.html", "x": 0, "y": 1000, "w": 760, "h": 960, "title": "Field kit · tokens" }
+    {
+      "file": "Onboarding.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "1 · First minute"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 475,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "2 · Feed + quest HUD"
+    },
+    {
+      "file": "Create.dc.html",
+      "x": 950,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "3 · Snap (light theme)"
+    },
+    {
+      "file": "Unlock.dc.html",
+      "x": 1425,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "4 · Unlock moment"
+    },
+    {
+      "file": "Ladder.dc.html",
+      "x": 1900,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "5 · Ladder"
+    },
+    {
+      "file": "Crew.dc.html",
+      "x": 2375,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "6 · Crew (profile)"
+    },
+    {
+      "file": "Tokens.dc.html",
+      "x": 0,
+      "y": 1000,
+      "w": 760,
+      "h": 960,
+      "title": "Field kit · tokens"
+    }
   ],
   "annotations": [
-    { "id": "idea-nav", "x": 475, "y": -190, "w": 375, "text": "IDEA 1 — One bottom bar instead of six header buttons.\nFeed · Snap (big orange shutter) · Ladder · Crew. The camera is always one tap away, which is the whole game." },
-    { "id": "idea-hud", "x": 950, "y": -190, "w": 375, "text": "IDEA 2 — The next quest is pinned everywhere.\nGreen HUD card on Feed, a chip on Snap, a 'You' row on Ladder, and the unlock modal names the next quest. A judge always knows what to do next." },
-    { "id": "idea-first", "x": 0, "y": -190, "w": 375, "text": "IDEA 3 — First minute has one job: take Kotaro somewhere.\nNo feed, no wallet, no tabs. One orange button. The locked chips hint at what comes after the first post." },
-    { "id": "idea-identity", "x": 1425, "y": -190, "w": 375, "text": "IDEA 4 — Identity is a badge, not a guess.\nEvery Axie chip carries Cast (dark) or Owned (green). The human is 'by Guest-7F2A' in the corner, never confused with the Axie." },
-    { "id": "idea-light", "x": 1900, "y": -190, "w": 375, "text": "IDEA 5 — One light 'field' theme on every screen.\nThe camera keeps translucent white pills over the live picture instead of the current dark chrome, so Snap feels like the same app as Feed." },
-    { "id": "idea-crew", "x": 2375, "y": -190, "w": 375, "text": "IDEA 6 — 'Crew' replaces 'Profile' and 'Idol Points'.\nWhat you own is the cast that follows you: a 4-wide grid with level tags on locked faces, props as chips, your moments below. Connect Ronin is a card, not a gate." }
+    {
+      "id": "idea-first",
+      "x": 0,
+      "y": -190,
+      "w": 375,
+      "text": "IDEA 1 — First minute has one job: take Kotaro somewhere.\nNo feed, no wallet, no tabs. One orange button. The locked chips hint at what the first post unlocks."
+    },
+    {
+      "id": "idea-nav",
+      "x": 475,
+      "y": -190,
+      "w": 375,
+      "text": "IDEA 2 — One bottom bar instead of six header buttons.\nFeed · Snap (big orange shutter) · Ladder · Crew. The camera is always one tap away, which is the whole game. The green card is the next quest, pinned."
+    },
+    {
+      "id": "idea-light",
+      "x": 950,
+      "y": -190,
+      "w": 375,
+      "text": "IDEA 3 — One light 'field' theme, camera included.\nThe live picture fills the screen (the hill here stands in for it); chrome is translucent white pills, not the current dark overlay. Locked props show the level that unlocks them."
+    },
+    {
+      "id": "idea-hud",
+      "x": 1425,
+      "y": -190,
+      "w": 375,
+      "text": "IDEA 4 — Every unlock ends by naming the next quest.\nBing joins, then 'leave 1 comment to unlock Kotaro's sword'. The same quest is on the Feed card and the Ladder row, so a judge never wonders what to do."
+    },
+    {
+      "id": "idea-identity",
+      "x": 1900,
+      "y": -190,
+      "w": 375,
+      "text": "IDEA 5 — Identity is a badge, not a guess.\nAxie chips carry Cast (dark) or Owned (green); owners show a display name, guests show Guest-XXXX. The podium ranks people by quest level, as the server already does."
+    },
+    {
+      "id": "idea-crew",
+      "x": 2375,
+      "y": -190,
+      "w": 375,
+      "text": "IDEA 6 — 'Crew' replaces 'Profile' and Idol Points.\nWhat you own is the cast that follows you: a grid with level tags on locked faces, props as chips, your moments below. Connect Ronin is a card, not a gate."
+    }
   ],
-  "launch": { "view": "canvas" }
+  "launch": {
+    "view": "canvas"
+  }
 }
