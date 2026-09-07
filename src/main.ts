@@ -8,7 +8,7 @@ import { unlockLevelFor, CAST_ORDER } from './quests'
 import { questHudHtml, questChipText, type QuestHudInput } from './questHud'
 import { GroupPhoto, squadPhotoSlots, rollShiny, SHINY_FILTER, makeGlint, drawGlint } from './groupPhoto'
 import type { Sticker3D } from './sticker3d'
-import { createAxie3D, getAxieMixer, type Axie3D, type Axie3DSpec } from './axie3d'
+import { createAxie3D, getAxieMixer, isAxieMixerReady, parsePartId, type Axie3D, type Axie3DSpec } from './axie3d'
 import { descriptorFor, isCustomFace } from './castDescriptors'
 import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
@@ -661,10 +661,19 @@ let axie3d: Axie3D | null = null
 const snapshotCache = new Map<string, string>()
 
 function is3DMixerFace(id: string): boolean {
-  return /^\d+$/.test(id) || isCustomFace(id)
+  return /^\d+$/.test(id) || isCustomFace(id) || (isDevMode() && id.startsWith('dev:'))
 }
 
 async function specForFace(id: string): Promise<Axie3DSpec | null> {
+  if (isDevMode() && id.startsWith('dev:')) {
+    // Dev preview of arbitrary part ids (used to check derived pack parts)
+    const parts = id
+      .slice(4)
+      .split(',')
+      .map(parsePartId)
+      .filter((p): p is NonNullable<typeof p> => Boolean(p))
+    return { kind: 'descriptor', descriptor: { colorVariant: 0, body: 'normal', parts }, label: id }
+  }
   if (isCustomFace(id)) {
     const mixer = await getAxieMixer()
     const { descriptor, gold } = descriptorFor(id, mixer)
@@ -701,6 +710,7 @@ function disposeAxie3D(): void {
 /** Show a mixer-backed 3D face on the camera; PNG stays until the model is ready. */
 async function showAxie3D(id: string, req: number): Promise<boolean> {
   try {
+    if (!isAxieMixerReady()) setMascotLoading(true, 'Warming up the 3D Axies… first time takes a moment')
     const spec = await specForFace(id)
     if (!spec) return false
     if (req !== castRequest) return false
@@ -5885,6 +5895,8 @@ async function boot(): Promise<void> {
     }
     renderCreateTrays()
     await initSticker3D()
+    const devFace = isDevMode() ? new URLSearchParams(location.search).get('face') : null
+    if (devFace && devFace.startsWith('dev:')) void showAxie3D(devFace, ++castRequest)
     const bootProp = defaultPropForCast(activeCast)
     if (bootProp && isPropUnlocked(bootProp)) void equipProp(bootProp)
     else void clearEquippedProp()

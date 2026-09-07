@@ -29,7 +29,7 @@ import {
   type AxieDescriptor,
   type AxiePartDescriptor,
 } from '@jaatster/threejs-axie-mixer3d-public'
-import type { ThreeAxieMixer3D } from '@jaatster/threejs-axie-mixer3d-public'
+import type { ThreeAxieMixer3D, AxieMixerManifest } from '@jaatster/threejs-axie-mixer3d-public'
 
 const MAX_PIXEL_RATIO = 2
 const ASSET_BASE = '/assets/axie/'
@@ -84,21 +84,114 @@ function makeRenderer(id: string): WebGLRenderer {
   return renderer
 }
 
-/** The mixer is created once per page (manifest is ~9 MB, cached by the browser). */
+let mixerReady = false
+/** True once the manifest is loaded, so callers can show a one-time warming message. */
+export function isAxieMixerReady(): boolean {
+  return mixerReady
+}
+
+/** Parse a pack part id such as S13_Beast04_L2_Eye into a descriptor part (null if malformed). */
+export function parsePartId(id: string): AxiePartDescriptor | null {
+  const m = /^S(\d{2})_([A-Za-z]+?)(\d{2})_L(\d)_(Eye|Ear|Mouth|Horn|Back|Tail)$/.exec(id.trim())
+  if (!m) return null
+  return {
+    type: m[5].toLowerCase() as AxiePartDescriptor['type'],
+    skin: Number(m[1]),
+    class: m[2] as AxiePartDescriptor['class'],
+    variant: Number(m[3]),
+    level: Number(m[4]) as AxiePartDescriptor['level'],
+  }
+}
+
+type DerivedProvenance = { parts: Record<string, unknown>; materials: string[]; textures: string[] }
+type DerivedEntries = { parts: Record<string, unknown>; materials: Record<string, unknown>; textures: Record<string, unknown> }
+type MutableAssets = { parts: Record<string, unknown>; materials: Record<string, unknown>; textures: Record<string, unknown> }
+type MutableManifest = { assets: MutableAssets; creator: { partIdsByType: Record<string, string[]> } }
+
+/**
+ * The public mixer validates the pack against fixed counts (576 parts, 1088 textures, 1001 materials),
+ * so our 30 derived variants (scripts/build_missing_parts.py) are lifted out of the manifest before
+ * validation and merged back into the live catalog afterwards.
+ */
+async function loadManifestWithDerived(): Promise<{ manifest: MutableManifest; derived: DerivedEntries | null }> {
+  const [manifest, prov] = await Promise.all([
+    fetch(ASSET_BASE + 'manifest.json').then((r) => {
+      if (!r.ok) throw new Error(`manifest ${r.status}`)
+      return r.json() as Promise<MutableManifest>
+    }),
+    fetch(ASSET_BASE + 'provenance/derived-parts.json')
+      .then((r) => (r.ok ? (r.json() as Promise<DerivedProvenance>) : null))
+      .catch(() => null),
+  ])
+  if (!prov || !prov.parts) return { manifest, derived: null }
+  const derived: DerivedEntries = { parts: {}, materials: {}, textures: {} }
+  const assets = manifest.assets
+  for (const id of Object.keys(prov.parts)) {
+    if (!assets.parts[id]) continue
+    derived.parts[id] = assets.parts[id]
+    delete assets.parts[id]
+    for (const list of Object.values(manifest.creator.partIdsByType)) {
+      const i = list.indexOf(id)
+      if (i >= 0) list.splice(i, 1)
+    }
+  }
+  for (const id of prov.materials) {
+    if (!assets.materials[id]) continue
+    derived.materials[id] = assets.materials[id]
+    delete assets.materials[id]
+  }
+  for (const id of prov.textures) {
+    if (!assets.textures[id]) continue
+    derived.textures[id] = assets.textures[id]
+    delete assets.textures[id]
+  }
+  return { manifest, derived }
+}
+
+function mergeDerived(mixer: ThreeAxieMixer3D, derived: DerivedEntries): void {
+  try {
+    const live = mixer.manifest as unknown as MutableManifest
+    Object.assign(live.assets.parts, derived.parts)
+    Object.assign(live.assets.materials, derived.materials)
+    Object.assign(live.assets.textures, derived.textures)
+    for (const [id, part] of Object.entries(derived.parts)) {
+      const type = (part as { descriptor: { type: string } }).descriptor.type
+      const list = live.creator.partIdsByType[type]
+      if (list && !list.includes(id)) list.push(id)
+    }
+    console.info('[axie3d] derived parts merged', Object.keys(derived.parts).length)
+  } catch (err) {
+    console.warn('[axie3d] could not merge derived parts (downgrade policy will apply)', err)
+  }
+}
+
+/** The mixer is created once per page (manifest ~5 MB, cached by the browser). */
 export function getAxieMixer(): Promise<ThreeAxieMixer3D> {
   if (!mixerPromise) {
-    mixerPromise = createAxieMixer3D({
-      renderer: firstRenderer || makeRenderer('axie3d-probe'),
-      assetBaseUrl: ASSET_BASE,
-      maxUnusedEntries: 24,
-      onDiagnostic: (event) => {
-        if (event.severity === 'error') console.error('[axie3d]', event)
-        else if (event.severity === 'warning') console.warn('[axie3d]', event)
-      },
-    }).catch((err) => {
-      mixerPromise = null
-      throw err
-    })
+    mixerPromise = loadManifestWithDerived()
+      .then(({ manifest, derived }) =>
+        createAxieMixer3D({
+          manifest: manifest as unknown as AxieMixerManifest,
+          renderer: firstRenderer || makeRenderer('axie3d-probe'),
+          assetBaseUrl: ASSET_BASE,
+          maxUnusedEntries: 24,
+          onDiagnostic: (event) => {
+            if (event.severity === 'error') console.error('[axie3d]', event)
+            else if (event.severity === 'warning') console.warn('[axie3d]', event)
+          },
+        }).then((mixer) => {
+          if (derived) mergeDerived(mixer, derived)
+          return mixer
+        }),
+      )
+      .then((mixer) => {
+        mixerReady = true
+        return mixer
+      })
+      .catch((err) => {
+        mixerPromise = null
+        throw err
+      })
   }
   return mixerPromise
 }
