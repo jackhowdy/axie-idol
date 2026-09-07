@@ -2957,12 +2957,12 @@ function castLabelName(castId: string): string {
 function castPreviewSrc(castId: string): string {
   const meta = CAST_MASCOTS.find((c) => c.id === castId)
   if (!meta) {
-    if (/^\d+$/.test(castId)) return `/api/image/${castId}`
+    if (/^\d+$/.test(castId)) return axieCdnPng(castId)
     return ''
   }
-  if (meta.kind === 'axie' || /^\d+$/.test(castId)) return `/api/image/${castId}`
+  if (meta.kind === 'axie' || /^\d+$/.test(castId)) return axieCdnPng(castId)
   if (meta.preview) return `/previews/${meta.preview}`
-  return `/api/image/${castId}`
+  return axieCdnPng(castId)
 }
 
 function loadCelebratedNotifIds(): Set<string> {
@@ -3025,7 +3025,7 @@ function maybeCelebrateUnread(): void {
 
 function axiePreviewSrc(axieId: string): string {
   if (CAST_MASCOTS.some((c) => c.id === axieId)) return castPreviewSrc(axieId)
-  if (/^\d+$/.test(axieId)) return `/api/image/${axieId}`
+  if (/^\d+$/.test(axieId)) return axieCdnPng(axieId)
   return previewFor(axieId) || ''
 }
 

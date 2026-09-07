@@ -1859,30 +1859,39 @@ async function proxyImage(id, res) {
     sendJson(res, 400, { error: 'Invalid Axie ID' })
     return
   }
-  let imageUrl = AXIE_CDN_PNG(id)
+  const UA = { 'User-Agent': 'Mozilla/5.0 (compatible; AxieIdol/1.0)', Accept: 'image/png,image/*,*/*' }
+  // 1) CDN first (fast path; works without metadata)
+  let upstream = null
   try {
-    const metaRes = await fetch(`${METADATA_BASE}/axie/${id}`)
-    if (metaRes.ok) {
-      const meta = await metaRes.json()
-      if (meta?.image && typeof meta.image === 'string') imageUrl = meta.image
-    }
+    upstream = await fetch(AXIE_CDN_PNG(id), { headers: UA, signal: AbortSignal.timeout(15_000) })
   } catch {
-    // CDN fallback
+    upstream = null
   }
-  const upstream = await fetch(imageUrl, {
-    headers: { Accept: 'image/png,image/*,*/*' },
-  })
-  if (!upstream.ok) {
-    sendJson(res, upstream.status === 404 ? 404 : 502, {
-      error: `Upstream image fetch failed (${upstream.status})`,
-      url: imageUrl,
+  // 2) Fallback: metadata image URL
+  if (!upstream || !upstream.ok) {
+    try {
+      const metaRes = await fetch(`${METADATA_BASE}/axie/${id}`, { headers: { 'User-Agent': UA['User-Agent'], Accept: 'application/json' }, signal: AbortSignal.timeout(15_000) })
+      if (metaRes.ok) {
+        const meta = await metaRes.json()
+        if (meta?.image && typeof meta.image === 'string') {
+          upstream = await fetch(meta.image, { headers: UA, signal: AbortSignal.timeout(15_000) })
+        }
+      }
+    } catch {
+      /* keep upstream as is */
+    }
+  }
+  if (!upstream || !upstream.ok) {
+    sendJson(res, upstream && upstream.status === 404 ? 404 : 502, {
+      error: `Upstream image fetch failed (${upstream ? upstream.status : 'network'})`,
+      url: AXIE_CDN_PNG(id),
     })
     return
   }
   const buf = Buffer.from(await upstream.arrayBuffer())
   res.writeHead(200, {
     'Content-Type': upstream.headers.get('content-type') || 'image/png',
-    'Cache-Control': 'public, max-age=300',
+    'Cache-Control': 'public, max-age=86400',
     'Content-Length': String(buf.length),
   })
   res.end(buf)
