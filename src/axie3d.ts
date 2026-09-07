@@ -45,7 +45,7 @@ import type { ThreeAxieMixer3D, AxieMixerManifest } from '@jaatster/threejs-axie
 const MAX_PIXEL_RATIO = 2
 const ASSET_BASE = '/assets/axie/'
 /** Bump when the manifest or derived parts change; the pack is served with long cache headers. */
-const PACK_VERSION = '15'
+const PACK_VERSION = '17'
 
 export type Axie3DSpec =
   | {
@@ -497,7 +497,7 @@ export function addNightmareSpikes(root: Object3D, colorHex: string): void {
   anchor.add(group)
 }
 
-const VIEW_DIR = new Vector3(0.8, 0.14, 1).normalize()
+const VIEW_DIR = new Vector3(0.92, 0.12, 1).normalize()
 const DEV_VIEWS: Record<string, Vector3> = {
   rear: new Vector3(-0.8, 0.2, -1).normalize(),
   side: new Vector3(1, 0.1, 0.15).normalize(),
@@ -797,24 +797,29 @@ export function applyPaletteShadow(root: Object3D, manifest: AxieMixerManifest, 
     Math.min(1.6, s.g / Math.max(p.g, 0.02)),
     Math.min(1.6, s.b / Math.max(p.b, 0.02)),
   )
+  const seen = new Set<unknown>()
   root.traverse((o) => {
     const m = o as Mesh & { isSkinnedMesh?: boolean }
-    if (!m.isSkinnedMesh || o.name.includes('AxieOutline')) return
+    if (!m.isMesh || o.name.includes('AxieOutline')) return
     const mat = m.material as unknown as {
       fragmentShader?: string
       uniforms?: Record<string, { value: unknown }>
       needsUpdate?: boolean
       userData?: { axieMixerV4?: unknown }
     }
-    if (!mat.fragmentShader || !mat.uniforms || !mat.userData?.axieMixerV4) return
+    if (!mat.fragmentShader || !mat.uniforms || !mat.userData?.axieMixerV4 || seen.has(mat)) return
+    seen.add(mat)
     if (!mat.fragmentShader.includes('vec3(uShadowMultiplier)')) return
-    mat.fragmentShader = mat.fragmentShader.replace('vec3(uShadowMultiplier)', 'uShadowTint')
-    mat.fragmentShader = mat.fragmentShader.replace('uniform float uShadowMultiplier;', 'uniform float uShadowMultiplier;\n  uniform vec3 uShadowTint;')
-    // 2D shades the lower ~40% of the body with a soft horizontal edge; the pack lights from a
-    // fixed view-space direction with a hard edge. Light the body from straight above instead.
+    // 2D shades the lower ~40% with a soft horizontal edge; the pack lights from a fixed
+    // view-space direction with a hard edge. Light everything from straight above instead.
     mat.fragmentShader = mat.fragmentShader.replace('vec3(15.0, 80.0, -30.0)', 'vec3(4.0, 80.0, 14.0)')
     mat.fragmentShader = mat.fragmentShader.replace('unityHlslSmoothstep(-0.25, 0.55, fakeLightDot)', 'unityHlslSmoothstep(-16.0, 4.0, fakeLightDot)')
-    mat.uniforms.uShadowTint = { value: ratio }
+    if (m.isSkinnedMesh) {
+      // the body takes the palette's shaded1 hue; parts keep the pack's grey multiplier
+      mat.fragmentShader = mat.fragmentShader.replace('vec3(uShadowMultiplier)', 'uShadowTint')
+      mat.fragmentShader = mat.fragmentShader.replace('uniform float uShadowMultiplier;', 'uniform float uShadowMultiplier;\n  uniform vec3 uShadowTint;')
+      mat.uniforms.uShadowTint = { value: ratio }
+    }
     mat.needsUpdate = true
   })
 }
