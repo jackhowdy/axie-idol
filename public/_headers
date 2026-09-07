@@ -1,8 +1,40 @@
-# Cloudflare Workers static assets: long cache for the Axie mixer pack.
-# Animation payloads are content-hashed (immutable); parts/bodies/textures are versioned by pack copy.
+# Cloudflare Workers static assets: cache rules for the Axie mixer pack.
+# Rules must not overlap (matching rules are concatenated), so each prefix is listed once.
 /assets/axie/animations/payload/*
   Cache-Control: public, max-age=31536000, immutable
 /assets/axie/manifest.json
   Cache-Control: public, max-age=3600
-/assets/axie/*
+/assets/axie/addons/*
+  Cache-Control: public, max-age=86400
+/assets/axie/bodies/*
+  Cache-Control: public, max-age=86400
+/assets/axie/final-unity/*
+  Cache-Control: public, max-age=86400
+/assets/axie/parts/*
+  Cache-Control: public, max-age=86400
+/assets/axie/provenance/*
+  Cache-Control: public, max-age=86400
+/assets/axie/shaders/*
+  Cache-Control: public, max-age=86400
+/assets/axie/socket-local-parts/*
+  Cache-Control: public, max-age=86400
+/assets/axie/textures/*
+  Cache-Control: public, max-age=86400
+/assets/axie/weapons/*
+  Cache-Control: public, max-age=86400
+/assets/axie/animations/bigyak/*
+  Cache-Control: public, max-age=86400
+/assets/axie/animations/curly/*
+  Cache-Control: public, max-age=86400
+/assets/axie/animations/frosty/*
+  Cache-Control: public, max-age=86400
+/assets/axie/animations/fuzzy/*
+  Cache-Control: public, max-age=86400
+/assets/axie/animations/normal/*
+  Cache-Control: public, max-age=86400
+/assets/axie/animations/spiky/*
+  Cache-Control: public, max-age=86400
+/assets/axie/animations/sumo/*
+  Cache-Control: public, max-age=86400
+/assets/axie/animations/wetdog/*
   Cache-Control: public, max-age=86400
