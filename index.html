@@ -189,6 +189,7 @@
           <button type="button" id="btn-feed-to-profile" class="btn nav-chip" title="Profile" hidden>Me</button>
           <div id="feed-guest" class="feed-guest"></div>
         </header>
+        <div id="feed-quest-hud" class="quest-hud-slot"></div>
         <div id="feed-mode-bar" class="feed-mode-bar" hidden>
           <button type="button" id="btn-feed-global" class="feed-mode-chip is-active" aria-pressed="true">Global</button>
           <button type="button" id="btn-feed-following" class="feed-mode-chip" aria-pressed="false">Following</button>
@@ -213,14 +214,15 @@
         <header class="feed-header board-header">
           <button type="button" id="btn-board-back" class="btn secondary feed-back" hidden>← Feed</button>
           <div class="feed-title" id="board-title">Ladder</div>
+          <p id="board-meta" class="board-meta">Resets midnight PH</p>
         </header>
         <div class="board-range-tabs" role="tablist" aria-label="Ladder range">
           <button type="button" class="board-range-tab is-active" data-range="daily" role="tab" aria-selected="true">Daily</button>
           <button type="button" class="board-range-tab" data-range="all" role="tab" aria-selected="false">All-time</button>
         </div>
-        <p id="board-meta" class="board-meta">Resets midnight PH</p>
         <p id="board-burn-meta" class="board-burn-meta" hidden></p>
         <div id="board-podium" class="board-podium" aria-label="Top 3"></div>
+        <div id="board-you-row" class="quest-hud-slot"></div>
         <div id="board-list" class="board-list" role="list"></div>
         <div id="board-error" class="feed-error" hidden></div>
       </section>

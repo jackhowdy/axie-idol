@@ -5,6 +5,7 @@
 
 import { icon } from './icons'
 import { unlockLevelFor } from './quests'
+import { questHudHtml, questChipText, type QuestHudInput } from './questHud'
 import type { Sticker3D } from './sticker3d'
 import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
@@ -2912,6 +2913,7 @@ function cacheCastCrew(payload: CastCrewPayload | null | undefined): void {
     /* ignore */
   }
   renderCreateTrays()
+  syncQuestHud()
 }
 
 function loadCachedCastCrew(): CastCrewPayload | null {
@@ -5382,6 +5384,34 @@ document.querySelector<HTMLButtonElement>('#btn-tray-connect')?.addEventListener
   void connectRonin()
 })
 
+const feedQuestHud = document.querySelector<HTMLElement>('#feed-quest-hud')
+const boardYouRow = document.querySelector<HTMLElement>('#board-you-row')
+const vfQuestText = document.querySelector<HTMLElement>('#vf-quest-text')
+
+function questHudInput(): QuestHudInput | null {
+  const d = myCastCrew || loadCachedCastCrew()
+  if (!d) return null
+  return {
+    level: d.level ?? 0,
+    nextQuest: d.nextQuest || null,
+    nextUnlock: d.nextUnlock || null,
+    previewSrc: castPreviewSrc,
+  }
+}
+
+/** Re-render the pinned quest card (Feed), the You row (Ladder) and the Snap chip. */
+function syncQuestHud(): void {
+  const p = questHudInput()
+  if (!p) return
+  const html = questHudHtml(p)
+  if (feedQuestHud) feedQuestHud.innerHTML = html
+  if (boardYouRow) boardYouRow.innerHTML = `<div class="you-row"><span class="you-rank">You</span>${html}</div>`
+  if (vfQuestText) vfQuestText.textContent = questChipText(p)
+}
+
+feedQuestHud?.addEventListener('click', () => showViewfinderFromFeed())
+boardYouRow?.addEventListener('click', () => showViewfinderFromFeed())
+
 tabbar.addEventListener('click', (e) => {
   const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.tab')
   if (!b) return
@@ -5416,6 +5446,7 @@ async function boot(): Promise<void> {
   syncBurnsUiClass()
   myCastCrew = loadCachedCastCrew()
   if (myCastCrew) renderCastCrewStrip(myCastCrew)
+  syncQuestHud()
   void refreshMyCastCrew()
 
   const dev = isDevMode()

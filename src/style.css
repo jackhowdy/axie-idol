@@ -3464,3 +3464,21 @@ button.id-chip {
 #viewfinder .btn.icon.vf-round.small { width: 40px; height: 40px; }
 #viewfinder .btn.gate-btn.secondary { background: var(--bg-2); border: 1px solid var(--border); color: var(--text); }
 #viewfinder .btn.gate-btn.primary { background: var(--accent); color: #fff; }
+
+/* ===== Field revamp: quest HUD ===== */
+.quest-hud-slot { padding: 0 16px 10px; }
+.quest-hud-slot:empty { display: none; }
+.quest-hud { padding: 12px 14px; border-radius: var(--radius-card); background: var(--surface-soft); display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.quest-hud-avatar { width: 44px; height: 44px; border-radius: 12px; background: var(--bg-2); display: flex; align-items: center; justify-content: center; overflow: hidden; flex: 0 0 auto; }
+.quest-hud-thumb { width: 40px; height: 40px; object-fit: cover; }
+.quest-hud-thumb.is-prop { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); }
+.quest-hud-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.quest-hud-title { font-family: var(--font-display); font-size: 13px; font-weight: 800; }
+.quest-hud-bar { height: 6px; border-radius: var(--radius-pill); background: rgba(26, 43, 60, 0.12); overflow: hidden; }
+.quest-hud-fill { height: 6px; background: var(--accent); }
+.quest-hud-sub { font-size: 12px; font-weight: 700; color: var(--muted); }
+.you-row { display: flex; align-items: center; gap: 10px; }
+.you-row .quest-hud { flex: 1 1 auto; }
+.you-rank { font-family: var(--font-display); font-weight: 900; font-size: 13px; width: 40px; height: 40px; border-radius: var(--radius-pill); background: var(--bg-2); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+#board .board-meta { margin: 0 0 0 auto; font-size: 12px; font-weight: 800; color: var(--muted); }
+.feed-header .board-meta { order: 2; }
