@@ -3190,7 +3190,7 @@ async function shareBoardRankCard(
 
   if (r.rank === 1) {
     ctx.font = '80px serif'
-    ctx.fillText('👑', cx, cy - rad - 20)
+    ctx.fillText('TOP', cx, cy - rad - 20)
   }
 
   ctx.fillStyle = '#1A1A1A'
@@ -3599,7 +3599,7 @@ function showSparkVictory(opts: SparkVictoryOpts): void {
   }
   if (sparkVictorySub) {
     sparkVictorySub.innerHTML =
-      'Keep chatting — likes &amp; comments help climb the Quest Ladder.'
+      'Likes and comments climb the ladder.'
   }
   const mode = (opts.mode || burnsToday?.mode || '').toLowerCase()
   const modeLabel = opts.modeLabel || burnsToday?.modeLabel || ''
@@ -4403,7 +4403,7 @@ async function submitPost(): Promise<void> {
         modeLabel: data.burns?.modeLabel,
       })
     } else {
-      postToast.textContent = 'Posted! ✨'
+      postToast.textContent = 'Posted'
       postToast.hidden = false
       window.setTimeout(() => {
         postToast.hidden = true

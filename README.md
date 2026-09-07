@@ -113,3 +113,14 @@ Secrets and variables:
 - Production — `npx wrangler secret put SKYMAVIS_API_KEY`; `SEED_POSTS` lives in `wrangler.toml` `[vars]`.
 
 First deploy: `npx wrangler r2 bucket create axie-idol-uploads`, then `npm run deploy`. Add the deployed origin (workers.dev and later the custom domain) to the Ronin Waypoint allowlist in the Ronin Developer Console or Connect will fail.
+
+## Screens (field revamp, September 2026)
+
+- **Feed** — global feed with the pinned quest card (next quest, progress, what it unlocks). Cards show the Axie chip (Cast or Owned badge) and the human ("by Guest-XXXX" or the owner name).
+- **Snap** — light camera composer. Top: back, quest chip, flip. Bottom: crew tray (locked faces show the level that unlocks them), gallery, adjust, orange shutter.
+- **Ladder** — Today / All time, podium with the top climber, a "You" row carrying the same quest card, then rows with level pills.
+- **Crew** — guest or owner identity, connect card (guests) or wallet row (owners), the 18-face crew grid with LV tags on locked faces, props, and moments.
+- **First minute** — new guests see a one-screen welcome once (`localStorage axieIdol.onboarded`); "Open the camera" goes straight to Snap.
+- **Unlock modal** — every cast or prop unlock ends with "Next up: …" and a button that opens Snap with the new cast mate selected.
+
+Known R1 limit: guest "My moments" is filtered client-side from the latest 50 global posts.

@@ -3591,3 +3591,4 @@ button.id-chip {
 #board .board-share-podium { display: none; }
 #board .board-row { border: 0; background: var(--bg-2); border-radius: var(--radius-card); }
 .board-lvl-pill { height: 28px; padding: 0 10px; border-radius: var(--radius-pill); background: var(--surface-soft); font-family: var(--font-display); font-weight: 900; font-size: 12px; display: inline-flex; align-items: center; color: var(--text); }
+#btn-feed-refresh span { display: flex; }

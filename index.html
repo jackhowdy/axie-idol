@@ -192,7 +192,7 @@
         <div class="chrome bottom preview-actions">
           <label class="caption-field" for="caption-input">
             <span class="caption-label">Caption</span>
-            <input id="caption-input" type="text" maxlength="140" placeholder="Say something idol-ish…" autocomplete="off" />
+            <input id="caption-input" type="text" maxlength="140" placeholder="Say something about this moment…" autocomplete="off" />
           </label>
           <div class="preview-btns">
             <button type="button" id="btn-retake" class="btn secondary">Retake</button>
@@ -200,7 +200,7 @@
             <button type="button" id="btn-post" class="btn primary">Post</button>
           </div>
         </div>
-        <div id="post-toast" class="toast" hidden>Posted! ✨</div>
+        <div id="post-toast" class="toast" hidden>Posted</div>
       </section>
 
       <!-- Idol feed -->
@@ -208,7 +208,7 @@
         <header class="feed-header">
           <button type="button" id="btn-feed-back" class="btn feed-back feed-create-btn" title="Create a moment" hidden>Create</button>
           <div class="feed-title">Feed</div>
-          <button type="button" id="btn-feed-refresh" class="btn nav-chip feed-refresh-btn" title="Refresh feed">↻</button>
+          <button type="button" id="btn-feed-refresh" class="btn nav-chip feed-refresh-btn" title="Refresh feed" aria-label="Refresh feed"><span data-icon="rotateR"></span></button>
           <button type="button" id="btn-to-board" class="btn nav-chip feed-board-btn" title="Quest Ladder" hidden>Board</button>
           <button type="button" id="btn-feed-connect" class="btn feed-connect-btn" title="Optional: bring owned Axies">Bring Axies</button>
           <button type="button" id="btn-feed-to-profile" class="btn nav-chip" title="Profile" hidden>Me</button>
@@ -423,13 +423,13 @@
           Your Axie is climbing the social ladder.
         </p>
         <p id="spark-victory-sub" class="spark-victory-sub">
-          Keep chatting — likes &amp; comments help climb the Quest Ladder.
+          Likes and comments climb the ladder.
         </p>
         <p id="spark-victory-next" class="spark-victory-next" hidden><strong>Next up:</strong> <span id="spark-victory-next-text"></span></p>
         <p id="spark-victory-demo" class="spark-victory-demo" hidden>Demo burn (ledger)</p>
         <div class="spark-victory-actions">
           <button type="button" id="btn-spark-victory-ok" class="btn primary spark-victory-cta">
-            Keep chatting
+            Back to the feed
           </button>
         </div>
       </div>
@@ -455,7 +455,7 @@
         </p>
         <div class="cast-unlock-actions">
           <button type="button" id="btn-cast-unlock-ok" class="btn primary cast-unlock-cta">
-            Keep chatting
+            Back to the feed
           </button>
         </div>
       </div>
