@@ -709,8 +709,9 @@ function disposeAxie3D(): void {
 
 /** Show a mixer-backed 3D face on the camera; PNG stays until the model is ready. */
 async function showAxie3D(id: string, req: number): Promise<boolean> {
+  const warming = !isAxieMixerReady()
+  if (warming) setMascotLoading(true, 'Warming up the 3D Axies… first time takes a moment')
   try {
-    if (!isAxieMixerReady()) setMascotLoading(true, 'Warming up the 3D Axies… first time takes a moment')
     const spec = await specForFace(id)
     if (!spec) return false
     if (req !== castRequest) return false
@@ -733,6 +734,8 @@ async function showAxie3D(id: string, req: number): Promise<boolean> {
   } catch (err) {
     console.warn('[axie-idol] mixer 3D failed', id, err)
     return false
+  } finally {
+    if (warming && req === castRequest) setMascotLoading(false)
   }
 }
 
