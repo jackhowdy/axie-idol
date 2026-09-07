@@ -29,7 +29,7 @@ async function waitFor(url, ms = 15000) {
 }
 
 /** Starts `node server.mjs` on a free port with a temp DATA_DIR. Returns { baseUrl, stop }. */
-export async function startNodeServer() {
+export async function startNodeServer(extraEnv = {}) {
   const port = await freePort()
   const dataDir = mkdtempSync(join(tmpdir(), 'axie-idol-test-'))
   const child = spawn(process.execPath, [resolve('server.mjs')], {
@@ -40,6 +40,7 @@ export async function startNodeServer() {
       DATA_DIR: dataDir,
       SEED_POSTS: '0',
       SKYMAVIS_API_KEY: '',
+      ...extraEnv,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })

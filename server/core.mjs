@@ -42,7 +42,10 @@ const FREE_CAST = [
   { id: '1367', label: 'Axie #1367', preview: AXIE_CDN_PNG('1367') },
   { id: '2660', label: 'Axie #2660', preview: AXIE_CDN_PNG('2660') },
   { id: 'agonia-echo', label: 'Agonia Echo', preview: '/previews/agonia-echo.png' },
+  // Secret: unlocked only by finding the Golden Axie (server roll on post)
+  { id: 'golden', label: 'Golden Axie', preview: '/previews/golden.png' },
 ]
+const GOLDEN_ID = 'golden'
 const FREE_CAST_IDS = new Set(FREE_CAST.map((c) => c.id))
 const QUEST_PROP_IDS = new Set([
   'kotaro-sword',
@@ -67,6 +70,9 @@ const QUEST_PROP_LABEL = {
 const SEED_MIN_LIVE = 8
 /** R1: pause cast seed/demo posts while building. Enable with SEED_POSTS=1 */
 const SEED_ENABLED = env.SEED_POSTS === '1' || env.SEED_POSTS === 'true'
+/** 1-in-N chance that a post contains the Golden Axie. Set GOLDEN_ODDS=1 to force it (demo/tests). */
+const GOLDEN_ODDS = Math.max(1, Math.floor(Number(env.GOLDEN_ODDS) || 5000))
+const MAX_SHINY = 3
 const SEED_CAPTIONS = {
   // Lifestyle AR composites: 2 each for first five casts, 1 each for tripp + xia → 12 pack ids
   kotaro: ['Park day with Kotaro! ⚔️', 'Cafe flex with Kotaro ☕'],
@@ -930,6 +936,38 @@ function pickLine(pool, castId) {
  * After a successful post: bump post stats, evaluate quests,
  * welcome-comment new cast unlocks, lightly engage unlocked crew.
  */
+/** Add a secret cast face to a poster's unlocked set (no level change). */
+function grantCast(posterKey, castId) {
+  if (!posterKey) return null
+  const store = loadCastCrew()
+  const entry = normalizeQuestEntry(store.byPoster[posterKey] || defaultQuestEntry())
+  if (!entry.unlockedCast.includes(castId)) entry.unlockedCast.push(castId)
+  entry.updatedAt = new Date().toISOString()
+  store.byPoster[posterKey] = entry
+  saveCastCrew(store)
+  return castPublicPayload(entry, { newlyUnlockedCast: [castId] })
+}
+
+/** Hall of Fame: who has found the Golden Axie (latest first). */
+function goldenSummary(postsStore) {
+  const finds = (postsStore.posts || [])
+    .filter((p) => p && p.golden === true)
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+  return {
+    odds: GOLDEN_ODDS,
+    count: finds.length,
+    latest: finds[0]
+      ? { postId: finds[0].id, label: finds[0].authorLabel || 'A squad', createdAt: finds[0].createdAt }
+      : null,
+    finders: finds.slice(0, 10).map((p) => ({
+      postId: p.id,
+      label: p.authorLabel || 'A squad',
+      axieId: p.axieId,
+      createdAt: p.createdAt,
+    })),
+  }
+}
+
 function applyCastCrewOnPost(postsStore, post, posterKey) {
   const empty = castPublicPayload(defaultQuestEntry())
   if (!posterKey || !post) return empty
@@ -2229,7 +2267,7 @@ function handleFeed(req, res, url) {
       .map((p) => publicPost(p))
   }
 
-  const payload = { posts, ...scoresPayload(store), burns: burnsTodayPayload(store) }
+  const payload = { posts, ...scoresPayload(store), burns: burnsTodayPayload(store), golden: goldenSummary(store) }
   if (timelineAxieId) {
     payload.axieId = timelineAxieId
     payload.followerCount = followerCountFor(timelineAxieId)
@@ -2518,6 +2556,7 @@ function handleBoard(_req, res, url) {
     sortBy: 'questLevel',
     rankings,
     burns,
+    golden: goldenSummary(store),
   })
 }
 
@@ -2996,6 +3035,11 @@ async function handleCreatePost(req, res) {
   await blobs.put(filename, parsed.buf, parsed.mime)
   const imagePath = `/uploads/${filename}`
 
+  const shiny = Array.isArray(body.shiny)
+    ? [...new Set(body.shiny.filter((x) => typeof x === 'string' && isCostumeId(x)).slice(0, MAX_SHINY))]
+    : []
+  const golden = Math.random() * GOLDEN_ODDS < 1
+
   const post = {
     id,
     createdAt: Date.now(),
@@ -3010,6 +3054,8 @@ async function handleCreatePost(req, res) {
     likedByDevice: [],
     comments: [],
   }
+  if (shiny.length) post.shiny = shiny
+  if (golden) post.golden = true
 
   const store = loadStore()
   store.posts.unshift(post)
@@ -3026,7 +3072,11 @@ async function handleCreatePost(req, res) {
     authorGuestId,
     deviceKey,
   })
-  const castCrew = applyCastCrewOnPost(store, post, posterKey)
+  let castCrew = applyCastCrewOnPost(store, post, posterKey)
+  if (golden) {
+    const granted = grantCast(posterKey, GOLDEN_ID)
+    if (granted) castCrew = { ...granted, engagement: castCrew?.engagement || [] }
+  }
 
   saveStore(store)
   recordRate(deviceKey, 'posts')
@@ -3044,6 +3094,8 @@ async function handleCreatePost(req, res) {
     castCrew,
   }
   if (sparkBurn) payload.sparkBurn = sparkBurn
+  if (golden) payload.goldenFound = true
+  payload.golden = goldenSummary(store)
   sendJson(res, 201, payload)
 }
 
@@ -3160,6 +3212,8 @@ function publicPost(p) {
     comments: publicComments(p.comments),
   }
   if (p.seed) out.seed = true
+  if (p.golden) out.golden = true
+  if (Array.isArray(p.shiny) && p.shiny.length) out.shiny = [...p.shiny]
   if (p.castAuthor || (typeof p.authorGuestId === 'string' && p.authorGuestId.startsWith('cast:'))) {
     out.castAuthor = true
     const cid = p.castId || String(p.authorGuestId || '').replace(/^cast:/, '')

@@ -27,6 +27,7 @@ const RAW: Record<string, string> = {
   minus: '<path d="M5 12h14"/>',
   share: '<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3M8 7l4-4 4 4"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
+  star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
 }
 
 export type IconName = keyof typeof RAW | 'heartFilled'

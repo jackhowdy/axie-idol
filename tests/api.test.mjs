@@ -43,12 +43,13 @@ async function post(g, axieId = 'kotaro', caption = 'hello') {
   return api('/api/posts', { method: 'POST', body: { ...g, axieId, caption, imageBase64: PNG_1x1 } })
 }
 
-test('GET /api/cast returns the 18-face free cast with Kotaro first', async () => {
+test('GET /api/cast returns the 18 faces plus the secret Golden Axie, Kotaro first', async () => {
   const r = await api('/api/cast')
   assert.equal(r.status, 200)
-  assert.equal(r.json.cast.length, 18)
+  assert.equal(r.json.cast.length, 19)
   assert.equal(r.json.cast[0].id, 'kotaro')
-  assert.equal(r.json.cast.at(-1).id, 'agonia-echo')
+  assert.equal(r.json.cast.at(-2).id, 'agonia-echo')
+  assert.equal(r.json.cast.at(-1).id, 'golden')
 })
 
 test('first guest post as Kotaro unlocks Bing (L1) and Bing welcomes the post', async () => {

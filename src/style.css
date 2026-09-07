@@ -3600,3 +3600,27 @@ button.id-chip {
 .tray-head-actions { display: flex; gap: 14px; align-items: center; }
 #viewfinder .cast-chip { position: relative; }
 .cast-chip .in-photo-badge { position: absolute; top: -2px; right: 2px; width: 20px; height: 20px; border-radius: var(--radius-pill); background: var(--accent-hot); color: #fff; font-family: var(--font-display); font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-2); }
+
+/* ===== Golden Axie + shinies ===== */
+#sticker-layer .is-shiny { filter: hue-rotate(150deg) saturate(1.4) brightness(1.08) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4)); }
+.shiny-tag { height: 24px; padding: 0 10px; border-radius: var(--radius-pill); background: linear-gradient(90deg, #7ad0ff, #c9a4ff, #ffd36e); color: #1A2B3C; font-family: var(--font-display); font-size: 11px; font-weight: 900; display: inline-flex; align-items: center; gap: 4px; }
+.golden-banner-slot { padding: 0 16px 10px; }
+.golden-banner-slot:empty { display: none; }
+.golden-banner { padding: 12px 14px; border-radius: var(--radius-card); background: linear-gradient(90deg, #FFE9A8, #FFD36E); border: 1px solid #E8B93A; display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 13px; font-weight: 800; color: #4A3607; }
+.golden-banner svg { flex: 0 0 auto; color: #A57A0C; }
+.golden-banner .golden-count { margin-left: auto; font-size: 12px; font-weight: 800; color: #7A5A0C; white-space: nowrap; }
+.feed-card.is-golden { box-shadow: 0 0 0 3px #FFD36E, 0 4px 16px rgba(26, 43, 60, 0.12); }
+.feed-card.is-golden .feed-card-img-wrap::after { content: 'Found the Golden Axie'; position: absolute; left: 12px; bottom: 12px; height: 28px; padding: 0 12px; border-radius: var(--radius-pill); background: #FFD36E; color: #4A3607; font-family: var(--font-display); font-size: 12px; font-weight: 900; display: flex; align-items: center; }
+.board-hof { margin: 0 16px 12px; padding: 12px 14px; border-radius: var(--radius-card); background: linear-gradient(90deg, #FFF3CC, #FFE7A3); border: 1px solid #E8B93A; display: flex; flex-direction: column; gap: 8px; }
+.board-hof:empty { display: none; }
+.board-hof-head { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-display); font-size: 13px; font-weight: 900; color: #4A3607; }
+.board-hof-count { font-size: 22px; font-weight: 900; color: #A57A0C; }
+.board-hof-sub { font-size: 12px; font-weight: 700; color: #7A5A0C; }
+.board-hof-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.board-hof-list span { height: 26px; padding: 0 10px; border-radius: var(--radius-pill); background: var(--bg-2); font-family: var(--font-display); font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; color: var(--text); }
+.spark-victory.is-golden .spark-victory-card { background: linear-gradient(180deg, #FFF3CC, #FFD36E); }
+.crew-slot.is-golden .crew-face { border-color: #E8B93A; background: linear-gradient(180deg, #FFF3CC, #FFD36E); }
+.crew-slot.is-golden.is-locked .crew-face { background: #4A3607; border-color: #4A3607; }
+.crew-slot.is-golden.is-locked .crew-face .crew-q { font-family: var(--font-display); font-size: 28px; font-weight: 900; color: #FFD36E; }
+.crew-slot .crew-shiny { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: var(--radius-pill); background: linear-gradient(90deg, #7ad0ff, #c9a4ff, #ffd36e); display: flex; align-items: center; justify-content: center; color: #1A2B3C; }
+.crew-slot .crew-shiny svg { width: 12px; height: 12px; }

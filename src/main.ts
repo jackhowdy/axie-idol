@@ -6,7 +6,7 @@
 import { icon } from './icons'
 import { unlockLevelFor, CAST_ORDER } from './quests'
 import { questHudHtml, questChipText, type QuestHudInput } from './questHud'
-import { GroupPhoto, squadPhotoSlots } from './groupPhoto'
+import { GroupPhoto, squadPhotoSlots, rollShiny, SHINY_FILTER } from './groupPhoto'
 import type { Sticker3D } from './sticker3d'
 import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
@@ -42,6 +42,8 @@ const CAST_MASCOTS = [
   { id: '1367', label: 'Axie #1367', glb: '', preview: '', sticker: '', prop: null, kind: 'axie' as const },
   { id: '2660', label: 'Axie #2660', glb: '', preview: '', sticker: '', prop: null, kind: 'axie' as const },
   { id: 'agonia-echo', label: 'Agonia Echo', glb: '', preview: 'agonia-echo.png', sticker: 'agonia-echo.png', prop: null, kind: 'villain' as const },
+  // Secret: only squads that found the Golden Axie have this unlocked
+  { id: 'golden', label: 'Golden Axie', glb: '', preview: 'golden.png', sticker: 'golden.png', prop: null, kind: 'starter' as const },
 ] as const
 
 type CastId = (typeof CAST_MASCOTS)[number]['id']
@@ -382,6 +384,8 @@ interface FeedPost {
   seed?: boolean
   castAuthor?: boolean
   castId?: string
+  golden?: boolean
+  shiny?: string[]
 }
 
 type SocialNotif = {
@@ -783,6 +787,7 @@ function applyStickerTransform(): void {
   stickerTarget.style.transform = `translate(-50%, -50%) rotate(${state.rotation}deg) scale(${state.scale})`
   sticker3d?.setLean(gx, gy)
   spineSticker?.setLean?.(gx, gy)
+  syncLeadShinyClass()
 
   // Equipped prop is a separate canvas hit-target; tracks sticker + user offset.
   if (propOverlay?.canvas && !propOverlay.canvas.hidden) {
@@ -1860,6 +1865,7 @@ async function captureComposite(): Promise<void> {
     const baseW = spCanvas.clientWidth * scaleX
     const baseH = spCanvas.clientHeight * scaleX
     ctx.save()
+    if (leadShiny && !customAxieId) ctx.filter = SHINY_FILTER
     ctx.translate(cx, cy)
     ctx.rotate((state.rotation * Math.PI) / 180)
     ctx.scale(state.scale, state.scale)
@@ -1871,6 +1877,7 @@ async function captureComposite(): Promise<void> {
     const baseW = glCanvas.clientWidth * scaleX
     const baseH = glCanvas.clientHeight * scaleX
     ctx.save()
+    if (leadShiny && !customAxieId) ctx.filter = SHINY_FILTER
     ctx.translate(cx, cy)
     ctx.rotate((state.rotation * Math.PI) / 180)
     ctx.scale(state.scale, state.scale)
@@ -1884,6 +1891,7 @@ async function captureComposite(): Promise<void> {
     const naturalAspect = stickerImg.naturalHeight / Math.max(1, stickerImg.naturalWidth)
     const baseH = baseW * naturalAspect
     ctx.save()
+    if (leadShiny && !customAxieId) ctx.filter = SHINY_FILTER
     ctx.translate(cx, cy)
     ctx.rotate((state.rotation * Math.PI) / 180)
     ctx.scale(state.scale, state.scale)
@@ -2076,6 +2084,98 @@ function syncGroupPhotoUi(): void {
 }
 
 const groupPhoto = new GroupPhoto(stickerLayer, () => syncGroupPhotoUi())
+
+/** Lead squad mate rolled shiny for the current photo? */
+let leadShiny = false
+const SHINIES_LS = 'axieIdol.shinies'
+let goldenOdds = 5000
+function goldenOddsLabel(): string {
+  return goldenOdds.toLocaleString('en-US')
+}
+function loadSeenShinies(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SHINIES_LS)
+    const arr = raw ? (JSON.parse(raw) as unknown) : []
+    return new Set(Array.isArray(arr) ? arr.map(String) : [])
+  } catch {
+    return new Set()
+  }
+}
+function rememberShiny(id: string): void {
+  try {
+    const seen = loadSeenShinies()
+    seen.add(id)
+    localStorage.setItem(SHINIES_LS, JSON.stringify([...seen]))
+  } catch {
+    /* ignore */
+  }
+}
+function announceShiny(id: string): void {
+  rememberShiny(id)
+  showLiveToast(`Shiny ${castLabelName(id)}! 1 in 256`, 2400)
+}
+function syncLeadShinyClass(): void {
+  stickerTarget.classList.toggle('is-shiny', leadShiny && !customAxieId)
+}
+/** Dev hook (?dev=1 only): <html data-force-shiny="1"> makes every roll shiny for QA. */
+function shinyRandom(): () => number {
+  return isDevMode() && document.documentElement.dataset.forceShiny === '1' ? () => 0 : Math.random
+}
+function rollLeadShiny(id: string): void {
+  leadShiny = rollShiny(shinyRandom())
+  syncLeadShinyClass()
+  if (leadShiny) announceShiny(id)
+}
+
+/** Golden Axie found: gold modal, then Snap with it. */
+function showGoldenFound(): void {
+  if (!sparkVictory) return
+  sparkVictory.classList.add('is-cast-follow', 'is-golden')
+  if (sparkVictoryKicker) sparkVictoryKicker.textContent = 'GOLDEN AXIE'
+  if (sparkVictoryAvatar) {
+    sparkVictoryAvatar.src = '/previews/golden.png'
+    sparkVictoryAvatar.alt = 'Golden Axie'
+    sparkVictoryAvatar.hidden = false
+  }
+  if (sparkVictoryAmount) sparkVictoryAmount.hidden = true
+  if (sparkVictoryTitle) sparkVictoryTitle.textContent = 'You found the Golden Axie!'
+  if (sparkVictoryBody) {
+    sparkVictoryBody.innerHTML = `One in every <strong>${goldenOddsLabel()}</strong> Snaps hides it, and yours did. Your squad is in the Hall of Fame, and the Golden Axie joins your squad.`
+  }
+  if (sparkVictorySub) sparkVictorySub.textContent = ''
+  if (sparkVictoryNext) sparkVictoryNext.hidden = true
+  if (btnSparkVictoryOk) {
+    btnSparkVictoryOk.textContent = 'Snap with the Golden Axie'
+    btnSparkVictoryOk.dataset.snapCast = 'golden'
+  }
+  sparkVictory.hidden = false
+  startSparkConfetti(4000, sparkVictoryConfetti)
+  window.setTimeout(() => btnSparkVictoryOk?.focus(), 60)
+}
+
+type GoldenSummary = {
+  odds?: number
+  count?: number
+  latest?: { postId: string; label: string; createdAt: number } | null
+  finders?: { postId: string; label: string; axieId: string; createdAt: number }[]
+}
+function applyGoldenSummary(g: GoldenSummary | null | undefined): void {
+  if (!g) return
+  if (typeof g.odds === 'number' && g.odds > 0) goldenOdds = g.odds
+  const banner = document.querySelector<HTMLElement>('#feed-golden-banner')
+  if (banner) {
+    banner.innerHTML = g.latest
+      ? `<div class="golden-banner">${icon('trophy', 20)}<span><strong>${escapeHtml(g.latest.label)}</strong> found the Golden Axie</span><span class="golden-count">${g.count || 1} found</span></div>`
+      : ''
+  }
+  const hof = document.querySelector<HTMLElement>('#board-hof')
+  if (hof) {
+    const list = (g.finders || []).map((f) => `<span>${escapeHtml(f.label)}</span>`).join('')
+    hof.innerHTML = `<div class="board-hof-head"><span>Golden Axies found</span><span class="board-hof-count">${g.count || 0}</span></div>
+<div class="board-hof-sub">Hidden in 1 of every ${goldenOddsLabel()} Snaps. Nobody knows which one.</div>
+${list ? `<div class="board-hof-list">${list}</div>` : ''}`
+  }
+}
 btnTrayClear?.addEventListener('click', () => {
   groupPhoto.clear()
   showLiveToast('Back to a solo photo', 1400)
@@ -2312,6 +2412,7 @@ async function selectCast(id: CastId): Promise<void> {
   if (!wasCustom && id === activeCast && sticker3d?.ready) return
   activeCast = id
   if (groupPhoto.has(id)) groupPhoto.remove(id)
+  rollLeadShiny(id)
   syncCastTrayUI()
   syncPropTrayUI()
   const match = defaultPropForCast(id)
@@ -2346,8 +2447,10 @@ castTray.addEventListener('click', (e) => {
     showLiveToast(`Photo is full (${slots} of ${slots}). Tap a face to swap it out.`, 2000)
     return
   }
-  groupPhoto.add(id, groupStickerSrc(id), { x: state.x, y: state.y }, groupPhoto.count())
-  showLiveToast(`${castLabelName(id)} joined the photo · double-tap to make lead`, 1800)
+  const shiny = rollShiny(shinyRandom())
+  groupPhoto.add(id, groupStickerSrc(id), { x: state.x, y: state.y }, groupPhoto.count(), shiny)
+  if (shiny) announceShiny(id)
+  else showLiveToast(`${castLabelName(id)} joined the photo · double-tap to make lead`, 1800)
 })
 castTray.addEventListener('dblclick', (e) => {
   const btn = (e.target as HTMLElement | null)?.closest?.('.cast-chip') as HTMLButtonElement | null
@@ -2967,7 +3070,7 @@ function hideSparkVictory(): void {
   activeCelebrationNotifId = null
   if (sparkVictory) {
     sparkVictory.hidden = true
-    sparkVictory.classList.remove('is-cast-follow', 'is-social')
+    sparkVictory.classList.remove('is-cast-follow', 'is-social', 'is-golden')
   }
   if (sparkVictoryAvatar) {
     sparkVictoryAvatar.hidden = true
@@ -3355,7 +3458,7 @@ function showPropUnlockVictory(propIds: string[]): void {
 }
 
 function queueCastUnlocks(ids: string[], propIds?: string[]): void {
-  const casts = (ids || []).filter((id) => CAST_MASCOTS.some((c) => c.id === id))
+  const casts = (ids || []).filter((id) => id !== 'golden' && CAST_MASCOTS.some((c) => c.id === id))
   const props = (propIds || []).filter((id) => EQUIPMENT_PROPS.some((p) => p.id === id))
   // Prefer celebrating cast faces; otherwise props
   if (casts.length) showCastFollowVictory(casts)
@@ -3419,7 +3522,21 @@ function renderCastCrewStrip(payload: CastCrewPayload | null | undefined): void 
   <span class="crew-slot-name">${name}</span>
 </div>`
   }).join('')
-  if (profileCastCrewCount) profileCastCrewCount.textContent = `${unlocked.size} of ${CAST_ORDER.length}`
+  {
+    const goldOn = unlocked.has('golden')
+    profileCastCrewGrid.innerHTML += `<div class="crew-slot is-golden${goldOn ? ' is-unlocked' : ' is-locked'}" role="listitem" title="${goldOn ? 'Golden Axie' : 'Golden Axie · hidden in 1 of every ' + goldenOddsLabel() + ' Snaps'}">
+  <div class="crew-face">${goldOn ? '<img src="/previews/golden.png" alt="" loading="lazy" />' : '<span class="crew-q">?</span>'}</div>
+  <span class="crew-slot-name">${goldOn ? 'Golden Axie' : 'Golden?'}</span>
+</div>`
+    const seen = loadSeenShinies()
+    profileCastCrewGrid.querySelectorAll<HTMLElement>('.crew-slot').forEach((slot) => {
+      const nameEl = slot.querySelector('.crew-slot-name')
+      const face = slot.querySelector('.crew-face')
+      const id = CAST_ORDER.find((cid) => castLabelName(cid) === nameEl?.textContent) || ''
+      if (id && seen.has(id) && face) face.insertAdjacentHTML('beforeend', `<span class="crew-shiny" title="Seen shiny">${icon('star', 12)}</span>`)
+    })
+  }
+  if (profileCastCrewCount) profileCastCrewCount.textContent = `${unlocked.size - (unlocked.has('golden') ? 1 : 0)} of ${CAST_ORDER.length}`
   const propsEl = document.querySelector<HTMLElement>('#crew-props')
   const propsCount = document.querySelector<HTMLElement>('#crew-props-count')
   if (propsEl) {
@@ -3442,7 +3559,7 @@ function renderCreateTrays(): void {
   const unlockedProps = new Set(myCastCrew?.unlockedProps || [])
 
   // Cast tray: every face; locked ones greyed with the level that unlocks them
-  const castHtml = CAST_MASCOTS.map((c) => {
+  const castHtml = CAST_MASCOTS.filter((c) => c.id !== 'golden' || unlockedCast.has('golden')).map((c) => {
     const src = castPreviewSrc(c.id)
     const locked = !unlockedCast.has(c.id)
     const pressed = !locked && !customAxieId && activeCast === c.id
@@ -3828,7 +3945,8 @@ function renderFeed(posts: FeedPost[]): void {
       const seedMark = p.seed ? ' data-seed="1"' : ''
       const commentCount = (p.comments || []).length
       const followLabel = castLabelFor(p.axieId)
-      return `<article class="feed-card" data-post-id="${p.id}"${seedMark}>
+      const shinyTag = p.shiny?.length ? `<span class="shiny-tag">${icon('star', 12)}Shiny ${escapeHtml(p.shiny.map((id) => castLabelFor(id)).join(', '))}</span>` : ''
+      return `<article class="feed-card${p.golden ? ' is-golden' : ''}" data-post-id="${p.id}"${seedMark}>
   <div class="feed-card-img-wrap">
     <img class="feed-card-img" src="${escapeHtml(p.imagePath)}" alt="${escapeHtml(p.axieLabel || p.axieId)} post" loading="lazy" />
     <div class="feed-chip-tl">${axieChip}</div>
@@ -3839,6 +3957,7 @@ function renderFeed(posts: FeedPost[]): void {
     <div class="feed-like-row">
       <button type="button" class="btn like-btn${liked ? ' is-liked' : ''}" data-post-id="${p.id}" aria-pressed="${liked ? 'true' : 'false'}" aria-label="Like">${icon(liked ? 'heartFilled' : 'heart', 18)}<span class="like-count" data-like-count="${p.id}">${p.likes || 0}</span></button>
       <span class="btn comment-count" aria-label="Comments">${icon('comment', 18)}<span>${commentCount}</span></span>
+      ${shinyTag}
       <span class="feed-spacer"></span>
       <button type="button" class="btn follow-chip" data-follow-axie="${escapeHtml(p.axieId)}">Follow ${escapeHtml(followLabel)}</button>
     </div>
@@ -4063,6 +4182,7 @@ async function refreshBoard(): Promise<void> {
       burns?: BurnsToday
     }
     applyBurnsPayload(data.burns)
+    applyGoldenSummary((data as { golden?: GoldenSummary }).golden)
     const range: 'daily' | 'all' =
       data.range === 'all' || boardRange === 'all' ? 'all' : 'daily'
     renderBoard(data.rankings || [], data.dayKey, data.resetsAt ?? null, range)
@@ -4173,6 +4293,7 @@ async function refreshFeed(): Promise<void> {
       followedAxieIds = new Set(data.follows.map(String))
     }
     renderScores(data.dailyAxieScores || data.axieScores || {})
+    applyGoldenSummary((data as { golden?: GoldenSummary }).golden)
     renderFeed(data.posts || [])
     updateFeedChrome()
   } catch (err) {
@@ -4411,6 +4532,11 @@ async function submitPost(): Promise<void> {
       authorLabel: postAuthorLabel,
       imageBase64,
     }
+    {
+      const shinyIds = [...groupPhoto.shinyIds()]
+      if (leadShiny && !customAxieId) shinyIds.unshift(activeCast)
+      if (shinyIds.length) body.shiny = shinyIds
+    }
     if (postingOwned) {
       body.ownerAddress = roninAddress
     }
@@ -4437,10 +4563,15 @@ async function submitPost(): Promise<void> {
       throw new Error(data.error || `Post failed (${res.status})`)
     }
     applyBurnsPayload(data.burns)
+    const goldenHit = Boolean((data as { goldenFound?: boolean }).goldenFound)
+    applyGoldenSummary((data as { golden?: GoldenSummary }).golden)
+    leadShiny = false
+    syncLeadShinyClass()
     if (data.castCrew) {
       cacheCastCrew(data.castCrew)
       renderCastCrewStrip(data.castCrew)
     }
+    if (goldenHit) window.setTimeout(() => showGoldenFound(), 400)
     const spark = data.sparkBurn
     const sparkAmount = spark && Number(spark.amount) > 0 ? Number(spark.amount) : 0
     const newlyCast = (

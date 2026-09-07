@@ -32,6 +32,7 @@ export class IdolStore extends DurableObject {
       env: {
         SEED_POSTS: env.SEED_POSTS || '0',
         SKYMAVIS_API_KEY: env.SKYMAVIS_API_KEY || '',
+        GOLDEN_ODDS: env.GOLDEN_ODDS || '',
       },
       log: console,
     })

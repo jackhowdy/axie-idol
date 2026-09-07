@@ -11,6 +11,17 @@ export type ExtraSticker = {
   y: number
   scale: number
   rotation: number
+  /** Colour-shifted rare variant (1 in SHINY_ODDS placements). */
+  shiny: boolean
+}
+
+export const SHINY_ODDS = 256
+/** Canvas/CSS filter that turns a squad mate shiny. */
+export const SHINY_FILTER = 'hue-rotate(150deg) saturate(1.4) brightness(1.08)'
+
+/** Roll a shiny for one placement. */
+export function rollShiny(random: () => number = Math.random): boolean {
+  return random() * SHINY_ODDS < 1
 }
 
 type Point = { x: number; y: number }
@@ -54,11 +65,16 @@ export class GroupPhoto {
     return this.extras.length
   }
 
+  /** Ids of extras that rolled shiny (for the post payload). */
+  shinyIds(): string[] {
+    return this.extras.filter((s) => s.shiny).map((s) => s.id)
+  }
+
   /** Add a squad mate beside the primary. `src` must be a transparent PNG. */
-  add(id: string, src: string, anchor: Point, index: number): ExtraSticker | null {
+  add(id: string, src: string, anchor: Point, index: number, shiny = false): ExtraSticker | null {
     if (this.has(id)) return null
     const el = document.createElement('img')
-    el.className = 'extra-sticker'
+    el.className = shiny ? 'extra-sticker is-shiny' : 'extra-sticker'
     el.src = src
     el.alt = ''
     el.draggable = false
@@ -72,6 +88,7 @@ export class GroupPhoto {
       y: anchor.y + 40,
       scale: 0.82,
       rotation: side * -6,
+      shiny,
     }
     this.layer.appendChild(el)
     this.bind(s)
@@ -189,6 +206,7 @@ export class GroupPhoto {
       const baseW = img.offsetWidth * scaleX
       const baseH = baseW * (img.naturalHeight / Math.max(1, img.naturalWidth))
       ctx.save()
+      if (s.shiny) ctx.filter = SHINY_FILTER
       ctx.translate(s.x * scaleX, s.y * scaleX)
       ctx.rotate((s.rotation * Math.PI) / 180)
       ctx.scale(s.scale, s.scale)
