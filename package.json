@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "start": "node server.mjs",
     "serve": "node server.mjs",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "dev:worker": "wrangler dev --port 8788",
     "deploy": "npm run build && wrangler deploy"
   },
