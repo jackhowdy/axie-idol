@@ -680,11 +680,22 @@ async function specForFace(id: string): Promise<Axie3DSpec | null> {
     return { kind: 'descriptor', descriptor, gold, label: id }
   }
   if (/^\d+$/.test(id)) {
-    const res = await fetch(`/api/axie/${encodeURIComponent(id)}`, { headers: { Accept: 'application/json' } })
+    const res = await fetch(`/api/axie/${encodeURIComponent(id)}?v=2`, { headers: { Accept: 'application/json' } })
     if (!res.ok) throw new Error(`genes ${res.status}`)
-    const data = (await res.json()) as { genes?: string; name?: string }
+    const data = (await res.json()) as {
+      genes?: string
+      name?: string
+      parts?: { type: string; stage: number }[]
+      bodyShape?: string | null
+    }
     if (!data.genes) throw new Error('no genes')
-    return { kind: 'genes', genes: data.genes, label: data.name || `Axie #${id}` }
+    const stages: Record<string, 1 | 2> = {}
+    for (const p of data.parts || []) {
+      // marketplace uses eyes/ears; the mixer descriptor uses eye/ear
+      const type = p.type === 'eyes' ? 'eye' : p.type === 'ears' ? 'ear' : p.type
+      stages[type] = p.stage === 2 ? 2 : 1
+    }
+    return { kind: 'genes', genes: data.genes, label: data.name || `Axie #${id}`, stages, bodyShape: data.bodyShape ?? null }
   }
   return null
 }

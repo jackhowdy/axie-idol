@@ -1152,10 +1152,10 @@ async function graphqlRequestKeyed(payload) {
 async function fetchAxieGenes(axieId) {
   const cache = storage.get('axies', () => ({}))
   const hit = cache[axieId]
-  if (hit && hit.genes) return hit
+  if (hit && hit.genes && Array.isArray(hit.parts)) return hit
   const data = await graphqlRequest(
     `query($axieId: ID!) {
-      axie(axieId: $axieId) { id name class newGenes genes bodyShape }
+      axie(axieId: $axieId) { id name class newGenes genes bodyShape parts { id name type stage specialGenes } }
     }`,
     { axieId: String(axieId) },
   )
@@ -1167,6 +1167,16 @@ async function fetchAxieGenes(axieId) {
     class: axie.class || null,
     genes: axie.newGenes || axie.genes || '',
     bodyShape: axie.bodyShape || null,
+    // Stage per part slot (1 or 2). The mixer's genes decoder always emits stage 1, so the client
+    // needs this to pick stage-2 meshes (all Nightmare and Nightmare-shiny parts are stage 2).
+    parts: Array.isArray(axie.parts)
+      ? axie.parts.map((p) => ({
+          type: String(p.type || '').toLowerCase(),
+          stage: p.stage === 2 ? 2 : 1,
+          name: p.name || null,
+          specialGenes: p.specialGenes || null,
+        }))
+      : [],
     fetchedAt: Date.now(),
   }
   if (rec.genes) {

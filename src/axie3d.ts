@@ -33,9 +33,18 @@ import type { ThreeAxieMixer3D, AxieMixerManifest } from '@jaatster/threejs-axie
 
 const MAX_PIXEL_RATIO = 2
 const ASSET_BASE = '/assets/axie/'
+/** Bump when the manifest or derived parts change; the pack is served with long cache headers. */
+const PACK_VERSION = '5'
 
 export type Axie3DSpec =
-  | { kind: 'genes'; genes: string; label?: string }
+  | {
+      kind: 'genes'
+      genes: string
+      label?: string
+      stages?: Partial<Record<AxiePartDescriptor['type'], 1 | 2>>
+      /** Marketplace body shape; 'Nightmare' switches to the white nightmare palette. */
+      bodyShape?: string | null
+    }
   | { kind: 'descriptor'; descriptor: AxieDescriptor; label?: string; gold?: boolean }
 
 export type Axie3D = {
@@ -115,11 +124,11 @@ type MutableManifest = { assets: MutableAssets; creator: { partIdsByType: Record
  */
 async function loadManifestWithDerived(): Promise<{ manifest: MutableManifest; derived: DerivedEntries | null }> {
   const [manifest, prov] = await Promise.all([
-    fetch(ASSET_BASE + 'manifest.json').then((r) => {
+    fetch(ASSET_BASE + 'manifest.json?v=' + PACK_VERSION).then((r) => {
       if (!r.ok) throw new Error(`manifest ${r.status}`)
       return r.json() as Promise<MutableManifest>
     }),
-    fetch(ASSET_BASE + 'provenance/derived-parts.json')
+    fetch(ASSET_BASE + 'provenance/derived-parts.json?v=' + PACK_VERSION)
       .then((r) => (r.ok ? (r.json() as Promise<DerivedProvenance>) : null))
       .catch(() => null),
   ])
@@ -196,6 +205,35 @@ export function getAxieMixer(): Promise<ThreeAxieMixer3D> {
   return mixerPromise
 }
 
+/** The genes decoder emits every part at stage 1; apply the marketplace's per-slot stage. */
+export function withStages(
+  descriptor: AxieDescriptor,
+  stages?: Partial<Record<AxiePartDescriptor['type'], 1 | 2>>,
+): AxieDescriptor {
+  if (!stages) return descriptor
+  return {
+    ...descriptor,
+    parts: descriptor.parts.map((p) => {
+      const level = stages[p.type]
+      return level && level !== p.level ? { ...p, level } : p
+    }),
+  }
+}
+
+/**
+ * Nightmare-body Axies: the pack has no nightmare mesh, but it ships a white "<class>-nightmare"
+ * palette (the mixer's own nightmare-body showcase uses the normal body with that palette).
+ */
+export function withNightmareBody(descriptor: AxieDescriptor, bodyShape: string | null | undefined, mixer: ThreeAxieMixer3D): AxieDescriptor {
+  if (bodyShape !== 'Nightmare') return descriptor
+  const variants = (mixer.manifest.creator as unknown as { colorVariants: { index: number; key: string }[] }).colorVariants
+  const current = variants[descriptor.colorVariant]?.key || ''
+  const cls = current.split('-')[0]
+  const target = variants.find((v) => v.key === `${cls}-nightmare`)
+  if (!target) return descriptor
+  return { ...descriptor, body: 'normal', colorVariant: target.index }
+}
+
 /** Apply the downgrade policy against the loaded manifest. Returns a new descriptor. */
 export function downgradeDescriptor(
   descriptor: AxieDescriptor,
@@ -269,6 +307,7 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
   const clock = new Clock()
   let character: Character | null = null
   let raf = 0
+  let hiddenTimer = 0
   let paused = false
   let lean = { x: 0, y: 0 }
   let loadSeq = 0
@@ -286,7 +325,10 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
         const mixer = await getAxieMixer()
         if (seq !== loadSeq) return false
         const has = (id: string) => Boolean((mixer.manifest.assets.parts as Record<string, unknown>)[id])
-        const base = spec.kind === 'genes' ? mixer.decodeGenes(spec.genes).descriptor : spec.descriptor
+        const base =
+          spec.kind === 'genes'
+            ? withNightmareBody(withStages(mixer.decodeGenes(spec.genes).descriptor, spec.stages), spec.bodyShape, mixer)
+            : spec.descriptor
         const descriptor = downgradeDescriptor(base, has, (m) => console.info(m))
         const next = (await mixer.create({
           descriptor,
@@ -349,6 +391,8 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
     dispose() {
       cancelAnimationFrame(raf)
       raf = 0
+      if (hiddenTimer) window.clearInterval(hiddenTimer)
+      hiddenTimer = 0
       loadSeq++
       if (character) {
         scene.remove(character.wrapper)
@@ -391,6 +435,13 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
       tick()
     }
     raf = requestAnimationFrame(loop)
+    // Background tabs pause requestAnimationFrame; keep a slow render alive so snapshots and
+    // returning to the tab never show an empty canvas.
+    if (!hiddenTimer) {
+      hiddenTimer = window.setInterval(() => {
+        if (document.visibilityState === 'hidden') tick(true)
+      }, 1000)
+    }
   }
 
   window.addEventListener('resize', resize)

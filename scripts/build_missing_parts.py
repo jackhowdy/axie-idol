@@ -3,9 +3,8 @@ Best-effort build of the part variants the public mixer pack does not ship.
 
 The public pack covers 576 of the 606 part/stage/skin variants. The 30 missing ones are:
   - 24 "nas-N" parts (skin 13, stage 2): the shiny versions of the Nightmare (skin 12) parts.
-    The pack's own summer (S06) vs summer-shiny (S09) pairs show that "shiny" keeps the mesh and
-    rotates the dominant hue of the texture by roughly +155 degrees, leaving neutrals and accents alone.
-    We apply the same rule to the S12 texture.
+    Shiny keeps the mesh and recolours the dominant hue, leaving neutrals and accents alone. Compared
+    with Sky Mavis art of real NightmareShiny Axies, the Nightmare set goes cool (about -120 degrees).
   - 6 "agamo" parts (skin 2): no Agamo texture exists in the pack, so we reuse the normal-skin (S00)
     mesh and shift its palette to a teal/violet treatment. This is an approximation, not the real art.
 
@@ -34,7 +33,13 @@ DERIVED_DIR = PACK / "textures" / "derived"
 PROVENANCE = PACK / "provenance" / "derived-parts.json"
 
 TYPE_ID = {"eyes": "Eye", "ears": "Ear", "mouth": "Mouth", "horn": "Horn", "back": "Back", "tail": "Tail"}
-SHINY_SHIFT_DEG = 155  # measured from the pack's S06 -> S09 pairs (orange->teal, teal->pink)
+# Measured against Sky Mavis art of real NightmareShiny Axies (#12094912, #2660, #9, #7 vs their
+# non-shiny Nightmare counterparts): pink/red -> blue/purple, purple -> green, teal -> green, i.e. about
+# -120 degrees. (The pack's summer/summer-shiny pairs rotate +155; the Nightmare set was painted cooler.)
+SHINY_SHIFT_DEG = -120
+# Per-part exceptions, checked against the official art: Molten Peas Shiny (Axies #12094912, #2660)
+# keeps a warm red/orange mask with yellow drips instead of going cool.
+SHINY_SHIFT_OVERRIDES = {"S13_Beast04_L2_Eye": 30}  # Molten Peas (Beast eyes, stage 2)
 AGAMO_PRIMARY_DEG = 175  # teal
 AGAMO_SECONDARY_SHIFT_DEG = 120
 
@@ -106,7 +111,7 @@ def hue_dist(h: np.ndarray, center: float) -> np.ndarray:
     return np.minimum(d, 1.0 - d)
 
 
-def recolour(png_path: Path, mode: str) -> bytes:
+def recolour(png_path: Path, mode: str, shiny_shift: float = SHINY_SHIFT_DEG) -> bytes:
     im = Image.open(png_path)
     has_alpha = im.mode in ("RGBA", "LA") or "transparency" in im.info
     im = im.convert("RGBA") if has_alpha else im.convert("RGB")
@@ -122,7 +127,7 @@ def recolour(png_path: Path, mode: str) -> bytes:
         h2 = h.copy()
         s2 = s.copy()
         if mode == "shiny":
-            h2 = np.where(band, (h + SHINY_SHIFT_DEG / 360) % 1.0, h)
+            h2 = np.where(band, (h + shiny_shift / 360) % 1.0, h)
         elif mode == "agamo":
             shift = (AGAMO_PRIMARY_DEG / 360) - dom
             h2 = np.where(band, (h + shift) % 1.0, h)
@@ -177,7 +182,7 @@ def main() -> int:
             continue
         skin = int(pid[1:3])
         if skin == 13:
-            src_id, mode, note = "S12" + pid[3:], "shiny", "shiny of the Nightmare (S12) part: dominant hue +155deg"
+            src_id, mode, note = "S12" + pid[3:], "shiny", "shiny of the Nightmare (S12) part: dominant hue shifted SHINY_SHIFT_DEG (cool)"
         elif skin == 2:
             src_id, mode, note = "S00" + pid[3:], "agamo", "normal (S00) mesh with a teal/violet palette; approximation"
         else:
@@ -196,9 +201,10 @@ def main() -> int:
             tex_id = mat["textures"]["_MainTex"]
             tex = copy.deepcopy(texs[tex_id])
             src_png = tex["variants"].get("unity-import") or tex["variants"]["source"]
-            key = (src_png, mode)
+            shift = SHINY_SHIFT_OVERRIDES.get(pid, SHINY_SHIFT_DEG)
+            key = (src_png, mode + str(shift))
             if key not in tex_cache:
-                png = recolour(local_path(src_png), mode)
+                png = recolour(local_path(src_png), mode, shift)
                 tex_cache[key] = (sha256_bytes(png), png)
             sha, png = tex_cache[key]
             out_file = DERIVED_DIR / f"{sha}.png"
@@ -238,6 +244,11 @@ def main() -> int:
         built += 1
         print(f"built {pid} <- {src_id} ({mode})")
 
+    # prune derived textures no longer referenced (earlier runs with other rules)
+    keep = {Path(t["variants"]["source"]).name for tid, t in texs.items() if tid in prov["textures"]}
+    for f in DERIVED_DIR.glob("*.png"):
+        if f.name not in keep:
+            f.unlink()
     MANIFEST.write_text(json.dumps(manifest, separators=(",", ":")), encoding="utf-8")
     PROVENANCE.write_text(json.dumps(prov, indent=2), encoding="utf-8")
     print(f"done: {built} parts, {len(prov['textures'])} textures, pack now has {len(parts)} parts")
