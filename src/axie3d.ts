@@ -45,7 +45,7 @@ import type { ThreeAxieMixer3D, AxieMixerManifest } from '@jaatster/threejs-axie
 const MAX_PIXEL_RATIO = 2
 const ASSET_BASE = '/assets/axie/'
 /** Bump when the manifest or derived parts change; the pack is served with long cache headers. */
-const PACK_VERSION = '13'
+const PACK_VERSION = '15'
 
 export type Axie3DSpec =
   | {
@@ -262,20 +262,42 @@ export function withNightmareBody(descriptor: AxieDescriptor, bodyShape: string 
  * Maiko-2) sits under the normal skin of the same variant. Kawaii (stage 1) shares Cute Bunny's
  * art. Map those ids to the asset that matches the 2D.
  */
-export const PART_ASSET_OVERRIDES: Record<string, { skin: number }> = {
+export type PartOverride = { skin?: number; level?: 1 | 2; scale?: number }
+export const PART_ASSET_OVERRIDES: Record<string, PartOverride> = {
   S03_Bug08_L1_Mouth: { skin: 0 }, // Kawaii (= Cute Bunny art)
   S03_Reptile10_L2_Eye: { skin: 0 }, // Kabuki-2
   S03_Reptile08_L2_Eye: { skin: 0 }, // Dokuganryu-2
   S03_Aquatic10_L2_Mouth: { skin: 0 }, // Geisha-2
   S03_Bug08_L2_Mouth: { skin: 0 }, // Kawaii-2
-  S03_Plant04_L2_Horn: { skin: 0 }, // Kendama-2
-  S03_Beast04_L2_Horn: { skin: 0 }, // japan-03 horn, stage 2
   S03_Bird04_L2_Back: { skin: 0 }, // Origami-2
   S03_Plant04_L2_Back: { skin: 0 }, // Yakitori-2
   S03_Bird10_L2_Tail: { skin: 0 }, // Omatsuri-2
   S03_Bug06_L2_Tail: { skin: 0 }, // Maki-2
-  S03_Bug12_L2_Ear: { skin: 0 }, // Mon-2
-  S03_Plant08_L2_Ear: { skin: 0 }, // Maiko-2
+  // no stage-2 asset exists for these; the stage-1 Japan mesh is the same object, drawn larger
+  S03_Plant04_L2_Horn: { level: 1, scale: 1.35 }, // Kendama-2
+  S03_Beast04_L2_Horn: { level: 1, scale: 1.3 }, // japan-03 horn, stage 2
+  S03_Bug12_L2_Ear: { level: 1, scale: 1.3 }, // Mon-2
+  S03_Plant08_L2_Ear: { level: 1, scale: 1.3 }, // Maiko-2
+}
+
+/** Mesh-name prefixes that need a post-assembly scale (from overrides with a scale). */
+export function overrideScales(descriptor: AxieDescriptor): Map<string, number> {
+  const out = new Map<string, number>()
+  for (const p of descriptor.parts) {
+    const o = PART_ASSET_OVERRIDES[formatAxiePartAssetId(p)]
+    if (o?.scale) out.set(formatAxiePartAssetId({ ...p, skin: o.skin ?? p.skin, level: o.level ?? p.level }), o.scale)
+  }
+  return out
+}
+
+/** Scale the meshes of enlarged parts about their attachment joint (they are children of the joint). */
+export function applyOverrideScales(root: Object3D, scales: Map<string, number>): void {
+  if (!scales.size) return
+  root.traverse((o) => {
+    const m = o as Mesh
+    if (!m.isMesh) return
+    for (const [prefix, s] of scales) if (o.name.startsWith(prefix)) m.scale.multiplyScalar(s)
+  })
 }
 
 export function applyPartOverrides(descriptor: AxieDescriptor, log: (msg: string) => void = () => {}): AxieDescriptor {
@@ -285,8 +307,9 @@ export function applyPartOverrides(descriptor: AxieDescriptor, log: (msg: string
       const id = formatAxiePartAssetId(p)
       const o = PART_ASSET_OVERRIDES[id]
       if (!o) return p
-      log(`[axie3d] override ${id} -> skin ${o.skin}`)
-      return { ...p, skin: o.skin }
+      const next = { ...p, skin: o.skin ?? p.skin, level: o.level ?? p.level }
+      log(`[axie3d] override ${id} -> ${formatAxiePartAssetId(next)}${o.scale ? ' x' + o.scale : ''}`)
+      return next
     }),
   }
 }
@@ -734,6 +757,68 @@ export function addMysticPod(root: Object3D, cls: string, axieId: string): void 
   anchor.add(group)
 }
 
+/**
+ * Eye parts whose texture carries an alpha mask (Papi and friends) render the masked area as a
+ * flat patch in the body colour; the 2D art draws them as lines directly on the body. Enable the
+ * shader's alpha clip on those eye materials so only the drawn lines remain.
+ */
+export function clipMaskedEyes(root: Object3D, manifest: AxieMixerManifest): void {
+  const parts = manifest.assets.parts as unknown as Record<string, { descriptor: { type: string }; rigs: readonly { materialId: string }[] }>
+  const mats = manifest.assets.materials as unknown as Record<string, { textures: Record<string, string> }>
+  const texs = manifest.assets.textures as unknown as Record<string, { hasAlpha?: boolean }>
+  root.traverse((o) => {
+    const m = o as Mesh
+    if (!m.isMesh || o.name.includes('AxieOutline')) return
+    const id = o.name.split('__')[0]
+    const part = parts[id]
+    if (!part || part.descriptor.type !== 'eye') return
+    const masked = part.rigs.some((r) => texs[mats[r.materialId]?.textures?._MainTex]?.hasAlpha)
+    if (!masked) return
+    const mat = m.material as unknown as { uniforms?: Record<string, { value: unknown }> }
+    if (mat.uniforms?.uAlphaClipEnabled) mat.uniforms.uAlphaClipEnabled.value = 1
+  })
+}
+
+/**
+ * Palette-true shading. Sky Mavis's 2D art shades the body with the palette's "shaded1" colour,
+ * which for some variants is a different hue (dawn-04: cyan body, lilac-pink shadow). The pack's
+ * V4 shader darkens with one grey multiplier instead, so on the body material we swap that
+ * multiplier for the per-channel ratio shaded1 / primary1. For most palettes the ratio is a plain
+ * ~0.75 darkening, so nothing else changes.
+ */
+export function applyPaletteShadow(root: Object3D, manifest: AxieMixerManifest, colorVariant: number): void {
+  const variants = (manifest.creator as unknown as { colorVariants: { primary1: string; shaded1: string }[] }).colorVariants
+  const v = variants[colorVariant]
+  if (!v) return
+  const p = new Color('#' + v.primary1)
+  const s = new Color('#' + v.shaded1)
+  const ratio = new Color(
+    Math.min(1.6, s.r / Math.max(p.r, 0.02)),
+    Math.min(1.6, s.g / Math.max(p.g, 0.02)),
+    Math.min(1.6, s.b / Math.max(p.b, 0.02)),
+  )
+  root.traverse((o) => {
+    const m = o as Mesh & { isSkinnedMesh?: boolean }
+    if (!m.isSkinnedMesh || o.name.includes('AxieOutline')) return
+    const mat = m.material as unknown as {
+      fragmentShader?: string
+      uniforms?: Record<string, { value: unknown }>
+      needsUpdate?: boolean
+      userData?: { axieMixerV4?: unknown }
+    }
+    if (!mat.fragmentShader || !mat.uniforms || !mat.userData?.axieMixerV4) return
+    if (!mat.fragmentShader.includes('vec3(uShadowMultiplier)')) return
+    mat.fragmentShader = mat.fragmentShader.replace('vec3(uShadowMultiplier)', 'uShadowTint')
+    mat.fragmentShader = mat.fragmentShader.replace('uniform float uShadowMultiplier;', 'uniform float uShadowMultiplier;\n  uniform vec3 uShadowTint;')
+    // 2D shades the lower ~40% of the body with a soft horizontal edge; the pack lights from a
+    // fixed view-space direction with a hard edge. Light the body from straight above instead.
+    mat.fragmentShader = mat.fragmentShader.replace('vec3(15.0, 80.0, -30.0)', 'vec3(4.0, 80.0, 14.0)')
+    mat.fragmentShader = mat.fragmentShader.replace('unityHlslSmoothstep(-0.25, 0.55, fakeLightDot)', 'unityHlslSmoothstep(-16.0, 4.0, fakeLightDot)')
+    mat.uniforms.uShadowTint = { value: ratio }
+    mat.needsUpdate = true
+  })
+}
+
 /** Bounds of the posed character: part meshes plus the skinned body vertices. */
 function characterBounds(root: Object3D): Box3 {
   const box = new Box3()
@@ -845,6 +930,9 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
           })
           console.info('[axie3d] colours ' + rows.join(' | '))
         }
+        applyOverrideScales(next.wrapper, overrideScales(base))
+        clipMaskedEyes(next.wrapper, mixer.manifest)
+        applyPaletteShadow(next.wrapper, mixer.manifest, descriptor.colorVariant)
         if (spec.kind === 'descriptor' && spec.gold) goldify(next.wrapper)
         if (spec.kind === 'genes' && spec.bodyShape !== 'Nightmare' && (spec.mysticParts ?? 0) > 0) {
           next.update(0)
