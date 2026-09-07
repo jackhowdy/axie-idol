@@ -37,21 +37,16 @@
           </div>
         </div>
 
-        <div class="chrome top">
-          <div class="top-row">
-            <div class="brand">Axie Idol · LIVE</div>
-            <button type="button" id="btn-to-feed" class="btn nav-chip" title="Idol Feed" hidden>Feed</button>
-            <button type="button" id="btn-to-profile" class="btn nav-chip" title="Profile" hidden>Profile</button>
-          </div>
-          <p class="hint">Free cast first — connect later to bring your own Axies</p>
-          <div id="auth-bar" class="auth-bar">
+        <div class="chrome top vf-top">
+          <button type="button" id="btn-vf-back" class="btn icon vf-round" title="Back to Feed" aria-label="Back to Feed"><span data-icon="back"></span></button>
+          <div id="vf-quest-chip" class="vf-quest-chip"><span class="vf-dot"></span><span id="vf-quest-text">Post to unlock Bing</span></div>
+          <button type="button" id="btn-flip" class="btn icon vf-round" title="Flip camera" aria-label="Flip camera"><span data-icon="flip"></span></button>
+          <button type="button" id="btn-to-feed" class="btn nav-chip" hidden>Feed</button>
+          <button type="button" id="btn-to-profile" class="btn nav-chip" hidden>Profile</button>
+          <div id="auth-bar" class="auth-bar" hidden>
             <p id="guest-badge" class="guest-badge auth-identity" hidden></p>
-            <button type="button" id="btn-connect-ronin" class="btn auth-btn" title="Connect via Ronin Waypoint or paste address">
-              Bring your Axies
-            </button>
-            <button type="button" id="btn-disconnect-ronin" class="btn auth-btn auth-disconnect" hidden title="Disconnect wallet">
-              Disconnect
-            </button>
+            <button type="button" id="btn-connect-ronin" class="btn auth-btn" hidden>Bring your Axies</button>
+            <button type="button" id="btn-disconnect-ronin" class="btn auth-btn auth-disconnect" hidden>Disconnect</button>
           </div>
           <form id="axie-id-form" class="axie-id-bar" autocomplete="off" hidden>
             <label for="axie-id-input" class="axie-id-label">Axie ID</label>
@@ -92,25 +87,29 @@
 
         <!-- Camera permission / iOS gate (getUserMedia only on tap) -->
         <div id="camera-gate" class="camera-gate">
-          <p class="camera-gate-title">Camera for Idol</p>
+          <p class="camera-gate-title">Snap your world</p>
           <p class="camera-gate-sub">
-            <strong>Enable Camera</strong> = live AR viewfinder<br />
-            <strong>Use iPhone Camera</strong> = snap a still, then place sticker
+            <strong>Enable camera</strong> opens the live viewfinder.<br />
+            <strong>Use phone camera</strong> takes a still, then you place your Axie.
           </p>
           <button type="button" id="btn-enable-camera" class="btn primary gate-btn">
-            Enable Camera
+            Enable camera
           </button>
           <button type="button" id="btn-native-camera" class="btn secondary gate-btn">
-            Use iPhone Camera
+            Use phone camera
           </button>
           <p class="camera-gate-note">
-            True live viewfinder needs Safari + HTTPS. Gallery upload stays in the toolbar.
+            Live viewfinder needs Safari or Chrome over HTTPS. Gallery upload always works.
           </p>
         </div>
 
         <div id="live-toast" class="toast live-toast" hidden></div>
 
         <div class="chrome bottom">
+          <div class="tray-head">
+            <span class="tray-label">Your crew</span>
+            <button type="button" id="btn-tray-connect" class="tray-link">Bring my Axies</button>
+          </div>
           <div id="inventory-tray" class="inventory-tray" role="toolbar" aria-label="Owned Axies" hidden>
             <div class="inventory-label">Inventory</div>
             <div id="inventory-scroll" class="inventory-scroll"></div>
@@ -125,34 +124,15 @@
           </div>
           <div id="prop-tray" class="prop-tray" role="toolbar" aria-label="Vibeathon equipment props">
           </div>
-          <div class="toolbar">
-            <button type="button" id="btn-flip" class="btn icon" title="Flip camera" aria-label="Flip camera">
-              🔄
-            </button>
-            <button type="button" id="btn-rotate-ccw" class="btn icon" title="Rotate left" aria-label="Rotate left">
-              ↺
-            </button>
-            <button type="button" id="btn-zoom-out" class="btn icon" title="Zoom out" aria-label="Zoom out">
-              −
-            </button>
-            <button type="button" id="btn-capture" class="btn capture" title="Capture" aria-label="Capture">
-              <span class="shutter"></span>
-            </button>
-            <button type="button" id="btn-zoom-in" class="btn icon" title="Zoom in" aria-label="Zoom in">
-              +
-            </button>
-            <button type="button" id="btn-rotate-cw" class="btn icon" title="Rotate right" aria-label="Rotate right">
-              ↻
-            </button>
-            <button
-              type="button"
-              id="btn-upload"
-              class="btn icon"
-              title="Upload from gallery"
-              aria-label="Upload from gallery"
-            >
-              🖼️
-            </button>
+          <div class="toolbar vf-toolbar">
+            <button type="button" id="btn-upload" class="btn icon vf-round" title="Upload from gallery" aria-label="Upload from gallery"><span data-icon="gallery"></span></button>
+            <div class="vf-adjust">
+              <button type="button" id="btn-rotate-ccw" class="btn icon vf-round small" title="Rotate left" aria-label="Rotate left"><span data-icon="rotateL"></span></button>
+              <button type="button" id="btn-zoom-out" class="btn icon vf-round small" title="Zoom out" aria-label="Zoom out"><span data-icon="minus"></span></button>
+              <button type="button" id="btn-zoom-in" class="btn icon vf-round small" title="Zoom in" aria-label="Zoom in"><span data-icon="plus"></span></button>
+              <button type="button" id="btn-rotate-cw" class="btn icon vf-round small" title="Rotate right" aria-label="Rotate right"><span data-icon="rotateR"></span></button>
+            </div>
+            <button type="button" id="btn-capture" class="btn capture" title="Capture" aria-label="Capture"><span class="shutter"></span></button>
           </div>
           <!-- Gallery pick (no capture attribute) -->
           <input id="file-input" type="file" accept="image/*" hidden />

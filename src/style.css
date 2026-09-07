@@ -3418,3 +3418,49 @@ button.id-chip {
 #owner.screen.active { padding-bottom: calc(76px + var(--safe-bottom)); }
 #feed.screen.active .feed-empty,
 #feed.screen.active .feed-error { margin-bottom: calc(76px + var(--safe-bottom)); }
+
+/* ===== Field revamp: light Snap chrome ===== */
+#viewfinder { --vf-text: var(--text); --vf-muted: var(--muted); background: var(--bg); }
+#viewfinder .chrome.top { background: none; padding: calc(12px + var(--safe-top)) 16px 0; }
+#viewfinder .chrome.bottom { background: rgba(255, 255, 255, 0.86); backdrop-filter: blur(10px); border-radius: 24px 24px 0 0; padding: 14px 16px calc(18px + var(--safe-bottom)); }
+#viewfinder .btn, #viewfinder .cast-chip, #viewfinder .prop-chip, #viewfinder .inv-chip, #viewfinder .cast-name, #viewfinder .prop-name, #viewfinder .inv-name, #viewfinder .inventory-label { color: var(--text); }
+.vf-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.vf-round { width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.86); border: 0; box-shadow: 0 2px 8px rgba(26, 43, 60, 0.10); pointer-events: auto; }
+.vf-round.small { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
+.vf-round span { display: flex; }
+.vf-round svg { width: 20px; height: 20px; }
+.vf-quest-chip { pointer-events: auto; flex: 1 1 auto; min-width: 0; height: 40px; padding: 0 14px; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.86); display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 13px; font-weight: 800; color: var(--text); box-shadow: 0 2px 8px rgba(26, 43, 60, 0.10); }
+.vf-quest-chip #vf-quest-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vf-dot { width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--accent-hot); flex: 0 0 auto; }
+.tray-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.tray-label { font-family: var(--font-display); font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.tray-link { pointer-events: auto; appearance: none; border: 0; background: none; font: inherit; font-family: var(--font-display); font-weight: 800; font-size: 12px; color: var(--accent); cursor: pointer; min-height: 44px; padding: 0; }
+#viewfinder .cast-tray { gap: 10px; }
+#viewfinder .cast-chip { background: none; border: 0; box-shadow: none; min-width: 60px; height: auto; padding: 0; gap: 4px; backdrop-filter: none; }
+#viewfinder .cast-thumb { width: 56px; height: 56px; border-radius: var(--radius-pill); background: var(--bg-2); border: 3px solid var(--bg-2); object-fit: cover; }
+#viewfinder .cast-chip[aria-pressed="true"] { background: none; box-shadow: none; }
+#viewfinder .cast-chip[aria-pressed="true"] .cast-thumb { border-color: var(--accent-hot); }
+#viewfinder .cast-chip.is-locked { position: relative; }
+#viewfinder .cast-chip.is-locked .cast-thumb { opacity: 0.35; filter: grayscale(1); background: var(--bg); }
+#viewfinder .cast-chip.is-locked .cast-lock { position: absolute; top: 19px; left: 50%; transform: translateX(-50%); color: var(--text); display: flex; }
+#viewfinder .cast-chip.is-locked .cast-name { color: var(--muted); }
+#viewfinder .cast-name { font-family: var(--font-display); font-size: 11px; font-weight: 800; }
+#viewfinder .prop-chip { background: var(--bg); border: 1px solid var(--border); color: var(--text); }
+#viewfinder .prop-chip[aria-pressed="true"] { border-color: var(--accent-hot); background: rgba(255, 107, 44, 0.12); }
+#viewfinder .prop-ico { display: flex; }
+.vf-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 6px; }
+.vf-adjust { display: flex; gap: 6px; }
+#viewfinder .btn.capture { width: 76px; height: 76px; min-width: 76px; background: var(--accent-hot); border: 5px solid var(--bg-2); box-shadow: 0 6px 18px rgba(255, 107, 44, 0.4); }
+#viewfinder .btn.capture .shutter { width: 52px; height: 52px; border: 3px solid rgba(255, 255, 255, 0.7); background: none; }
+#viewfinder .camera-gate { background: rgba(255, 255, 255, 0.94); color: var(--text); border-radius: 20px; border: 1px solid var(--border); }
+#viewfinder .camera-gate-title { color: var(--text); font-family: var(--font-display); font-size: 1.25rem; font-weight: 900; }
+#viewfinder .camera-gate-sub, #viewfinder .camera-gate-note { color: var(--muted); }
+#viewfinder .live-toast { background: var(--text); color: #fff; }
+/* Snap chrome: beat the older dark-theme rules by specificity */
+#viewfinder { background: linear-gradient(180deg, #9CCBF4 0%, #CFE9FF 38%, #DFF5C8 39%, #B9E29A 100%); }
+#viewfinder #video, #viewfinder #upload-preview { background: transparent; }
+#viewfinder .chrome .btn, #viewfinder .chrome .btn.icon { color: var(--text); }
+#viewfinder .btn.icon.vf-round { width: 44px; height: 44px; background: rgba(255, 255, 255, 0.86); border: 0; box-shadow: 0 2px 8px rgba(26, 43, 60, 0.10); font-size: 1rem; }
+#viewfinder .btn.icon.vf-round.small { width: 40px; height: 40px; }
+#viewfinder .btn.gate-btn.secondary { background: var(--bg-2); border: 1px solid var(--border); color: var(--text); }
+#viewfinder .btn.gate-btn.primary { background: var(--accent); color: #fff; }

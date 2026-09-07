@@ -4,6 +4,7 @@
  */
 
 import { icon } from './icons'
+import { unlockLevelFor } from './quests'
 import type { Sticker3D } from './sticker3d'
 import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
@@ -3347,34 +3348,28 @@ function renderCreateTrays(): void {
   if (!unlockedCast.has('kotaro')) unlockedCast.add('kotaro')
   const unlockedProps = new Set(myCastCrew?.unlockedProps || [])
 
-  // Cast tray: only unlocked faces
-  const castHtml = CAST_MASCOTS.filter((c) => unlockedCast.has(c.id))
-    .map((c) => {
-      const src = castPreviewSrc(c.id)
-      const pressed = !customAxieId && activeCast === c.id
-      return `<button type="button" class="cast-chip" data-cast="${c.id}" aria-pressed="${pressed ? 'true' : 'false'}" title="${escapeHtml(c.label)}">
+  // Cast tray: every face; locked ones greyed with the level that unlocks them
+  const castHtml = CAST_MASCOTS.map((c) => {
+    const src = castPreviewSrc(c.id)
+    const locked = !unlockedCast.has(c.id)
+    const pressed = !locked && !customAxieId && activeCast === c.id
+    const lvl = unlockLevelFor(c.id)
+    const sub = locked && lvl != null ? `Lv ${lvl}` : escapeHtml(c.label)
+    const title = `${escapeHtml(c.label)}${locked && lvl != null ? ` · unlocks at level ${lvl}` : ''}`
+    return `<button type="button" class="cast-chip${locked ? ' is-locked' : ''}" data-cast="${c.id}" aria-pressed="${pressed ? 'true' : 'false'}" title="${title}">
   <img class="cast-thumb" src="${escapeHtml(src)}" alt="" draggable="false" onerror="this.src='/previews/kotaro.png'" />
-  <span class="cast-name">${escapeHtml(c.label)}</span>
+  ${locked ? `<span class="cast-lock">${icon('lock', 18)}</span>` : ''}
+  <span class="cast-name">${sub}</span>
 </button>`
-    })
-    .join('')
+  }).join('')
   castTray.innerHTML = castHtml || ''
 
   // Prop tray: only unlocked props (none free at launch)
-  const propIcons: Record<string, string> = {
-    'kotaro-sword': '⚔',
-    'bing-cannon': '💣',
-    'kibo-hammer': '🔨',
-    'paladill-axe': '🪓',
-    'pomodoro-staff': '🪄',
-    'tripp-sword': '🗡',
-    'xia-axe': '⛏',
-  }
   const propHtml = (EQUIPMENT_PROPS as readonly { id: PropId; file: string; label: string; short?: string }[]).filter((p) => unlockedProps.has(p.id))
     .map((p) => {
       const on = equippedProp === p.id
       return `<button type="button" class="prop-chip" data-prop="${p.id}" aria-pressed="${on ? 'true' : 'false'}" title="${escapeHtml(p.label)}">
-  <span class="prop-ico" aria-hidden="true">${propIcons[p.id] || '🎁'}</span>
+  <span class="prop-ico" aria-hidden="true">${icon('sword', 16)}</span>
   <span class="prop-name">${escapeHtml(p.short || p.label)}</span>
 </button>`
     })
@@ -5378,6 +5373,13 @@ roninAddressInput.addEventListener('keydown', (e) => {
     void applyRoninAddress(roninAddressInput.value)
   }
   if (e.key === 'Escape') closeRoninModal()
+})
+
+document.querySelector<HTMLButtonElement>('#btn-vf-back')?.addEventListener('click', () => {
+  void showFeed('global')
+})
+document.querySelector<HTMLButtonElement>('#btn-tray-connect')?.addEventListener('click', () => {
+  void connectRonin()
 })
 
 tabbar.addEventListener('click', (e) => {
