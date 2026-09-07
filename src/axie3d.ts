@@ -20,6 +20,8 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  MeshToonMaterial,
+  NeutralToneMapping,
   PerspectiveCamera,
   Scene,
   SRGBColorSpace,
@@ -28,6 +30,7 @@ import {
   type Material,
   type Object3D,
 } from 'three'
+import { MysticGammaCompositor } from '@jaatster/threejs-axie-mixer3d-public/rendering'
 import {
   createAxieMixer3D,
   formatAxiePartAssetId,
@@ -39,7 +42,7 @@ import type { ThreeAxieMixer3D, AxieMixerManifest } from '@jaatster/threejs-axie
 const MAX_PIXEL_RATIO = 2
 const ASSET_BASE = '/assets/axie/'
 /** Bump when the manifest or derived parts change; the pack is served with long cache headers. */
-const PACK_VERSION = '6'
+const PACK_VERSION = '7'
 
 export type Axie3DSpec =
   | {
@@ -93,6 +96,8 @@ function makeRenderer(id: string): WebGLRenderer {
   })
   renderer.setClearColor(0x000000, 0)
   renderer.outputColorSpace = SRGBColorSpace
+  renderer.toneMapping = NeutralToneMapping
+  renderer.toneMappingExposure = 1
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO))
   if (!firstRenderer) firstRenderer = renderer
   return renderer
@@ -283,21 +288,43 @@ function goldify(root: Object3D): void {
 }
 
 /**
- * Nightmare body spikes. The pack has no Nightmare body mesh; Sky Mavis's art shows the white body
- * with pointed thorns in the class accent colour. We add toon cones on an ellipsoid fitted to the
- * body mesh, parented to the spine bone so they ride the idle animation.
+ * Nightmare body thorns. The pack has no Nightmare body mesh; Sky Mavis's art shows the white body
+ * with a handful of curved thorns in the class accent colour: two large ones on the crown sweeping
+ * back, one on each flank, small ones low on the front. Each thorn is seated on the nearest skinned
+ * body vertex in its direction, hooks toward the rear, and is parented to the spine bone so it rides
+ * the idle animation.
  */
-const SPIKE_DIRS: [number, number, number][] = [
-  [-0.55, 0.85, 0.1], // crown, front-left
-  [0.5, 0.88, -0.2], // crown, right
-  [-0.2, 0.75, -0.7], // crown, back
-  [-0.98, 0.3, 0.1], // left flank, upper
-  [0.98, 0.25, 0.0], // right flank, upper
-  [-0.8, -0.35, 0.5], // lower left
-  [0.85, -0.4, 0.4], // lower right
-  [-0.6, -0.2, -0.8], // rear left
-  [0.7, 0.1, -0.75], // rear right
+type ThornSlot = { dir: [number, number, number]; len: number; rad: number; bend: number }
+const THORN_SLOTS: ThornSlot[] = [
+  { dir: [-0.7, 0.7, 0.3], len: 0.3, rad: 0.075, bend: 0.5 }, // crown left, above the eye
+  { dir: [0.75, 0.65, 0.2], len: 0.28, rad: 0.07, bend: 0.5 }, // crown right
+  { dir: [-0.95, 0.4, -0.15], len: 0.22, rad: 0.06, bend: 0.5 }, // left flank, sweeping up and back
+  { dir: [0.95, 0.35, -0.2], len: 0.22, rad: 0.06, bend: 0.5 }, // right flank
+  { dir: [-0.7, -0.5, 0.5], len: 0.15, rad: 0.05, bend: 0.25 }, // low front left
+  { dir: [0.72, -0.55, 0.42], len: 0.15, rad: 0.05, bend: 0.25 }, // low front right
+  { dir: [-0.4, 0.45, -0.85], len: 0.22, rad: 0.06, bend: 0.35 }, // rear left
+  { dir: [0.45, 0.4, -0.82], len: 0.22, rad: 0.06, bend: 0.35 }, // rear right
 ]
+
+/** A tapered thorn along +Y that hooks toward -Z near the tip. */
+function thornGeometry(rad: number, len: number, bend: number): ConeGeometry {
+  const geo = new ConeGeometry(rad, len, 12, 10)
+  const pos = geo.attributes.position
+  const p = new Vector3()
+  for (let i = 0; i < pos.count; i++) {
+    p.fromBufferAttribute(pos, i)
+    const t = (p.y + len / 2) / len // 0 at the base, 1 at the tip
+    const taper = Math.pow(1 - t, 0.75) / Math.max(1e-3, 1 - t) // sharper tip than a plain cone
+    if (t < 0.999) {
+      p.x *= taper
+      p.z *= taper
+    }
+    p.z -= bend * len * t * t
+    pos.setXYZ(i, p.x, p.y, p.z)
+  }
+  geo.computeVertexNormals()
+  return geo
+}
 
 function worldPos(root: Object3D, name: string): Vector3 | null {
   let out: Vector3 | null = null
@@ -308,11 +335,11 @@ function worldPos(root: Object3D, name: string): Vector3 | null {
 }
 
 /**
- * The skinned body reports a near-zero bounding box (centimetre rig under a 0.01 node), so the body
- * ellipsoid is fitted from the part attachment joints: eye (front), tail (back), ears (sides),
- * top horn (top) and feet (bottom).
+ * The pack's body shader skins vertices in its own space, so mesh vertex positions cannot be read
+ * back reliably. The body is approximated by an ellipsoid fitted from the part joints: eye (front),
+ * tail (back), ears (sides), top horn (top) and feet (bottom).
  */
-function bodyBounds(root: Object3D): Box3 | null {
+function bodyEllipsoid(root: Object3D): { center: Vector3; radii: Vector3 } | null {
   const eye = worldPos(root, 'Root_Eye_M_JNT')
   const tail = worldPos(root, 'Root_Tail_M_JNT')
   const earL = worldPos(root, 'Root_Ear_L_JNT')
@@ -321,62 +348,93 @@ function bodyBounds(root: Object3D): Box3 | null {
   const foot = worldPos(root, 'Fool_L_JNT') || worldPos(root, 'Toe_L_JNT')
   if (!eye || !tail || !earL || !earR || !top) return null
   const bottomY = foot ? foot.y : 0
-  const halfW = Math.abs(earL.x - earR.x) * 0.5 * 1.3
-  const min = new Vector3(-halfW, bottomY, tail.z - 0.02)
-  const max = new Vector3(halfW, top.y * 0.97, eye.z + 0.08)
-  return new Box3(min, max)
+  // the ears, eye and tail attach inside the silhouette; the body bulges past them
+  const halfW = Math.abs(earL.x - earR.x) * 0.5 * 1.32
+  const minZ = tail.z - 0.24
+  const maxZ = eye.z + 0.1
+  const topY = top.y * 0.98
+  return {
+    center: new Vector3((earL.x + earR.x) * 0.5, (topY + bottomY) * 0.5, (minZ + maxZ) * 0.5),
+    radii: new Vector3(halfW, (topY - bottomY) * 0.5, (maxZ - minZ) * 0.5),
+  }
 }
 
 export function addNightmareSpikes(root: Object3D, colorHex: string): void {
   root.updateWorldMatrix(true, true)
-  const box = bodyBounds(root)
-  if (!box) return
-  const size = box.getSize(new Vector3())
-  const center = box.getCenter(new Vector3())
-  if (size.y < 0.2) return
-  const radii = new Vector3(size.x * 0.5, size.y * 0.5, size.z * 0.5)
+  const fit = bodyEllipsoid(root)
+  if (!fit) {
+    console.warn('[axie3d] thorns: body joints not found')
+    return
+  }
+  const { center, radii } = fit
+  const size = radii.clone().multiplyScalar(2)
   const height = size.y
-  let bone: Object3D | null = null
+  if (location.search.includes('dev=1')) {
+    console.info('[axie3d] thorns center=' + center.toArray().map((n) => n.toFixed(2)).join(',') + ' radii=' + radii.toArray().map((n) => n.toFixed(2)).join(','))
+  }
+  if (height < 0.2) return
+  let spine: Object3D | null = null
   root.traverse((o) => {
-    if (!bone && o.name === 'Spine01_JNT') bone = o
+    if (!spine && o.name === 'Spine01_JNT') spine = o
   })
-  root.traverse((o) => {
-    if (!bone && o.name === 'Root_Character') bone = o
-  })
-  const anchor: Object3D = bone ?? root
-  if (location.search.includes('dev=1')) console.info('[axie3d] nightmare body box', box.min.toArray().map((n) => n.toFixed(2)).join(','), box.max.toArray().map((n) => n.toFixed(2)).join(','))
+  const anchor: Object3D = spine ?? root
   const group = new Group()
   group.name = 'NightmareSpikes'
   group.matrixAutoUpdate = false
-  // group local space == world space at rest, so spikes follow the bone's delta from the rest pose
   group.matrix.copy(new Matrix4().copy(anchor.matrixWorld).invert())
-  const fill = new MeshStandardMaterial({ color: new Color(colorHex), roughness: 0.55, metalness: 0 })
-  const line = new MeshBasicMaterial({ color: 0x1a1a1a, side: BackSide })
+  const fill = new MeshToonMaterial({ color: new Color(colorHex) })
+  const line = new MeshBasicMaterial({ color: 0x151515, side: BackSide })
   const up = new Vector3(0, 1, 0)
-  SPIKE_DIRS.forEach(([x, y, z], i) => {
-    const dir = new Vector3(x, y, z).normalize()
-    const len = height * (i < 3 ? 0.27 : 0.21)
-    const rad = height * (i < 3 ? 0.07 : 0.055)
-    const surface = new Vector3(dir.x * radii.x, dir.y * radii.y, dir.z * radii.z).multiplyScalar(1.0).add(center)
+  const back = new Vector3(0, 0, -1)
+  for (const slot of THORN_SLOTS) {
+    const dir = new Vector3(...slot.dir).normalize()
+    const seat = new Vector3(dir.x * radii.x, dir.y * radii.y, dir.z * radii.z).multiplyScalar(1.0).add(center)
     const normal = new Vector3(dir.x / radii.x, dir.y / radii.y, dir.z / radii.z).normalize()
-    const cone = new Mesh(new ConeGeometry(rad, len, 10), fill)
-    cone.position.copy(surface).addScaledVector(normal, len * 0.3)
+    const len = height * slot.len
+    const rad = height * slot.rad
+    const cone = new Mesh(thornGeometry(rad, len, slot.bend), fill)
+    cone.position.copy(seat).addScaledVector(normal, len * 0.42)
     cone.quaternion.setFromUnitVectors(up, normal)
-    const outline = new Mesh(new ConeGeometry(rad * 1.22, len * 1.08, 10), line)
-    outline.position.copy(cone.position).addScaledVector(normal, -len * 0.02)
+    // roll the hook so it sweeps toward the rear
+    const localBack = back.clone().applyQuaternion(cone.quaternion.clone().invert())
+    const roll = Math.atan2(localBack.x, -localBack.z)
+    cone.rotateY(roll)
+    const outline = new Mesh(thornGeometry(rad * 1.16, len * 1.04, slot.bend), line)
+    outline.position.copy(cone.position).addScaledVector(normal, -len * 0.015)
     outline.quaternion.copy(cone.quaternion)
     group.add(outline, cone)
-  })
+  }
   anchor.add(group)
 }
 
+const VIEW_DIR = new Vector3(0.62, 0.14, 1).normalize()
+
+/** Bounds of the posed character: part meshes plus the skinned body vertices. */
+function characterBounds(root: Object3D): Box3 {
+  const box = new Box3()
+  root.traverse((o) => {
+    const m = o as Mesh & { isSkinnedMesh?: boolean }
+    if (!m.isMesh || m.isSkinnedMesh || o.name.includes('AxieOutline')) return
+    box.union(new Box3().setFromObject(o))
+  })
+  const fit = bodyEllipsoid(root)
+  if (fit) {
+    box.expandByPoint(fit.center.clone().sub(fit.radii))
+    box.expandByPoint(fit.center.clone().add(fit.radii))
+  }
+  if (box.isEmpty()) box.setFromObject(root)
+  return box
+}
+
 function frameCamera(camera: PerspectiveCamera, root: Object3D): void {
-  const box = new Box3().setFromObject(root)
+  root.updateWorldMatrix(true, true)
+  const box = characterBounds(root)
   const size = box.getSize(new Vector3())
   const center = box.getCenter(new Vector3())
+  center.y += size.y * 0.02
   const radius = Math.max(size.x, size.y, size.z) * 0.5 || 1
-  const dist = radius / Math.tan((camera.fov * Math.PI) / 360) * 1.15
-  camera.position.set(center.x + dist * 0.35, center.y + radius * 0.15, center.z + dist)
+  const dist = (radius / Math.tan((camera.fov * Math.PI) / 360)) * 1.22
+  camera.position.copy(center).addScaledVector(VIEW_DIR, dist)
   camera.near = Math.max(0.05, dist / 100)
   camera.far = dist * 10
   camera.lookAt(center)
@@ -387,15 +445,28 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
   const renderer = makeRenderer(id)
   const canvas = renderer.domElement
   const scene = new Scene()
-  const camera = new PerspectiveCamera(30, 1, 0.1, 100)
-  scene.add(new HemisphereLight(0xffffff, 0x556677, 1.6))
-  scene.add(new AmbientLight(0xffffff, 0.35))
-  const key = new DirectionalLight(0xffffff, 2.2)
-  key.position.set(2, 4, 3)
+  const camera = new PerspectiveCamera(35, 1, 0.1, 100)
+  // Lighting follows the mixer demo (hemisphere + warm key) with a camera-side fill so white
+  // Nightmare bodies read white instead of grey; the pack's toon shaders respond to these lights.
+  scene.add(new HemisphereLight('#f6fffc', '#c8d4d0', 2.2))
+  scene.add(new AmbientLight('#ffffff', 0.5))
+  const key = new DirectionalLight('#fff3da', 2.6)
+  key.position.set(4, 7, 5)
   scene.add(key)
-  const fill = new DirectionalLight(0xffffff, 0.7)
-  fill.position.set(-3, 2, -2)
+  const fill = new DirectionalLight('#ffffff', 1.4)
+  fill.position.set(-4, 1.5, 6)
   scene.add(fill)
+  const compositor = new MysticGammaCompositor()
+  const draw = () => {
+    // Mystic parts carry Unity-gamma transparent streams; the compositor keeps their blending exact.
+    let ok = false
+    try {
+      ok = compositor.render(renderer, scene, camera)
+    } catch {
+      ok = false
+    }
+    if (!ok) renderer.render(scene, camera)
+  }
 
   const clock = new Clock()
   let character: Character | null = null
@@ -480,7 +551,7 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
       renderer.setSize(size, size, false)
       camera.aspect = 1
       frameCamera(camera, character.wrapper)
-      renderer.render(scene, camera)
+      draw()
       const url = canvas.toDataURL('image/png')
       renderer.setSize(w, h, false)
       camera.aspect = w / Math.max(1, h)
@@ -501,6 +572,7 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
       api.ready = false
       api.label = null
       window.removeEventListener('resize', resize)
+      compositor.dispose()
       if (renderer !== firstRenderer) renderer.dispose()
       canvas.remove()
     },
@@ -523,7 +595,7 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
       // Gyro lean: rotate the character slightly toward the tilt
       character.wrapper.rotation.y = lean.x * 0.004
       character.wrapper.rotation.x = lean.y * 0.002
-      renderer.render(scene, camera)
+      draw()
     }
   }
 

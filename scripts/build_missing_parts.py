@@ -265,10 +265,20 @@ def transfer(png_path: Path, normal_icon: Path, shiny_icon: Path) -> tuple[bytes
         d2 = np.take_along_axis(d, n2[..., None], -1)[..., 0]
         w1 = np.where(d1 + d2 > 1e-6, d2 / (d1 + d2 + 1e-6), 1.0)
         w1 = np.clip((w1 - 0.5) * 4 + 0.5, 0, 1)  # mostly nearest, blend only near boundaries
-        dh = np.array([((t.h - c.h + 0.5) % 1.0) - 0.5 for c, t in pairs])
+        # Target hue is the icon's shiny hue; the texel's own hue offset from its cluster is kept
+        # at a third so shading variation survives without drifting off the painted colour
+        # (a pure-red texel under a slightly pink cluster would otherwise land on lime, not yellow).
+        th = np.array([t.h for _, t in pairs])
+        ch = np.array([c.h for c, _ in pairs])
         rs = np.array([t.s / max(c.s, 1e-3) for c, t in pairs])
         rv = np.array([t.v / max(c.v, 1e-3) for c, t in pairs])
-        dhp = w1 * dh[n1] + (1 - w1) * dh[n2]
+
+        def wrap(x: np.ndarray) -> np.ndarray:
+            return ((x + 0.5) % 1.0) - 0.5
+
+        hue1 = th[n1] + wrap(h - ch[n1]) * 0.33
+        hue2 = th[n2] + wrap(h - ch[n2]) * 0.33
+        dhp = wrap(hue1 - h) * w1 + wrap(hue2 - h) * (1 - w1)
         rsp = w1 * rs[n1] + (1 - w1) * rs[n2]
         rvp = w1 * rv[n1] + (1 - w1) * rv[n2]
         h2 = np.where(coloured, (h + dhp) % 1.0, h)
