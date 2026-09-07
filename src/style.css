@@ -3592,3 +3592,11 @@ button.id-chip {
 #board .board-row { border: 0; background: var(--bg-2); border-radius: var(--radius-card); }
 .board-lvl-pill { height: 28px; padding: 0 10px; border-radius: var(--radius-pill); background: var(--surface-soft); font-family: var(--font-display); font-weight: 900; font-size: 12px; display: inline-flex; align-items: center; color: var(--text); }
 #btn-feed-refresh span { display: flex; }
+
+/* ===== Group photo: extra squad mates ===== */
+.extra-sticker { position: absolute; left: 50%; top: 50%; width: 42vmin; max-width: 200px; height: auto; transform: translate(-50%, -50%); transform-origin: center center; pointer-events: auto; touch-action: none; cursor: grab; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.35)); will-change: transform; user-select: none; -webkit-user-drag: none; }
+.extra-sticker:active { cursor: grabbing; }
+.tray-photo-count { text-transform: none; letter-spacing: 0; color: var(--accent); margin-left: 6px; }
+.tray-head-actions { display: flex; gap: 14px; align-items: center; }
+#viewfinder .cast-chip { position: relative; }
+.cast-chip .in-photo-badge { position: absolute; top: -2px; right: 2px; width: 20px; height: 20px; border-radius: var(--radius-pill); background: var(--accent-hot); color: #fff; font-family: var(--font-display); font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-2); }

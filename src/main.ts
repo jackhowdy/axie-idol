@@ -6,6 +6,7 @@
 import { icon } from './icons'
 import { unlockLevelFor, CAST_ORDER } from './quests'
 import { questHudHtml, questChipText, type QuestHudInput } from './questHud'
+import { GroupPhoto, squadPhotoSlots } from './groupPhoto'
 import type { Sticker3D } from './sticker3d'
 import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
@@ -1114,7 +1115,7 @@ function isUiChromeTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
   return Boolean(
     target.closest(
-      '.chrome, .toolbar, .cast-tray, .prop-tray, .inventory-tray, .ronin-modal, .spark-victory, .cast-unlock, .camera-gate, #feed, #board, #profile, button, a, input, label, form',
+      '.chrome, .toolbar, .cast-tray, .prop-tray, .inventory-tray, .ronin-modal, .spark-victory, .cast-unlock, .camera-gate, .extra-sticker, #feed, #board, #profile, button, a, input, label, form',
     ),
   )
 }
@@ -1890,6 +1891,9 @@ async function captureComposite(): Promise<void> {
     ctx.restore()
   }
 
+  // Extra squad mates (group photo)
+  await groupPhoto.drawExtras(ctx, scaleX)
+
   // Equipped prop is always a separate overlay (independent drag hit-target).
   if (propOverlay?.ready && propOverlay.canvas && !propOverlay.canvas.hidden) {
     propOverlay.renderNow()
@@ -2031,7 +2035,51 @@ function syncCastTrayUI(): void {
     btn.setAttribute('aria-pressed', on ? 'true' : 'false')
   })
   syncInventoryTrayUI()
+  syncGroupPhotoUi()
 }
+
+/** Transparent PNG for a squad mate joining a group photo. */
+function groupStickerSrc(id: string): string {
+  const meta = castMeta(id)
+  if (!meta || /^\d+$/.test(id)) return axieCdnPng(id)
+  return `./stickers/${meta.sticker || `${id}.png`}`
+}
+
+function currentLevel(): number {
+  return (myCastCrew || loadCachedCastCrew())?.level ?? 0
+}
+
+const trayPhotoCount = document.querySelector<HTMLElement>('#tray-photo-count')
+const btnTrayClear = document.querySelector<HTMLButtonElement>('#btn-tray-clear')
+
+/** Numbered badges on tray chips + the "photo 1 of 3" counter. */
+function syncGroupPhotoUi(): void {
+  const slots = squadPhotoSlots(currentLevel())
+  const inPhoto = 1 + groupPhoto.count()
+  castTray.querySelectorAll<HTMLButtonElement>('.cast-chip').forEach((btn) => {
+    const id = btn.dataset.cast || ''
+    btn.querySelector('.in-photo-badge')?.remove()
+    let n = 0
+    if (!customAxieId && id === activeCast) n = 1
+    else {
+      const idx = groupPhoto.list().findIndex((x) => x.id === id)
+      if (idx >= 0) n = idx + 2
+    }
+    if (n > 0 && slots > 1) {
+      btn.insertAdjacentHTML('beforeend', `<span class="in-photo-badge" aria-hidden="true">${n}</span>`)
+    }
+  })
+  if (trayPhotoCount) {
+    trayPhotoCount.textContent = slots > 1 ? `· photo ${inPhoto} of ${slots}` : '· group photos at Lv 3'
+  }
+  if (btnTrayClear) btnTrayClear.hidden = groupPhoto.count() === 0
+}
+
+const groupPhoto = new GroupPhoto(stickerLayer, () => syncGroupPhotoUi())
+btnTrayClear?.addEventListener('click', () => {
+  groupPhoto.clear()
+  showLiveToast('Back to a solo photo', 1400)
+})
 
 function syncInventoryTrayUI(): void {
   inventoryScroll.querySelectorAll<HTMLButtonElement>('.inv-chip').forEach((btn) => {
@@ -2263,6 +2311,7 @@ async function selectCast(id: CastId): Promise<void> {
   ownedAuthorLabel = null
   if (!wasCustom && id === activeCast && sticker3d?.ready) return
   activeCast = id
+  if (groupPhoto.has(id)) groupPhoto.remove(id)
   syncCastTrayUI()
   syncPropTrayUI()
   const match = defaultPropForCast(id)
@@ -2278,6 +2327,34 @@ castTray.addEventListener('click', (e) => {
   e.preventDefault()
   const id = btn.dataset.cast as CastId | undefined
   if (!id) return
+  const slots = squadPhotoSlots(currentLevel())
+  const isLead = !customAxieId && id === activeCast
+  if (slots <= 1 || isLead) {
+    void selectCast(id)
+    return
+  }
+  if (!isCastUnlocked(id)) {
+    showLiveToast('Keep questing to unlock this cast', 1800)
+    return
+  }
+  if (groupPhoto.has(id)) {
+    groupPhoto.remove(id)
+    showLiveToast(`${castLabelName(id)} stepped out of the photo`, 1400)
+    return
+  }
+  if (1 + groupPhoto.count() >= slots) {
+    showLiveToast(`Photo is full (${slots} of ${slots}). Tap a face to swap it out.`, 2000)
+    return
+  }
+  groupPhoto.add(id, groupStickerSrc(id), { x: state.x, y: state.y }, groupPhoto.count())
+  showLiveToast(`${castLabelName(id)} joined the photo · double-tap to make lead`, 1800)
+})
+castTray.addEventListener('dblclick', (e) => {
+  const btn = (e.target as HTMLElement | null)?.closest?.('.cast-chip') as HTMLButtonElement | null
+  const id = btn?.dataset.cast as CastId | undefined
+  if (!id) return
+  e.preventDefault()
+  if (groupPhoto.has(id)) groupPhoto.remove(id)
   void selectCast(id)
 })
 
@@ -4404,6 +4481,7 @@ async function submitPost(): Promise<void> {
       })
     } else {
       postToast.textContent = 'Posted'
+      groupPhoto.clear()
       postToast.hidden = false
       window.setTimeout(() => {
         postToast.hidden = true

@@ -124,3 +124,7 @@ First deploy: `npx wrangler r2 bucket create axie-idol-uploads`, then `npm run d
 - **Unlock modal** — every cast or prop unlock ends with "Next up: …" and a button that opens Snap with the new cast mate selected.
 
 Known R1 limit: guest "My moments" is filtered client-side from the latest 50 global posts.
+
+## Group photos
+
+From quest level 3 a second squad mate can join a Snap, and from level 7 a third (`squadPhotoSlots()` in `src/groupPhoto.ts`). On Snap, tapping an unlocked face adds it to the photo (tap again to remove; double-tap makes it the lead). Extra squad mates are transparent PNG stickers with their own drag and pinch, composited into the capture after the lead and before the prop. `public/stickers/*.png` for the kit mascots and starters are transparent renders of the official GLBs.

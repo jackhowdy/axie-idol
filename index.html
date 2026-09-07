@@ -132,8 +132,11 @@
 
         <div class="chrome bottom">
           <div class="tray-head">
-            <span class="tray-label">Your crew</span>
-            <button type="button" id="btn-tray-connect" class="tray-link">Bring my Axies</button>
+            <span class="tray-label">Your crew <span id="tray-photo-count" class="tray-photo-count"></span></span>
+            <span class="tray-head-actions">
+              <button type="button" id="btn-tray-clear" class="tray-link" hidden>Clear photo</button>
+              <button type="button" id="btn-tray-connect" class="tray-link">Bring my Axies</button>
+            </span>
           </div>
           <div id="inventory-tray" class="inventory-tray" role="toolbar" aria-label="Owned Axies" hidden>
             <div class="inventory-label">Inventory</div>

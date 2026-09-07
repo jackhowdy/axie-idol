@@ -24,3 +24,13 @@ test('icons render inline SVG with the requested size', () => {
   assert.match(icon('heartFilled', 18), /fill="currentColor"/)
   assert.match(icon('unknown-name'), /<path/)
 })
+
+test('group photo slots grow with level: 1, then 2 at Lv3, then 3 at Lv7', async () => {
+  const { squadPhotoSlots } = await import('../src/groupPhoto.ts')
+  assert.equal(squadPhotoSlots(0), 1)
+  assert.equal(squadPhotoSlots(2), 1)
+  assert.equal(squadPhotoSlots(3), 2)
+  assert.equal(squadPhotoSlots(6), 2)
+  assert.equal(squadPhotoSlots(7), 3)
+  assert.equal(squadPhotoSlots(24), 3)
+})
