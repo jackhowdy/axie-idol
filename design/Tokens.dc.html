@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
+  <style>
+    body { margin: 0; font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif; color: #1A2B3C; }
+    a { color: #2B8CEE; } a:hover { color: #1f6fc2; }
+  </style>
+</helmet>
+<div style="width: 760px; min-height: 900px; background: #FFFFFF; padding: 40px; display: flex; flex-direction: column; gap: 32px; box-sizing: border-box;">
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-size: 26px; font-weight: 900; letter-spacing: 0.01em;">Field kit — tokens as they exist in style.css</div>
+    <div style="font-size: 14px; color: #5A6F82;">Nothing new here. The revamp reuses these values; the change is where they are applied, not what they are.</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="font-size: 13px; font-weight: 800; letter-spacing: 0.08em; color: #5A6F82;">COLOR</div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 64px; border-radius: 12px; background: #E8F6FF; border: 1px solid #C5D6E5;"></div><div style="font-size: 12px; font-weight: 700;">sky (bg) #E8F6FF</div></div>
+      <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 64px; border-radius: 12px; background: #DFF5C8;"></div><div style="font-size: 12px; font-weight: 700;">grass (soft) #DFF5C8</div></div>
+      <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 64px; border-radius: 12px; background: #2B8CEE;"></div><div style="font-size: 12px; font-weight: 700;">map blue (accent) #2B8CEE</div></div>
+      <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 64px; border-radius: 12px; background: #FF6B2C;"></div><div style="font-size: 12px; font-weight: 700;">shutter orange (hot) #FF6B2C</div></div>
+      <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 64px; border-radius: 12px; background: #3ECF8E;"></div><div style="font-size: 12px; font-weight: 700;">success #3ECF8E</div></div>
+      <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 64px; border-radius: 12px; background: #1A2B3C;"></div><div style="font-size: 12px; font-weight: 700;">text #1A2B3C</div></div>
+      <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 64px; border-radius: 12px; background: #5A6F82;"></div><div style="font-size: 12px; font-weight: 700;">muted #5A6F82</div></div>
+      <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 64px; border-radius: 12px; background: #FFFFFF; border: 1px solid #C5D6E5;"></div><div style="font-size: 12px; font-weight: 700;">card #FFFFFF · border #C5D6E5</div></div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="font-size: 13px; font-weight: 800; letter-spacing: 0.08em; color: #5A6F82;">TYPE — Nunito for everything (today body text is system-ui; one font reads calmer)</div>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 28px; font-weight: 900; line-height: 1.1;">Screen title 28 / 900</div>
+      <div style="font-size: 18px; font-weight: 800;">Card title 18 / 800</div>
+      <div style="font-size: 15px; font-weight: 600; line-height: 1.45; color: #1A2B3C;">Body 15 / 600 — captions, comments, quest copy. Line height 1.45 so kids can read it.</div>
+      <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.06em; color: #5A6F82;">LABEL 12 / 800 / tracked</div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="font-size: 13px; font-weight: 800; letter-spacing: 0.08em; color: #5A6F82;">CONTROLS — pills, 44px minimum, 52px primary</div>
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+      <div style="height: 52px; padding: 0 22px; border-radius: 999px; background: #2B8CEE; color: #fff; font-weight: 800; font-size: 15px; display: flex; align-items: center; box-shadow: 0 4px 16px rgba(26,43,60,0.12);">Primary</div>
+      <div style="height: 52px; padding: 0 22px; border-radius: 999px; background: #FF6B2C; color: #fff; font-weight: 800; font-size: 15px; display: flex; align-items: center; box-shadow: 0 4px 16px rgba(26,43,60,0.12);">Post / Capture</div>
+      <div style="height: 44px; padding: 0 18px; border-radius: 999px; background: #FFFFFF; border: 1px solid #C5D6E5; font-weight: 700; font-size: 14px; display: flex; align-items: center;">Secondary</div>
+      <div style="height: 36px; padding: 0 14px; border-radius: 999px; background: rgba(43,140,238,0.12); border: 1px solid rgba(43,140,238,0.45); color: #2B8CEE; font-weight: 800; font-size: 13px; display: flex; align-items: center;">Chip</div>
+      <div style="height: 28px; padding: 0 10px; border-radius: 999px; background: #DFF5C8; color: #1A2B3C; font-weight: 800; font-size: 12px; display: flex; align-items: center;">Lv 3</div>
+      <div style="height: 28px; padding: 0 10px; border-radius: 999px; background: #1A2B3C; color: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center;">Cast</div>
+      <div style="height: 28px; padding: 0 10px; border-radius: 999px; background: #3ECF8E; color: #0e3d2a; font-weight: 800; font-size: 12px; display: flex; align-items: center;">Owned</div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="font-size: 13px; font-weight: 800; letter-spacing: 0.08em; color: #5A6F82;">SURFACES — cards 16px radius, trays 20px, one shadow</div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+      <div style="height: 110px; border-radius: 16px; background: #FFFFFF; box-shadow: 0 4px 16px rgba(26,43,60,0.12); padding: 14px; font-size: 13px; font-weight: 700;">Card</div>
+      <div style="height: 110px; border-radius: 20px; background: rgba(255,255,255,0.78); border: 1px solid #C5D6E5; padding: 14px; font-size: 13px; font-weight: 700;">Tray (translucent over camera)</div>
+      <div style="height: 110px; border-radius: 16px; background: #DFF5C8; padding: 14px; font-size: 13px; font-weight: 700;">Grass panel (quest HUD, success)</div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="font-size: 13px; font-weight: 800; letter-spacing: 0.08em; color: #5A6F82;">ICONS — stroke, 24px grid, 2px lines, never emoji</div>
+    <div style="display: flex; gap: 20px; align-items: center; color: #1A2B3C;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 6h3a2 2 0 0 1-2 4M7 6H4a2 2 0 0 0 2 4"></path></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"></path></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2"></path><path d="M20 4v5h-5M4 20v-5h5"></path></svg>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
