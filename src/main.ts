@@ -685,8 +685,9 @@ async function specForFace(id: string): Promise<Axie3DSpec | null> {
     const data = (await res.json()) as {
       genes?: string
       name?: string
-      parts?: { type: string; stage: number }[]
+      parts?: { type: string; stage: number; specialGenes?: string | null }[]
       bodyShape?: string | null
+      class?: string | null
     }
     if (!data.genes) throw new Error('no genes')
     const stages: Record<string, 1 | 2> = {}
@@ -695,7 +696,17 @@ async function specForFace(id: string): Promise<Axie3DSpec | null> {
       const type = p.type === 'eyes' ? 'eye' : p.type === 'ears' ? 'ear' : p.type
       stages[type] = p.stage === 2 ? 2 : 1
     }
-    return { kind: 'genes', genes: data.genes, label: data.name || `Axie #${id}`, stages, bodyShape: data.bodyShape ?? null }
+    const mysticParts = (data.parts || []).filter((p) => p.specialGenes === 'Mystic').length
+    return {
+      kind: 'genes',
+      genes: data.genes,
+      label: data.name || `Axie #${id}`,
+      stages,
+      bodyShape: data.bodyShape ?? null,
+      mysticParts,
+      axieId: id,
+      axieClass: data.class ?? null,
+    }
   }
   return null
 }

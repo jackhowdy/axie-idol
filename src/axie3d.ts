@@ -21,10 +21,13 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
-  NeutralToneMapping,
+  MeshToonMaterial,
+  NoToneMapping,
   PerspectiveCamera,
   Scene,
+  SphereGeometry,
   SRGBColorSpace,
+  CanvasTexture,
   Vector3,
   WebGLRenderer,
   type Material,
@@ -42,7 +45,7 @@ import type { ThreeAxieMixer3D, AxieMixerManifest } from '@jaatster/threejs-axie
 const MAX_PIXEL_RATIO = 2
 const ASSET_BASE = '/assets/axie/'
 /** Bump when the manifest or derived parts change; the pack is served with long cache headers. */
-const PACK_VERSION = '11'
+const PACK_VERSION = '13'
 
 export type Axie3DSpec =
   | {
@@ -52,6 +55,12 @@ export type Axie3DSpec =
       stages?: Partial<Record<AxiePartDescriptor['type'], 1 | 2>>
       /** Marketplace body shape; 'Nightmare' switches to the white nightmare palette. */
       bodyShape?: string | null
+      /** Number of Mystic parts (Sky Mavis draws a Mystic body pod when >= 1 and the body is not Nightmare). */
+      mysticParts?: number
+      /** Axie id, printed on the Mystic pod's hatch like the 2D art. */
+      axieId?: string
+      /** Axie class, for the hatch icon. */
+      axieClass?: string | null
     }
   | { kind: 'descriptor'; descriptor: AxieDescriptor; label?: string; gold?: boolean }
 
@@ -96,7 +105,7 @@ function makeRenderer(id: string): WebGLRenderer {
   })
   renderer.setClearColor(0x000000, 0)
   renderer.outputColorSpace = SRGBColorSpace
-  renderer.toneMapping = NeutralToneMapping
+  renderer.toneMapping = NoToneMapping
   renderer.toneMappingExposure = 1
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO))
   if (!firstRenderer) firstRenderer = renderer
@@ -479,6 +488,252 @@ function viewDir(): Vector3 {
   return VIEW_DIR
 }
 
+/**
+ * Mystic body pod. Sky Mavis's 2D art gives every Axie with a Mystic part (and a non-Nightmare body)
+ * a white mechanical casing over the rear half of the body: a diagonal seam from the upper rear
+ * down to the belly, a gold port near the belly, a raised hatch with the class icon and the Axie's
+ * id, a pipe bar with orange tips and a few orange rivets. The pack has no such mesh, so this is a
+ * tilted rear half-ellipsoid with a painted texture, parented to the spine like the thorns.
+ */
+const CLASS_ICON_COLOUR: Record<string, string> = {
+  beast: '#f7a11a',
+  aquatic: '#00b8d9',
+  plant: '#6cc32b',
+  bug: '#ff5341',
+  bird: '#ff8bb8',
+  reptile: '#c26be0',
+  dawn: '#8fd8ff',
+  dusk: '#2f8fa0',
+  mech: '#8c9aa8',
+}
+
+function drawClassIcon(ctx: CanvasRenderingContext2D, cls: string, x: number, y: number, r: number): void {
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.strokeStyle = CLASS_ICON_COLOUR[cls] || '#6cc32b'
+  ctx.fillStyle = ctx.strokeStyle
+  ctx.lineWidth = r * 0.22
+  ctx.lineCap = 'round'
+  switch (cls) {
+    case 'beast': {
+      // paw: pad + three toes
+      ctx.beginPath()
+      ctx.ellipse(0, r * 0.35, r * 0.55, r * 0.42, 0, 0, Math.PI * 2)
+      ctx.fill()
+      for (const [dx, dy] of [
+        [-0.62, -0.25],
+        [0, -0.55],
+        [0.62, -0.25],
+      ]) {
+        ctx.beginPath()
+        ctx.arc(dx * r, dy * r, r * 0.24, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      break
+    }
+    case 'bird': {
+      // feather
+      ctx.beginPath()
+      ctx.moveTo(-r * 0.6, r * 0.8)
+      ctx.quadraticCurveTo(-r * 0.2, -r * 0.2, r * 0.7, -r * 0.8)
+      ctx.quadraticCurveTo(r * 0.4, r * 0.3, -r * 0.6, r * 0.8)
+      ctx.fill()
+      ctx.beginPath()
+      ctx.moveTo(-r * 0.6, r * 0.8)
+      ctx.lineTo(r * 0.5, -r * 0.6)
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = r * 0.1
+      ctx.stroke()
+      break
+    }
+    case 'aquatic': {
+      // drop
+      ctx.beginPath()
+      ctx.moveTo(0, -r * 0.9)
+      ctx.bezierCurveTo(r * 0.9, r * 0.1, r * 0.55, r * 0.9, 0, r * 0.9)
+      ctx.bezierCurveTo(-r * 0.55, r * 0.9, -r * 0.9, r * 0.1, 0, -r * 0.9)
+      ctx.fill()
+      break
+    }
+    case 'bug': {
+      // ladybird body with a centre line
+      ctx.beginPath()
+      ctx.ellipse(0, 0, r * 0.7, r * 0.85, 0, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = r * 0.12
+      ctx.beginPath()
+      ctx.moveTo(0, -r * 0.8)
+      ctx.lineTo(0, r * 0.8)
+      ctx.stroke()
+      break
+    }
+    case 'reptile': {
+      // scale / diamond
+      ctx.beginPath()
+      ctx.moveTo(0, -r * 0.9)
+      ctx.lineTo(r * 0.8, 0)
+      ctx.lineTo(0, r * 0.9)
+      ctx.lineTo(-r * 0.8, 0)
+      ctx.closePath()
+      ctx.fill()
+      break
+    }
+    default: {
+      // sprout: stem + two leaves (plant, dawn, dusk, mech fall back here with their colour)
+      ctx.beginPath()
+      ctx.moveTo(0, r * 0.9)
+      ctx.lineTo(0, -r * 0.2)
+      ctx.stroke()
+      for (const s of [-1, 1]) {
+        ctx.beginPath()
+        ctx.moveTo(0, -r * 0.15)
+        ctx.quadraticCurveTo(s * r * 0.55, -r * 0.55, s * r * 0.85, -r * 0.35)
+        ctx.quadraticCurveTo(s * r * 0.5, -r * 0.05, 0, -r * 0.15)
+        ctx.fill()
+      }
+    }
+  }
+  ctx.restore()
+}
+
+/** Paint the pod texture. u wraps around the pod (0 = seam edge at the belly side), v runs top to bottom. */
+function mysticPodTexture(cls: string, axieId: string): CanvasTexture {
+  const W = 1024
+  const H = 512
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')!
+  // base: warm white with a cooler lower band
+  const g = ctx.createLinearGradient(0, 0, 0, H)
+  g.addColorStop(0, '#f8f9f7')
+  g.addColorStop(0.55, '#e9ecea')
+  g.addColorStop(1, '#cfd5d3')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, W, H)
+  // panel seams
+  ctx.strokeStyle = 'rgba(120,130,128,0.55)'
+  ctx.lineWidth = 5
+  ctx.beginPath()
+  ctx.moveTo(0, H * 0.36)
+  ctx.bezierCurveTo(W * 0.3, H * 0.31, W * 0.7, H * 0.31, W, H * 0.36)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo(W * 0.5, 0)
+  ctx.lineTo(W * 0.5, H)
+  ctx.stroke()
+  // the two sides of the pod (left flank = u 0.05..0.45, right flank = u 0.55..0.95)
+  // hatch sits a little behind the seam on each flank (u 0.17 / 0.83), the port between hatch and seam
+  for (const [side, dir] of [
+    [0.17, 1],
+    [0.83, -1],
+  ] as [number, number][]) {
+    const cx = W * side
+    // raised hatch with the class icon and id
+    ctx.fillStyle = '#dfe4e2'
+    ctx.strokeStyle = '#8e9694'
+    ctx.lineWidth = 6
+    ctx.beginPath()
+    ctx.roundRect(cx - 100, H * 0.56, 200, 150, 36)
+    ctx.fill()
+    ctx.stroke()
+    ctx.fillStyle = '#f4f6f5'
+    ctx.beginPath()
+    ctx.arc(cx, H * 0.68, 50, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.strokeStyle = '#a7aeac'
+    ctx.lineWidth = 4
+    ctx.stroke()
+    drawClassIcon(ctx, cls, cx, H * 0.68, 28)
+    ctx.fillStyle = CLASS_ICON_COLOUR[cls] || '#6cc32b'
+    ctx.font = 'bold 30px "Segoe UI", Arial, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText(axieId, cx, H * 0.68 + 82)
+    // gold port near the belly
+    const px = cx - dir * 120
+    const py = H * 0.86
+    ctx.fillStyle = '#ffffff'
+    ctx.beginPath()
+    ctx.arc(px, py, 64, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.strokeStyle = '#9aa19f'
+    ctx.lineWidth = 6
+    ctx.stroke()
+    const pg = ctx.createRadialGradient(px - 12, py - 14, 8, px, py, 46)
+    pg.addColorStop(0, '#fff2a8')
+    pg.addColorStop(0.5, '#f7c948')
+    pg.addColorStop(1, '#d9950e')
+    ctx.fillStyle = pg
+    ctx.beginPath()
+    ctx.arc(px, py, 46, 0, Math.PI * 2)
+    ctx.fill()
+    // pipe bar with orange tips
+    ctx.fillStyle = '#c9cfcd'
+    ctx.beginPath()
+    ctx.roundRect(cx + (dir > 0 ? -20 : -160), H * 0.92, 180, 26, 13)
+    ctx.fill()
+    ctx.strokeStyle = '#8e9694'
+    ctx.lineWidth = 4
+    ctx.stroke()
+    ctx.fillStyle = '#f08a2e'
+    ctx.beginPath()
+    ctx.roundRect(cx + (dir > 0 ? -20 : -160), H * 0.92, 26, 26, 13)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.roundRect(cx + (dir > 0 ? 134 : -6), H * 0.92, 26, 26, 13)
+    ctx.fill()
+    // rivets
+    ctx.fillStyle = '#f08a2e'
+    for (const [dx, dy, w, h] of [
+      [-210, H * 0.7, 22, 12],
+      [-80, H * 0.97, 26, 10],
+      [165, H * 0.8, 12, 22],
+      [130, H * 0.58, 20, 10],
+    ]) {
+      ctx.beginPath()
+      ctx.roundRect(cx + dir * dx, dy, w, h, 4)
+      ctx.fill()
+    }
+  }
+  const tex = new CanvasTexture(c)
+  tex.colorSpace = SRGBColorSpace
+  tex.anisotropy = 4
+  return tex
+}
+
+export function addMysticPod(root: Object3D, cls: string, axieId: string): void {
+  root.updateWorldMatrix(true, true)
+  const fit = bodyEllipsoid(root)
+  if (!fit) return
+  const { center, radii } = fit
+  let spine: Object3D | null = null
+  root.traverse((o) => {
+    if (!spine && o.name === 'Spine01_JNT') spine = o
+  })
+  const anchor: Object3D = spine ?? root
+  const group = new Group()
+  group.name = 'MysticPod'
+  group.matrixAutoUpdate = false
+  group.matrix.copy(new Matrix4().copy(anchor.matrixWorld).invert())
+  // rear half of a sphere (three.js phi from PI to 2PI is the -z side), cut below the crown and
+  // above the feet, then scaled to the body ellipsoid and tilted so the seam runs diagonally
+  const geo = new SphereGeometry(1, 48, 32, Math.PI - 0.55, Math.PI + 1.1, Math.PI * 0.28, Math.PI * 0.6)
+  const tex = mysticPodTexture(cls.toLowerCase(), axieId)
+  const fill = new MeshToonMaterial({ map: tex })
+  const line = new MeshBasicMaterial({ color: 0x1c1c1c, side: BackSide })
+  const pod = new Mesh(geo, fill)
+  const outline = new Mesh(geo, line)
+  for (const m of [pod, outline]) {
+    m.position.copy(center).add(new Vector3(0, -radii.y * 0.02, -radii.z * 0.06))
+    m.scale.set(radii.x * 1.3, radii.y * 1.1, radii.z * 1.22)
+    m.rotation.x = -0.5 // tilt: top edge further back, belly edge further forward
+  }
+  outline.scale.multiplyScalar(1.022)
+  group.add(outline, pod)
+  anchor.add(group)
+}
+
 /** Bounds of the posed character: part meshes plus the skinned body vertices. */
 function characterBounds(root: Object3D): Box3 {
   const box = new Box3()
@@ -518,12 +773,12 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
   const camera = new PerspectiveCamera(35, 1, 0.1, 100)
   // Lighting follows the mixer demo (hemisphere + warm key) with a camera-side fill so white
   // Nightmare bodies read white instead of grey; the pack's toon shaders respond to these lights.
-  scene.add(new HemisphereLight('#f6fffc', '#c8d4d0', 2.2))
-  scene.add(new AmbientLight('#ffffff', 0.5))
-  const key = new DirectionalLight('#fff3da', 2.6)
+  scene.add(new HemisphereLight('#f6fffc', '#c8d4d0', 1.7))
+  scene.add(new AmbientLight('#ffffff', 0.35))
+  const key = new DirectionalLight('#fff3da', 2.0)
   key.position.set(4, 7, 5)
   scene.add(key)
-  const fill = new DirectionalLight('#ffffff', 1.4)
+  const fill = new DirectionalLight('#ffffff', 1.0)
   fill.position.set(-4, 1.5, 6)
   scene.add(fill)
   const compositor = new MysticGammaCompositor()
@@ -577,7 +832,24 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
           character.dispose()
         }
         character = next
+        if (location.search.includes('dev=1')) {
+          const rows: string[] = []
+          next.wrapper.traverse((o) => {
+            const m = o as Mesh
+            if (!m.isMesh) return
+            const mat = m.material as unknown as { uniforms?: Record<string, { value: unknown }>; name?: string }
+            const u = mat.uniforms
+            if (!u) return
+            const hex = (c: unknown) => (c && typeof (c as Color).getHexString === 'function' ? (c as Color).getHexString() : String(c))
+            rows.push(o.name.slice(0, 40) + ' P=' + hex(u.uPrimaryColor?.value) + ' S=' + hex(u.uSecondaryColor?.value) + ' clip=' + String(u.uAlphaClipEnabled?.value))
+          })
+          console.info('[axie3d] colours ' + rows.join(' | '))
+        }
         if (spec.kind === 'descriptor' && spec.gold) goldify(next.wrapper)
+        if (spec.kind === 'genes' && spec.bodyShape !== 'Nightmare' && (spec.mysticParts ?? 0) > 0) {
+          next.update(0)
+          addMysticPod(next.wrapper, spec.axieClass || 'plant', spec.axieId || '')
+        }
         if (spec.kind === 'genes' && spec.bodyShape === 'Nightmare') {
           const variants = (mixer.manifest.creator as unknown as { colorVariants: { primary2: string }[] }).colorVariants
           const accent = variants[descriptor.colorVariant]?.primary2 || 'ff4363'
