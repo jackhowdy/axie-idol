@@ -128,3 +128,16 @@ Known R1 limit: guest "My moments" is filtered client-side from the latest 50 gl
 ## Group photos
 
 From quest level 3 a second squad mate can join a Snap, and from level 7 a third (`squadPhotoSlots()` in `src/groupPhoto.ts`). On Snap, tapping an unlocked face adds it to the photo (tap again to remove; double-tap makes it the lead). Extra squad mates are transparent PNG stickers with their own drag and pinch, composited into the capture after the lead and before the prop. `public/stickers/*.png` for the kit mascots and starters are transparent renders of the official GLBs.
+
+## Animated 3D Axies (mixer)
+
+Every face on Snap is an animated 3D model. The seven starter mascots use the official kit GLBs in `public/models/mascots/`. Everything else (the numeric cast Axies, Olek, the Agonia Echo villain, the Golden Axie, and any owned Axie from a linked Ronin wallet) is assembled at runtime by the Three.js Axie Mixer 3D public alpha (`vendor/axie-mixer3d`, wrapped in `src/axie3d.ts`).
+
+- Genes for a numeric Axie come from `GET /api/axie/:id` (Sky Mavis gateway, cached server-side in the `axies` store).
+- Olek, the villain and the golden face are descriptors in `src/castDescriptors.ts` (Olek is a creator-built stand-in; the villain is the Nightmare showcase set on a dark spiky body; golden is the villain under a gold material).
+- Downgrade policy (`downgradeDescriptor`): a part that is not in the pack falls back to the same part in normal skin, then to stage 1. Never a 2D fallback. The public pack covers 576 of 606 part/stage/skin variants (missing: 6 Japan-skin parts, 24 Season 13 parts).
+- Group-photo extras that are 3D faces get a transparent snapshot (`snapshotFace`) rendered offscreen once per session.
+- Pack: `public/assets/axie/` (git-ignored, ~512 MB, 5,821 files) is copied from the mixer clone with `node scripts/copy-mixer-assets.mjs`. `public/_headers` gives it long cache headers on Cloudflare. First load of a character fetches the manifest (~9 MB) plus ~200 files; later loads are cached.
+- Dev previews: `?dev=1` unlocks every face (including golden) and all three photo slots so the tray can be checked without questing.
+
+Rights: the mixer and pack are Sky Mavis assets released for approved Axie projects only (see the mixer's RIGHTS file). This entry is a Vibeathon submission and does not redistribute the pack in git.

@@ -1,0 +1,8 @@
+# Cloudflare Workers static assets: long cache for the Axie mixer pack.
+# Animation payloads are content-hashed (immutable); parts/bodies/textures are versioned by pack copy.
+/assets/axie/animations/payload/*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/axie/manifest.json
+  Cache-Control: public, max-age=3600
+/assets/axie/*
+  Cache-Control: public, max-age=86400

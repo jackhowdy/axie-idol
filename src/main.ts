@@ -680,6 +680,14 @@ async function specForFace(id: string): Promise<Axie3DSpec | null> {
   return null
 }
 
+/** Warm the mixer manifest (~9 MB, cached) shortly after boot so the first 3D face on Snap is quick. */
+function warmAxieMixer(): void {
+  const go = () => void getAxieMixer().catch(() => {})
+  const w = window as unknown as { requestIdleCallback?: (cb: () => void) => void }
+  if (w.requestIdleCallback) w.requestIdleCallback(go)
+  else window.setTimeout(go, 3000)
+}
+
 function disposeAxie3D(): void {
   if (!axie3d) return
   axie3d.dispose()
@@ -2160,6 +2168,11 @@ function groupStickerSrc(id: string): string {
   return `./stickers/${meta.sticker || `${id}.png`}`
 }
 
+/** Group-photo slots for the current level (dev mode: all three, for previews). */
+function photoSlots(): number {
+  return isDevMode() ? 3 : squadPhotoSlots(currentLevel())
+}
+
 function currentLevel(): number {
   return (myCastCrew || loadCachedCastCrew())?.level ?? 0
 }
@@ -2169,7 +2182,7 @@ const btnTrayClear = document.querySelector<HTMLButtonElement>('#btn-tray-clear'
 
 /** Numbered badges on tray chips + the "photo 1 of 3" counter. */
 function syncGroupPhotoUi(): void {
-  const slots = squadPhotoSlots(currentLevel())
+  const slots = photoSlots()
   const inPhoto = 1 + groupPhoto.count()
   castTray.querySelectorAll<HTMLButtonElement>('.cast-chip').forEach((btn) => {
     const id = btn.dataset.cast || ''
@@ -2562,7 +2575,7 @@ castTray.addEventListener('click', (e) => {
   e.preventDefault()
   const id = btn.dataset.cast as CastId | undefined
   if (!id) return
-  const slots = squadPhotoSlots(currentLevel())
+  const slots = photoSlots()
   const isLead = !customAxieId && id === activeCast
   if (slots <= 1 || isLead) {
     void selectCast(id)
@@ -5878,6 +5891,7 @@ async function boot(): Promise<void> {
     void refreshMyCastCrew()
   })()
 
+  window.setTimeout(warmAxieMixer, 2500)
   console.info('[axie-idol] boot', {
     mobile: isMobileLike(),
     isSecureContext: window.isSecureContext,
