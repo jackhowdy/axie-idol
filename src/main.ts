@@ -4,7 +4,7 @@
  */
 
 import { icon } from './icons'
-import { unlockLevelFor } from './quests'
+import { unlockLevelFor, CAST_ORDER } from './quests'
 import { questHudHtml, questChipText, type QuestHudInput } from './questHud'
 import type { Sticker3D } from './sticker3d'
 import type { PropOverlay } from './propOverlay'
@@ -3316,48 +3316,33 @@ function renderCastCrewStrip(payload: CastCrewPayload | null | undefined): void 
   }
   const unlocked = new Set(data.unlockedCast || data.unlocked || ['kotaro'])
   const unlockedProps = new Set(data.unlockedProps || [])
-  const level = data.level ?? 0
   profileCastCrew.hidden = false
-  if (profileCastCrewCount) {
-    profileCastCrewCount.textContent = `Level ${level} · ${unlocked.size} cast`
-  }
-  // Show unlocked cast faces (hide locked for R1 kid clarity)
-  const faces = CAST_MASCOTS.filter((c) => unlocked.has(c.id))
-  profileCastCrewGrid.innerHTML = faces
-    .map((c) => {
-      const src = castPreviewSrc(c.id)
-      const name = escapeHtml(c.label)
-      return `<div class="cast-crew-slot is-unlocked" role="listitem" title="${name} following you">
-  <img src="${escapeHtml(src)}" alt="${name}" loading="lazy" onerror="this.src='/previews/kotaro.png'" />
-  <span class="cast-crew-slot-name">${name}</span>
+  profileCastCrewGrid.innerHTML = CAST_ORDER.map((id) => {
+    const c = CAST_MASCOTS.find((m) => m.id === id)
+    if (!c) return ''
+    const on = unlocked.has(id)
+    const lvl = unlockLevelFor(id) ?? 0
+    const src = castPreviewSrc(id)
+    const isVillain = id === 'agonia-echo'
+    const name = on ? escapeHtml(c.label) : isVillain ? '???' : escapeHtml(c.label)
+    const title = `${escapeHtml(c.label)}${on ? '' : ` · level ${lvl}`}`
+    return `<div class="crew-slot${on ? ' is-unlocked' : ' is-locked'}${isVillain ? ' is-villain' : ''}" role="listitem" title="${title}">
+  <div class="crew-face"><img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.src='/previews/kotaro.png'" />${on ? '' : `<span class="crew-lvl">LV ${lvl}</span>`}</div>
+  <span class="crew-slot-name">${name}</span>
 </div>`
-    })
-    .join('')
-  if (unlockedProps.size) {
-    profileCastCrewGrid.innerHTML += [...unlockedProps]
-      .map((pid) => {
-        const name = escapeHtml(propLabelName(pid))
-        return `<div class="cast-crew-slot is-unlocked is-prop" role="listitem" title="${name}">
-  <span class="cast-crew-prop-ico" aria-hidden="true">🎁</span>
-  <span class="cast-crew-slot-name">${name}</span>
-</div>`
-      })
-      .join('')
+  }).join('')
+  if (profileCastCrewCount) profileCastCrewCount.textContent = `${unlocked.size} of ${CAST_ORDER.length}`
+  const propsEl = document.querySelector<HTMLElement>('#crew-props')
+  const propsCount = document.querySelector<HTMLElement>('#crew-props-count')
+  if (propsEl) {
+    propsEl.innerHTML = EQUIPMENT_PROPS.map((p) => {
+      const on = unlockedProps.has(p.id)
+      const lvl = unlockLevelFor(p.id) ?? 0
+      return `<span class="crew-prop${on ? ' is-unlocked' : ''}">${on ? icon('sword', 16) : icon('lock', 16)}${escapeHtml(p.label)}${on ? '' : ` · Lv ${lvl}`}</span>`
+    }).join('')
   }
-  if (profileCastCrewHint) {
-    const next = data.nextQuest || null
-    const nextUnlock = data.nextUnlock
-    if (next) {
-      profileCastCrewHint.hidden = false
-      profileCastCrewHint.textContent = `L${next.level}: ${next.description} (${next.progress}/${next.target}) → ${next.unlockLabel || nextUnlock?.label || ''}`
-    } else if (level >= 24) {
-      profileCastCrewHint.hidden = false
-      profileCastCrewHint.textContent = 'Quest complete — Villain unlocked!'
-    } else {
-      profileCastCrewHint.hidden = true
-      profileCastCrewHint.textContent = ''
-    }
-  }
+  if (propsCount) propsCount.textContent = `${unlockedProps.size} of ${EQUIPMENT_PROPS.length}`
+  if (profileCastCrewHint) profileCastCrewHint.hidden = true
 }
 
 /** Rebuild Create trays from unlocked cast/props (hide locked). */
@@ -5014,8 +4999,35 @@ async function loadProfileAxies(reset: boolean): Promise<void> {
   }
 }
 
+/** Guest moments: latest global posts by this guest id (R1 limit: last 50 posts). */
+async function loadGuestMoments(): Promise<void> {
+  try {
+    const res = await fetch(
+      `/api/feed?guestId=${encodeURIComponent(guestId)}&deviceKey=${encodeURIComponent(deviceKey)}`,
+      { headers: { Accept: 'application/json' } },
+    )
+    const data = (await res.json()) as { posts?: FeedPost[] }
+    const mine = (data.posts || []).filter((p) => p.authorGuestId === guestId)
+    profilePostsList.classList.add('moments-grid')
+    profilePostsEmpty.hidden = mine.length > 0
+    profilePostsEmpty.textContent = 'No moments yet. Snap one with Kotaro.'
+    profilePostsList.innerHTML = mine
+      .map(
+        (p) =>
+          `<button type="button" class="moment-tile" data-post-id="${escapeHtml(p.id)}" title="${escapeHtml(p.caption || '')}"><img src="${escapeHtml(p.imagePath)}" alt="" loading="lazy" /></button>`,
+      )
+      .join('')
+  } catch {
+    profilePostsEmpty.hidden = false
+  }
+}
+
 async function loadProfilePosts(): Promise<void> {
-  if (!roninAddress) return
+  if (!roninAddress) {
+    await loadGuestMoments()
+    return
+  }
+  profilePostsList.classList.remove('moments-grid')
   try {
     const res = await fetch(
       `/api/feed?authorAddress=${encodeURIComponent(roninAddress)}`,
@@ -5320,21 +5332,31 @@ async function loadOwnerPosts(): Promise<void> {
 }
 
 async function showProfile(): Promise<void> {
-  if (!roninAddress) {
-    showLiveToast('Bring your own Axies — Connect when you\'re ready', 2200)
-    void connectRonin()
-    return
-  }
   hideAllScreens()
   setActiveTab('crew')
   profileScreen.hidden = false
   profileScreen.classList.add('active')
+  const connected = Boolean(roninAddress)
+  const connectCard = document.querySelector<HTMLElement>('#crew-connect-card')
+  const walletRow = document.querySelector<HTMLElement>('#crew-wallet-row')
+  const axiesTab = document.querySelector<HTMLElement>('.profile-tab[data-tab="axies"]')
+  if (connectCard) connectCard.hidden = connected
+  if (walletRow) walletRow.hidden = !connected
+  if (axiesTab) axiesTab.hidden = !connected
+  const crewLvl = (myCastCrew || loadCachedCastCrew())?.level ?? 0
+  profileTodayPoints.textContent = `Lv ${crewLvl}`
+  renderCastCrewStrip(myCastCrew)
+  if (!connected) {
+    profileAddressEl.textContent = authorLabel
+    profileAddressEl.title = ''
+    setProfileTab('posts')
+    return
+  }
   profileAddressEl.textContent = ownerDisplayName(roninAddress)
   profileAddressEl.title = roninAddress
   void refreshCachedOwnerName(roninAddress).then(() => {
     if (profileAddressEl) profileAddressEl.textContent = ownerDisplayName(roninAddress)
   })
-  profileTodayPoints.textContent = 'Quest Lv …'
   // Re-sync Waypoint so secondary wallet lands in owners.json without logout
   await resyncWaypointIfPossible()
   setProfileTab(profileTab || 'axies')
@@ -5365,9 +5387,7 @@ async function showProfile(): Promise<void> {
         const crewBit =
           typeof crewN === 'number' && crewN > 0 ? ` · ${crewN} cast following` : ''
         if (typeof lvl === 'number') {
-          profileTodayPoints.textContent = `Quest Lv ${lvl}${crewBit}`
-        } else if (typeof data.todayPoints === 'number') {
-          profileTodayPoints.textContent = `Quest Lv —${crewBit}`
+          profileTodayPoints.textContent = `Lv ${lvl}${crewBit}`
         }
       }
       if (typeof data.unread === 'number') {
@@ -5409,6 +5429,9 @@ roninAddressInput.addEventListener('keydown', (e) => {
 
 document.querySelector<HTMLButtonElement>('#btn-vf-back')?.addEventListener('click', () => {
   void showFeed('global')
+})
+document.querySelector<HTMLButtonElement>('#btn-crew-connect')?.addEventListener('click', () => {
+  void connectRonin()
 })
 document.querySelector<HTMLButtonElement>('#btn-tray-connect')?.addEventListener('click', () => {
   void connectRonin()

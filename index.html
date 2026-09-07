@@ -255,35 +255,41 @@
       <!-- Profile (Ronin connected) -->
       <section id="profile" class="screen" aria-label="Profile" hidden>
         <header class="feed-header profile-header">
-          <button type="button" id="btn-profile-back" class="btn secondary feed-back" hidden>← Back</button>
-          <div class="feed-title">Crew</div>
-          <button type="button" id="btn-profile-bell" class="btn icon profile-bell" title="Inbox" aria-label="Notifications">
-            🔔<span id="profile-bell-badge" class="bell-badge" hidden>0</span>
-          </button>
-        </header>
-        <div class="profile-strip">
-          <div class="profile-strip-main">
+          <button type="button" id="btn-profile-back" class="btn secondary feed-back" hidden>Back</button>
+          <div class="crew-avatar"><span data-icon="user"></span></div>
+          <div class="crew-identity">
             <p id="profile-address" class="profile-address">—</p>
-            <p id="profile-today-points" class="profile-today-points">Quest Lv 0</p>
+            <p id="profile-today-points" class="profile-today-points">Lv 0</p>
           </div>
-          <div class="profile-strip-actions">
-            <button type="button" id="btn-profile-disconnect" class="btn secondary">Disconnect</button>
-            <button type="button" id="btn-profile-post" class="btn primary">Post as an Axie you own</button>
+          <button type="button" id="btn-profile-bell" class="btn icon profile-bell" title="Inbox" aria-label="Notifications"><span data-icon="bell"></span><span id="profile-bell-badge" class="bell-badge" hidden>0</span></button>
+        </header>
+        <div id="crew-connect-card" class="crew-connect">
+          <div class="crew-connect-text">
+            <strong>Own Axies on Ronin?</strong>
+            <span>Connect once and they join the crew tray. Posts show their real name.</span>
           </div>
+          <button type="button" id="btn-crew-connect" class="btn primary crew-connect-btn">Connect</button>
+        </div>
+        <div id="crew-wallet-row" class="crew-wallet" hidden>
+          <button type="button" id="btn-profile-post" class="btn primary crew-wallet-post">Snap with an Axie I own</button>
+          <button type="button" id="btn-profile-disconnect" class="btn secondary">Disconnect</button>
         </div>
         <div id="profile-cast-crew" class="cast-crew-strip" hidden>
-          <div class="cast-crew-strip-head">
-            <strong>Your cast crew</strong>
-            <span id="profile-cast-crew-count" class="cast-crew-count"></span>
+          <div class="crew-section-head">
+            <span class="crew-section-label">Crew · <span id="profile-cast-crew-count"></span></span>
+            <span class="crew-section-hint">Quests unlock faces</span>
           </div>
-          <p class="cast-crew-strip-sub">Quest level unlocks cast faces &amp; props</p>
           <div id="profile-cast-crew-grid" class="cast-crew-grid" role="list"></div>
+          <div class="crew-section-head crew-section-head-props">
+            <span class="crew-section-label">Props · <span id="crew-props-count"></span></span>
+          </div>
+          <div id="crew-props" class="crew-props"></div>
           <p id="profile-cast-crew-hint" class="cast-crew-hint" hidden></p>
         </div>
         <div class="profile-tabs" role="tablist">
           <button type="button" class="profile-tab is-active" data-tab="axies" role="tab" aria-selected="true">My Axies</button>
-          <button type="button" class="profile-tab" data-tab="posts" role="tab" aria-selected="false">My posts</button>
-          <button type="button" class="profile-tab" data-tab="board" role="tab" aria-selected="false">My board</button>
+          <button type="button" class="profile-tab" data-tab="posts" role="tab" aria-selected="false">My moments</button>
+          <button type="button" class="profile-tab" data-tab="board" role="tab" aria-selected="false">My ladder</button>
         </div>
         <div id="profile-tab-axies" class="profile-panel" data-panel="axies">
           <div class="profile-axies-tools">
@@ -300,7 +306,7 @@
         </div>
         <div id="profile-tab-posts" class="profile-panel" data-panel="posts" hidden>
           <div id="profile-posts-list" class="feed-list profile-posts-list"></div>
-          <p id="profile-posts-empty" class="feed-empty" hidden>No posts yet from this wallet — go capture something bright!</p>
+          <p id="profile-posts-empty" class="feed-empty" hidden>No moments yet. Snap one with Kotaro.</p>
         </div>
         <div id="profile-tab-board" class="profile-panel" data-panel="board" hidden>
           <div id="profile-board-list" class="board-list profile-board-list" role="list"></div>

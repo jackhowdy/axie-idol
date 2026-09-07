@@ -3505,3 +3505,46 @@ button.id-chip {
 #onboard .onboard-cta span { display: flex; }
 #onboard .btn.onboard-secondary { width: 100%; height: 48px; justify-content: center; font-weight: 800; }
 .onboard-note { margin: 0; text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); }
+
+/* ===== Field revamp: Crew screen ===== */
+#profile .profile-header { gap: 12px; }
+.crew-avatar { width: 52px; height: 52px; border-radius: var(--radius-pill); background: var(--surface-soft); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.crew-avatar span { display: flex; }
+.crew-identity { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.crew-identity .profile-address { margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crew-identity .profile-today-points { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); }
+#profile .btn.icon.profile-bell { width: 44px; height: 44px; background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font-size: 1rem; position: relative; }
+#profile .profile-bell span[data-icon] { display: flex; }
+.crew-connect { margin: 0 16px 14px; padding: 12px 14px; border-radius: var(--radius-card); background: var(--bg-2); border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.crew-connect[hidden] { display: none !important; }
+.crew-connect-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.crew-connect-text strong { font-family: var(--font-display); font-size: 14px; font-weight: 900; color: var(--text); }
+#profile .btn.crew-connect-btn { height: 40px; min-width: 0; padding: 0 14px; font-size: 13px; white-space: nowrap; }
+.crew-wallet { margin: 0 16px 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.crew-wallet[hidden] { display: none !important; }
+#profile .btn.crew-wallet-post { flex: 1 1 auto; height: 44px; font-size: 13px; }
+#profile .cast-crew-strip { padding: 0; margin: 0; background: none; border: 0; }
+.crew-section-head { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 8px; }
+.crew-section-head-props { padding-top: 16px; }
+.crew-section-label { font-family: var(--font-display); font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.crew-section-hint { font-size: 12px; font-weight: 800; color: var(--accent); }
+#profile .cast-crew-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 0 16px; }
+.crew-slot { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; }
+.crew-face { position: relative; width: 100%; aspect-ratio: 1; border-radius: var(--radius-card); background: var(--bg-2); border: 2px solid var(--border); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.crew-face img { width: 94%; height: 94%; object-fit: cover; }
+.crew-slot.is-unlocked .crew-face { border-color: var(--success); }
+.crew-slot.is-locked .crew-face img { opacity: 0.3; filter: grayscale(1); }
+.crew-slot.is-villain .crew-face { background: var(--text); border-color: var(--text); }
+.crew-slot.is-villain .crew-face img { opacity: 0.35; filter: none; }
+.crew-lvl { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 0; background: rgba(26, 43, 60, 0.78); color: #fff; font-family: var(--font-display); font-size: 10px; font-weight: 900; text-align: center; letter-spacing: 0.04em; }
+.crew-slot.is-villain .crew-lvl { background: rgba(255, 107, 44, 0.9); }
+.crew-slot-name { font-family: var(--font-display); font-size: 11px; font-weight: 800; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crew-slot.is-locked .crew-slot-name { color: var(--muted); }
+.crew-props { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px; }
+.crew-prop { height: 40px; padding: 0 14px; border-radius: var(--radius-pill); background: var(--bg-2); border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 13px; font-weight: 800; color: var(--muted); }
+.crew-prop svg { flex: 0 0 auto; }
+.crew-prop.is-unlocked { border-color: var(--success); color: var(--text); }
+#profile .profile-tabs { margin-top: 16px; }
+.moments-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0 16px; }
+.moment-tile { appearance: none; border: 0; padding: 0; border-radius: 12px; overflow: hidden; aspect-ratio: 1; background: var(--surface-soft); cursor: pointer; }
+.moment-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
