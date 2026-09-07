@@ -45,7 +45,7 @@ import type { ThreeAxieMixer3D, AxieMixerManifest } from '@jaatster/threejs-axie
 const MAX_PIXEL_RATIO = 2
 const ASSET_BASE = '/assets/axie/'
 /** Bump when the manifest or derived parts change; the pack is served with long cache headers. */
-const PACK_VERSION = '17'
+const PACK_VERSION = '20'
 
 export type Axie3DSpec =
   | {
@@ -497,7 +497,7 @@ export function addNightmareSpikes(root: Object3D, colorHex: string): void {
   anchor.add(group)
 }
 
-const VIEW_DIR = new Vector3(0.92, 0.12, 1).normalize()
+// default view direction lives in CAMERA (dirX, dirY, 1)
 const DEV_VIEWS: Record<string, Vector3> = {
   rear: new Vector3(-0.8, 0.2, -1).normalize(),
   side: new Vector3(1, 0.1, 0.15).normalize(),
@@ -508,7 +508,7 @@ function viewDir(): Vector3 {
     const m = /view=([a-z]+)/.exec(location.hash)
     if (m && DEV_VIEWS[m[1]]) return DEV_VIEWS[m[1]]
   }
-  return VIEW_DIR
+  return new Vector3(devNum('yawx', CAMERA.dirX), devNum('yawy', CAMERA.dirY), 1).normalize()
 }
 
 /**
@@ -741,7 +741,7 @@ export function addMysticPod(root: Object3D, cls: string, axieId: string): void 
   group.matrix.copy(new Matrix4().copy(anchor.matrixWorld).invert())
   // rear half of a sphere (three.js phi from PI to 2PI is the -z side), cut below the crown and
   // above the feet, then scaled to the body ellipsoid and tilted so the seam runs diagonally
-  const geo = new SphereGeometry(1, 48, 32, Math.PI - 0.55, Math.PI + 1.1, Math.PI * 0.28, Math.PI * 0.6)
+  const geo = new SphereGeometry(1, 48, 32, Math.PI - 0.3, Math.PI + 0.6, Math.PI * 0.28, Math.PI * 0.6)
   const tex = mysticPodTexture(cls.toLowerCase(), axieId)
   const fill = new MeshToonMaterial({ map: tex })
   const line = new MeshBasicMaterial({ color: 0x1c1c1c, side: BackSide })
@@ -749,8 +749,8 @@ export function addMysticPod(root: Object3D, cls: string, axieId: string): void 
   const outline = new Mesh(geo, line)
   for (const m of [pod, outline]) {
     m.position.copy(center).add(new Vector3(0, -radii.y * 0.02, -radii.z * 0.06))
-    m.scale.set(radii.x * 1.3, radii.y * 1.1, radii.z * 1.22)
-    m.rotation.x = -0.5 // tilt: top edge further back, belly edge further forward
+    m.scale.set(radii.x * 1.22, radii.y * 1.1, radii.z * 1.16)
+    m.rotation.x = -0.4 // tilt: top edge further back, belly edge further forward
   }
   outline.scale.multiplyScalar(1.022)
   group.add(outline, pod)
@@ -824,6 +824,75 @@ export function applyPaletteShadow(root: Object3D, manifest: AxieMixerManifest, 
   })
 }
 
+/**
+ * Face proportions. Sky Mavis's 2D draws eyes and mouths larger on the body than the pack's
+ * meshes; the parts sit on their own joints (Root_Eye_M_JNT, Root_Mouth_M_JNT), so scaling the
+ * meshes about the joint enlarges them in place. Calibrated against the 2D one Axie at a time;
+ * dev mode can override with #eye=1.3&mouth=1.2 in the hash.
+ */
+export const FACE_SCALE = { eye: 1.25, mouth: 1.15, ear: 1.0 }
+
+/**
+ * Body proportions. The 2D Axie is a squat bean roughly 1.5x longer than tall; the pack's body is
+ * nearly round. The character wrapper is squashed vertically and stretched along its length, and
+ * every rigid part mesh is counter-scaled so horns, ears and backs keep their own shape while
+ * riding the squashed body. Dev hash: #sy=0.82&sz=1.2&fov=20&yawx=1.1&yawy=0.1
+ */
+export const BODY_SHAPE = { sy: 0.82, sz: 1.25, sx: 1.0 }
+export const CAMERA = { fov: 20, dirX: 0.75, dirY: 0.1, dist: 1.06 }
+
+function devNum(name: string, fallback: number): number {
+  if (!location.search.includes('dev=1')) return fallback
+  const m = new RegExp(name + '=(-?[0-9.]+)').exec(location.hash)
+  return m ? Number(m[1]) : fallback
+}
+
+export function applyBodyShape(root: Object3D): void {
+  const sx = devNum('sx', BODY_SHAPE.sx)
+  const sy = devNum('sy', BODY_SHAPE.sy)
+  const sz = devNum('sz', BODY_SHAPE.sz)
+  if (sx === 1 && sy === 1 && sz === 1) return
+  root.scale.set(sx, sy, sz)
+  root.updateWorldMatrix(true, true)
+  // counter-scale rigid parts in world axes: parent each part mesh's local scale by the inverse of
+  // the wrapper scale expressed in the mesh's own frame (approximation: use the bone's rotation)
+  const inv = new Vector3(1 / sx, 1 / sy, 1 / sz)
+  root.traverse((o) => {
+    const m = o as Mesh & { isSkinnedMesh?: boolean }
+    if (!m.isMesh || m.isSkinnedMesh) return
+    // world-axis inverse scale mapped into the mesh's local axes via its parent's world rotation
+    const q = new Matrix4().extractRotation(o.parent ? o.parent.matrixWorld : root.matrixWorld)
+    const ax = new Vector3(1, 0, 0).applyMatrix4(q)
+    const ay = new Vector3(0, 1, 0).applyMatrix4(q)
+    const az = new Vector3(0, 0, 1).applyMatrix4(q)
+    const f = (v: Vector3) => Math.abs(v.x) * inv.x + Math.abs(v.y) * inv.y + Math.abs(v.z) * inv.z
+    m.scale.multiply(new Vector3(f(ax), f(ay), f(az)))
+  })
+}
+
+function faceScales(): { eye: number; mouth: number; ear: number } {
+  const out = { ...FACE_SCALE }
+  if (location.search.includes('dev=1')) {
+    for (const k of ['eye', 'mouth', 'ear'] as const) {
+      const m = new RegExp(k + '=([0-9.]+)').exec(location.hash)
+      if (m) out[k] = Number(m[1])
+    }
+  }
+  return out
+}
+
+export function applyFaceScale(root: Object3D): void {
+  const s = faceScales()
+  root.traverse((o) => {
+    const m = o as Mesh
+    if (!m.isMesh) return
+    const n = o.name
+    if (/_L[12]_Eye__/.test(n) && s.eye !== 1) m.scale.multiplyScalar(s.eye)
+    else if (/_L[12]_Mouth__/.test(n) && s.mouth !== 1) m.scale.multiplyScalar(s.mouth)
+    else if (/_L[12]_Ear__/.test(n) && s.ear !== 1) m.scale.multiplyScalar(s.ear)
+  })
+}
+
 /** Bounds of the posed character: part meshes plus the skinned body vertices. */
 function characterBounds(root: Object3D): Box3 {
   const box = new Box3()
@@ -848,7 +917,8 @@ function frameCamera(camera: PerspectiveCamera, root: Object3D): void {
   const center = box.getCenter(new Vector3())
   center.y += size.y * 0.02
   const radius = Math.max(size.x, size.y, size.z) * 0.5 || 1
-  const dist = (radius / Math.tan((camera.fov * Math.PI) / 360)) * 1.22
+  camera.fov = devNum('fov', CAMERA.fov)
+  const dist = (radius / Math.tan((camera.fov * Math.PI) / 360)) * devNum('dist', CAMERA.dist)
   camera.position.copy(center).addScaledVector(viewDir(), dist)
   camera.near = Math.max(0.05, dist / 100)
   camera.far = dist * 10
@@ -887,6 +957,7 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
   let character: Character | null = null
   let raf = 0
   let hiddenTimer = 0
+  let lastFrame = 0
   let paused = false
   let lean = { x: 0, y: 0 }
   let loadSeq = 0
@@ -936,6 +1007,8 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
           console.info('[axie3d] colours ' + rows.join(' | '))
         }
         applyOverrideScales(next.wrapper, overrideScales(base))
+        applyFaceScale(next.wrapper)
+        applyBodyShape(next.wrapper)
         clipMaskedEyes(next.wrapper, mixer.manifest)
         applyPaletteShadow(next.wrapper, mixer.manifest, descriptor.colorVariant)
         if (spec.kind === 'descriptor' && spec.gold) goldify(next.wrapper)
@@ -1038,6 +1111,7 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
     if (raf) return
     const loop = () => {
       raf = requestAnimationFrame(loop)
+      lastFrame = performance.now()
       tick()
     }
     raf = requestAnimationFrame(loop)
@@ -1045,8 +1119,9 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
     // returning to the tab never show an empty canvas.
     if (!hiddenTimer) {
       hiddenTimer = window.setInterval(() => {
-        if (document.visibilityState === 'hidden') tick(true)
-      }, 1000)
+        // background tabs and hidden panes pause requestAnimationFrame without always reporting hidden
+        if (performance.now() - lastFrame > 800) tick(true)
+      }, 500)
     }
   }
 

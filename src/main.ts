@@ -5922,6 +5922,13 @@ async function boot(): Promise<void> {
     await initSticker3D()
     const devFace = isDevMode() ? new URLSearchParams(location.search).get('face') : null
     if (devFace && devFace.startsWith('dev:')) void showAxie3D(devFace, ++castRequest)
+    if (isDevMode() && new URLSearchParams(location.search).get('raf') === 'timer') {
+      // dev QA in a hidden browser pane: requestAnimationFrame never fires there, which stalls the
+      // mixer's frame-scheduled loading; drive it from timers instead
+      const w = window as unknown as { requestAnimationFrame: (cb: (t: number) => void) => number; cancelAnimationFrame: (id: number) => void }
+      w.requestAnimationFrame = (cb) => window.setTimeout(() => cb(performance.now()), 16)
+      w.cancelAnimationFrame = (id) => window.clearTimeout(id)
+    }
     if (isDevMode()) {
       // dev QA: #face=dev:<part ids> swaps the live face without a reload
       window.addEventListener('hashchange', () => {
