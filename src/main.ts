@@ -5911,6 +5911,14 @@ async function boot(): Promise<void> {
     await initSticker3D()
     const devFace = isDevMode() ? new URLSearchParams(location.search).get('face') : null
     if (devFace && devFace.startsWith('dev:')) void showAxie3D(devFace, ++castRequest)
+    if (isDevMode()) {
+      // dev QA: #face=dev:<part ids> swaps the live face without a reload
+      window.addEventListener('hashchange', () => {
+        const h = decodeURIComponent(location.hash.replace(/^#/, '')).split('&')[0]
+        const face = h.startsWith('face=') ? h.slice(5) : null
+        if (face && face.startsWith('dev:')) void showAxie3D(face, ++castRequest)
+      })
+    }
     const bootProp = defaultPropForCast(activeCast)
     if (bootProp && isPropUnlocked(bootProp)) void equipProp(bootProp)
     else void clearEquippedProp()

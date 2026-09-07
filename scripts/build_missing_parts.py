@@ -69,7 +69,14 @@ NIGHTMARE_ICON = {
     "S12_Reptile06_L2_Horn": "horn-killah-clamp-2",
 }
 
-AGAMO_PRIMARY_DEG = 175  # teal
+# Agamo (skin 2) = the Bionic parts of the three Agamogenesis Axies (#4154, #4155, #4156).
+# Pack part id -> (normal counterpart icon, bionic icon), stage suffix added per level.
+AGAMO_ICON = {
+    "S00_Aquatic12_L1_Horn": ("horn-shoal-star", "horn-5h04l-5t4r"),
+    "S00_Reptile08_L1_Back": ("back-indian-star", "back-1nd14n-5t4r"),
+    "S00_Bug10_L1_Horn": ("horn-parasite", "horn-p4r451t3"),
+}
+AGAMO_PRIMARY_DEG = 175  # teal (fallback only)
 AGAMO_SECONDARY_SHIFT_DEG = 120
 CLUSTERS = 4
 SAT_COLOURED = 0.16
@@ -416,6 +423,13 @@ def main(argv: list[str]) -> int:
                     normal_icon, shiny_icon = icon_path(icon), icon_path(icon.replace("-2", "-shiny-2"))
                     png, info = transfer(local_path(src_png), normal_icon, shiny_icon)
                     sheet_rows.append((pid, normal_icon, shiny_icon, local_path(src_png), png))
+                elif src_id.replace("_L2_", "_L1_") in AGAMO_ICON:
+                    base_icon, bionic_icon = AGAMO_ICON[src_id.replace("_L2_", "_L1_")]
+                    suffix = "-2" if "_L2_" in src_id else ""
+                    normal_icon, bionic = icon_path(base_icon + suffix), icon_path(bionic_icon + suffix)
+                    png, info = transfer(local_path(src_png), normal_icon, bionic)
+                    note = f"Bionic (Agamogenesis) colours learned from marketplace icons {base_icon}{suffix} vs {bionic_icon}{suffix}; normal mesh"
+                    sheet_rows.append((pid, normal_icon, bionic, local_path(src_png), png))
                 else:
                     png = recolour_agamo(local_path(src_png))
                 tex_cache[key] = (sha256_bytes(png), png)

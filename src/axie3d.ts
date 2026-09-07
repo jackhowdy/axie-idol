@@ -10,6 +10,7 @@ import {
   AmbientLight,
   BackSide,
   Box3,
+  BufferAttribute,
   Clock,
   Color,
   ConeGeometry,
@@ -20,7 +21,6 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
-  MeshToonMaterial,
   NeutralToneMapping,
   PerspectiveCamera,
   Scene,
@@ -42,7 +42,7 @@ import type { ThreeAxieMixer3D, AxieMixerManifest } from '@jaatster/threejs-axie
 const MAX_PIXEL_RATIO = 2
 const ASSET_BASE = '/assets/axie/'
 /** Bump when the manifest or derived parts change; the pack is served with long cache headers. */
-const PACK_VERSION = '7'
+const PACK_VERSION = '11'
 
 export type Axie3DSpec =
   | {
@@ -244,6 +244,44 @@ export function withNightmareBody(descriptor: AxieDescriptor, bodyShape: string 
   return { ...descriptor, body: 'normal', colorVariant: target.index }
 }
 
+/**
+ * Pack corrections, verified part by part against Sky Mavis's marketplace icons (7 Sep 2026, see
+ * README "Japan parts"). The public pack ships stage-2 Japan assets only for the japan-02 set
+ * (Yen, Karimata, Dango, Umaibo, Hamaya, Koinobori) and points every other stage-2 Japan slot at
+ * those same files, while the real stage-2 art for the japan-01 and japan-03 sets (Kabuki-2,
+ * Dokuganryu-2, Geisha-2, Kawaii-2, Kendama-2, Origami-2, Yakitori-2, Omatsuri-2, Maki-2, Mon-2,
+ * Maiko-2) sits under the normal skin of the same variant. Kawaii (stage 1) shares Cute Bunny's
+ * art. Map those ids to the asset that matches the 2D.
+ */
+export const PART_ASSET_OVERRIDES: Record<string, { skin: number }> = {
+  S03_Bug08_L1_Mouth: { skin: 0 }, // Kawaii (= Cute Bunny art)
+  S03_Reptile10_L2_Eye: { skin: 0 }, // Kabuki-2
+  S03_Reptile08_L2_Eye: { skin: 0 }, // Dokuganryu-2
+  S03_Aquatic10_L2_Mouth: { skin: 0 }, // Geisha-2
+  S03_Bug08_L2_Mouth: { skin: 0 }, // Kawaii-2
+  S03_Plant04_L2_Horn: { skin: 0 }, // Kendama-2
+  S03_Beast04_L2_Horn: { skin: 0 }, // japan-03 horn, stage 2
+  S03_Bird04_L2_Back: { skin: 0 }, // Origami-2
+  S03_Plant04_L2_Back: { skin: 0 }, // Yakitori-2
+  S03_Bird10_L2_Tail: { skin: 0 }, // Omatsuri-2
+  S03_Bug06_L2_Tail: { skin: 0 }, // Maki-2
+  S03_Bug12_L2_Ear: { skin: 0 }, // Mon-2
+  S03_Plant08_L2_Ear: { skin: 0 }, // Maiko-2
+}
+
+export function applyPartOverrides(descriptor: AxieDescriptor, log: (msg: string) => void = () => {}): AxieDescriptor {
+  return {
+    ...descriptor,
+    parts: descriptor.parts.map((p) => {
+      const id = formatAxiePartAssetId(p)
+      const o = PART_ASSET_OVERRIDES[id]
+      if (!o) return p
+      log(`[axie3d] override ${id} -> skin ${o.skin}`)
+      return { ...p, skin: o.skin }
+    }),
+  }
+}
+
 /** Apply the downgrade policy against the loaded manifest. Returns a new descriptor. */
 export function downgradeDescriptor(
   descriptor: AxieDescriptor,
@@ -306,22 +344,40 @@ const THORN_SLOTS: ThornSlot[] = [
   { dir: [0.45, 0.4, -0.82], len: 0.22, rad: 0.06, bend: 0.35 }, // rear right
 ]
 
-/** A tapered thorn along +Y that hooks toward -Z near the tip. */
-function thornGeometry(rad: number, len: number, bend: number): ConeGeometry {
-  const geo = new ConeGeometry(rad, len, 12, 10)
+/**
+ * A tapered thorn along +Y that hooks toward -Z near the tip, with the 2D art's gradient baked into
+ * vertex colours: the accent colour at the base darkening slightly into the body, a lighter tint
+ * toward the tip, and a pale highlight strip along the front-facing edge.
+ */
+function thornGeometry(rad: number, len: number, bend: number, accent: Color): ConeGeometry {
+  const geo = new ConeGeometry(rad, len, 14, 12)
   const pos = geo.attributes.position
+  const colors = new Float32Array(pos.count * 3)
   const p = new Vector3()
+  const base = accent.clone().offsetHSL(0, 0.05, -0.08)
+  const tip = accent.clone().offsetHSL(0.01, -0.05, 0.22)
+  const highlight = accent.clone().offsetHSL(0.02, -0.25, 0.4)
+  const c = new Color()
   for (let i = 0; i < pos.count; i++) {
     p.fromBufferAttribute(pos, i)
     const t = (p.y + len / 2) / len // 0 at the base, 1 at the tip
-    const taper = Math.pow(1 - t, 0.75) / Math.max(1e-3, 1 - t) // sharper tip than a plain cone
+    const angle = Math.atan2(p.x, p.z) // around the thorn, 0 = facing +Z (front)
+    const taper = Math.pow(1 - t, 0.75) / Math.max(1e-3, 1 - t)
     if (t < 0.999) {
       p.x *= taper
       p.z *= taper
     }
     p.z -= bend * len * t * t
     pos.setXYZ(i, p.x, p.y, p.z)
+    c.copy(base).lerp(tip, Math.pow(t, 1.3))
+    // highlight strip on the front edge, fading toward the base
+    const strip = Math.max(0, Math.cos(angle - 0.6)) ** 6 * (0.25 + 0.75 * t)
+    c.lerp(highlight, strip * 0.85)
+    colors[i * 3] = c.r
+    colors[i * 3 + 1] = c.g
+    colors[i * 3 + 2] = c.b
   }
+  geo.setAttribute('color', new BufferAttribute(colors, 3))
   geo.computeVertexNormals()
   return geo
 }
@@ -382,7 +438,9 @@ export function addNightmareSpikes(root: Object3D, colorHex: string): void {
   group.name = 'NightmareSpikes'
   group.matrixAutoUpdate = false
   group.matrix.copy(new Matrix4().copy(anchor.matrixWorld).invert())
-  const fill = new MeshToonMaterial({ color: new Color(colorHex) })
+  const accent = new Color(colorHex)
+  // unlit like the 2D art; the gradient lives in the vertex colours
+  const fill = new MeshBasicMaterial({ vertexColors: true })
   const line = new MeshBasicMaterial({ color: 0x151515, side: BackSide })
   const up = new Vector3(0, 1, 0)
   const back = new Vector3(0, 0, -1)
@@ -392,14 +450,14 @@ export function addNightmareSpikes(root: Object3D, colorHex: string): void {
     const normal = new Vector3(dir.x / radii.x, dir.y / radii.y, dir.z / radii.z).normalize()
     const len = height * slot.len
     const rad = height * slot.rad
-    const cone = new Mesh(thornGeometry(rad, len, slot.bend), fill)
+    const cone = new Mesh(thornGeometry(rad, len, slot.bend, accent), fill)
     cone.position.copy(seat).addScaledVector(normal, len * 0.42)
     cone.quaternion.setFromUnitVectors(up, normal)
     // roll the hook so it sweeps toward the rear
     const localBack = back.clone().applyQuaternion(cone.quaternion.clone().invert())
     const roll = Math.atan2(localBack.x, -localBack.z)
     cone.rotateY(roll)
-    const outline = new Mesh(thornGeometry(rad * 1.16, len * 1.04, slot.bend), line)
+    const outline = new Mesh(thornGeometry(rad * 1.16, len * 1.04, slot.bend, accent), line)
     outline.position.copy(cone.position).addScaledVector(normal, -len * 0.015)
     outline.quaternion.copy(cone.quaternion)
     group.add(outline, cone)
@@ -407,7 +465,19 @@ export function addNightmareSpikes(root: Object3D, colorHex: string): void {
   anchor.add(group)
 }
 
-const VIEW_DIR = new Vector3(0.62, 0.14, 1).normalize()
+const VIEW_DIR = new Vector3(0.8, 0.14, 1).normalize()
+const DEV_VIEWS: Record<string, Vector3> = {
+  rear: new Vector3(-0.8, 0.2, -1).normalize(),
+  side: new Vector3(1, 0.1, 0.15).normalize(),
+  front: new Vector3(0.15, 0.1, 1).normalize(),
+}
+function viewDir(): Vector3 {
+  if (location.search.includes('dev=1')) {
+    const m = /view=([a-z]+)/.exec(location.hash)
+    if (m && DEV_VIEWS[m[1]]) return DEV_VIEWS[m[1]]
+  }
+  return VIEW_DIR
+}
 
 /** Bounds of the posed character: part meshes plus the skinned body vertices. */
 function characterBounds(root: Object3D): Box3 {
@@ -434,7 +504,7 @@ function frameCamera(camera: PerspectiveCamera, root: Object3D): void {
   center.y += size.y * 0.02
   const radius = Math.max(size.x, size.y, size.z) * 0.5 || 1
   const dist = (radius / Math.tan((camera.fov * Math.PI) / 360)) * 1.22
-  camera.position.copy(center).addScaledVector(VIEW_DIR, dist)
+  camera.position.copy(center).addScaledVector(viewDir(), dist)
   camera.near = Math.max(0.05, dist / 100)
   camera.far = dist * 10
   camera.lookAt(center)
@@ -493,7 +563,7 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
           spec.kind === 'genes'
             ? withNightmareBody(withStages(mixer.decodeGenes(spec.genes).descriptor, spec.stages), spec.bodyShape, mixer)
             : spec.descriptor
-        const descriptor = downgradeDescriptor(base, has, (m) => console.info(m))
+        const descriptor = downgradeDescriptor(applyPartOverrides(base, (m) => console.info(m)), has, (m) => console.info(m))
         const next = (await mixer.create({
           descriptor,
           extensions: { quality: 'balanced', strict: false },
