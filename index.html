@@ -7,11 +7,11 @@
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#E8F6FF" />
-    <title>Axie Idol — LIVE Composer</title>
+    <title>Axie Idol</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/src/style.css" />
@@ -40,7 +40,7 @@
         <div class="chrome top">
           <div class="top-row">
             <div class="brand">Axie Idol · LIVE</div>
-            <button type="button" id="btn-to-feed" class="btn nav-chip" title="Idol Feed">Feed</button>
+            <button type="button" id="btn-to-feed" class="btn nav-chip" title="Idol Feed" hidden>Feed</button>
             <button type="button" id="btn-to-profile" class="btn nav-chip" title="Profile" hidden>Profile</button>
           </div>
           <p class="hint">Free cast first — connect later to bring your own Axies</p>
@@ -201,10 +201,10 @@
       <!-- Idol feed -->
       <section id="feed" class="screen active" aria-label="Idol Feed">
         <header class="feed-header">
-          <button type="button" id="btn-feed-back" class="btn feed-back feed-create-btn" title="Create a moment">Create</button>
-          <div class="feed-title">Idol Feed</div>
+          <button type="button" id="btn-feed-back" class="btn feed-back feed-create-btn" title="Create a moment" hidden>Create</button>
+          <div class="feed-title">Feed</div>
           <button type="button" id="btn-feed-refresh" class="btn nav-chip feed-refresh-btn" title="Refresh feed">↻</button>
-          <button type="button" id="btn-to-board" class="btn nav-chip feed-board-btn" title="Quest Ladder">Board</button>
+          <button type="button" id="btn-to-board" class="btn nav-chip feed-board-btn" title="Quest Ladder" hidden>Board</button>
           <button type="button" id="btn-feed-connect" class="btn feed-connect-btn" title="Optional: bring owned Axies">Bring Axies</button>
           <button type="button" id="btn-feed-to-profile" class="btn nav-chip" title="Profile" hidden>Me</button>
           <div id="feed-guest" class="feed-guest"></div>
@@ -231,8 +231,8 @@
       <!-- Idol Board (Daily + All-time, Asia/Manila) -->
       <section id="board" class="screen" aria-label="Quest Ladder" hidden>
         <header class="feed-header board-header">
-          <button type="button" id="btn-board-back" class="btn secondary feed-back">← Feed</button>
-          <div class="feed-title" id="board-title">Daily Climbers</div>
+          <button type="button" id="btn-board-back" class="btn secondary feed-back" hidden>← Feed</button>
+          <div class="feed-title" id="board-title">Ladder</div>
         </header>
         <div class="board-range-tabs" role="tablist" aria-label="Ladder range">
           <button type="button" class="board-range-tab is-active" data-range="daily" role="tab" aria-selected="true">Daily</button>
@@ -248,8 +248,8 @@
       <!-- Profile (Ronin connected) -->
       <section id="profile" class="screen" aria-label="Profile" hidden>
         <header class="feed-header profile-header">
-          <button type="button" id="btn-profile-back" class="btn secondary feed-back">← Back</button>
-          <div class="feed-title">Profile</div>
+          <button type="button" id="btn-profile-back" class="btn secondary feed-back" hidden>← Back</button>
+          <div class="feed-title">Crew</div>
           <button type="button" id="btn-profile-bell" class="btn icon profile-bell" title="Inbox" aria-label="Notifications">
             🔔<span id="profile-bell-badge" class="bell-badge" hidden>0</span>
           </button>
@@ -342,6 +342,20 @@
         </div>
       </section>
     </div>
+      <nav id="tabbar" class="tabbar" aria-label="Main">
+        <button type="button" class="tab" data-tab="feed" aria-current="page">
+          <span class="tab-ico" data-icon="home"></span><span class="tab-label">Feed</span>
+        </button>
+        <button type="button" class="tab tab-snap" data-tab="snap">
+          <span class="tab-shutter" data-icon="camera"></span><span class="tab-label">Snap</span>
+        </button>
+        <button type="button" class="tab" data-tab="ladder">
+          <span class="tab-ico" data-icon="trophy"></span><span class="tab-label">Ladder</span>
+        </button>
+        <button type="button" class="tab" data-tab="crew">
+          <span class="tab-ico" data-icon="user"></span><span class="tab-label">Crew</span>
+        </button>
+      </nav>
     <div id="img-lightbox" class="img-lightbox" hidden>
       <button type="button" id="img-lightbox-close" class="img-lightbox-close" aria-label="Close photo">Close</button>
       <img id="img-lightbox-img" alt="" />

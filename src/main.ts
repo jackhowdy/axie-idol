@@ -3,6 +3,7 @@
  * 7 kit mascots (no Sapidae) — on-demand GLB stickers + PNG fallback (see RIGHTS.md)
  */
 
+import { icon } from './icons'
 import type { Sticker3D } from './sticker3d'
 import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
@@ -537,6 +538,26 @@ const sparkVictorySub = document.querySelector<HTMLElement>('#spark-victory-sub'
 const sparkVictoryDemo = document.querySelector<HTMLElement>('#spark-victory-demo')
 const btnSparkVictoryOk = document.querySelector<HTMLButtonElement>('#btn-spark-victory-ok')
 const ownerScreen = document.querySelector<HTMLElement>('#owner')!
+
+type TabName = 'feed' | 'snap' | 'ladder' | 'crew'
+const tabbar = document.querySelector<HTMLElement>('#tabbar')!
+
+function setActiveTab(tab: TabName | null): void {
+  if (!tab) {
+    tabbar.hidden = true
+    return
+  }
+  tabbar.hidden = false
+  for (const b of tabbar.querySelectorAll<HTMLButtonElement>('.tab')) {
+    if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page')
+    else b.removeAttribute('aria-current')
+  }
+}
+
+// Paint SVG icons into every [data-icon] placeholder once
+for (const el of document.querySelectorAll<HTMLElement>('[data-icon]')) {
+  el.innerHTML = icon(el.dataset.icon || 'chevron', el.classList.contains('tab-shutter') ? 26 : 24)
+}
 const btnOwnerBack = document.querySelector<HTMLButtonElement>('#btn-owner-back')!
 const ownerTitle = document.querySelector<HTMLElement>('#owner-title')!
 const ownerNameEl = document.querySelector<HTMLElement>('#owner-name')!
@@ -1356,6 +1377,7 @@ btnProfileDisconnect?.addEventListener('click', () => {
 })
 btnProfilePost?.addEventListener('click', () => {
   hideAllScreens()
+  setActiveTab(null)
   viewfinder.hidden = false
   viewfinder.classList.add('active')
   showLiveToast('Pick an owned Axie, then capture & Post', 2200)
@@ -1886,6 +1908,7 @@ async function captureComposite(): Promise<void> {
   viewfinder.hidden = true
   previewScreen.hidden = false
   previewScreen.classList.add('active')
+  setActiveTab(null)
 }
 
 function clamp(n: number, min: number, max: number): number {
@@ -2465,6 +2488,7 @@ function castOrAxieLabel(id: string): string {
 
 function showViewfinderFromFeed(): void {
   hideAllScreens()
+  setActiveTab(null)
   viewfinder.hidden = false
   viewfinder.classList.add('active')
   // Guest dopamine: default Kotaro on camera if none selected
@@ -2540,7 +2564,7 @@ function updateFeedChrome(): void {
     btnFeedBack.title = 'Create a moment'
     btnFeedBack.classList.add('feed-create-btn')
   } else {
-    feedTitle.textContent = 'Idol Feed'
+    feedTitle.textContent = 'Feed'
     btnFeedBack.textContent = 'Create'
     btnFeedBack.title = 'Create a moment'
     btnFeedBack.classList.add('feed-create-btn')
@@ -2578,6 +2602,7 @@ async function openAxieTimeline(axieId: string): Promise<void> {
   updateFeedChrome()
   if (feedScreen.hidden) {
     hideAllScreens()
+    setActiveTab('feed')
     feedScreen.hidden = false
     feedScreen.classList.add('active')
     feedGuest.textContent = authorLabel
@@ -2592,6 +2617,7 @@ async function showFeed(mode: 'global' | 'following' = 'global'): Promise<void> 
   timelineFollowerCount = 0
   updateFeedChrome()
   hideAllScreens()
+  setActiveTab('feed')
   feedScreen.hidden = false
   feedScreen.classList.add('active')
   feedGuest.textContent = roninAddress
@@ -3105,7 +3131,7 @@ async function shareBoardRankCard(
 
   ctx.fillStyle = '#7A5A00'
   ctx.font = '700 28px Nunito, system-ui, sans-serif'
-  const rangeLabel = range === 'all' ? 'All-time Quest Ladder' : 'Daily Climbers'
+  const rangeLabel = range === 'all' ? 'All-time Quest Ladder' : 'Ladder'
   ctx.fillText(rangeLabel, w / 2, 130)
 
   const imgSrc = r.preview || previewFor(r.axieId) || axiePreviewSrc(r.axieId)
@@ -3817,7 +3843,7 @@ function syncBoardRangeTabs(): void {
     btn.setAttribute('aria-selected', active ? 'true' : 'false')
   })
   if (boardTitle) {
-    boardTitle.textContent = boardRange === 'all' ? 'All-time Quest Ladder' : 'Daily Climbers'
+    boardTitle.textContent = boardRange === 'all' ? 'All-time Quest Ladder' : 'Ladder'
   }
 }
 
@@ -3954,6 +3980,7 @@ async function refreshBoard(): Promise<void> {
 
 async function showBoard(): Promise<void> {
   hideAllScreens()
+  setActiveTab('ladder')
   boardScreen.hidden = false
   boardScreen.classList.add('active')
   await refreshBoard()
@@ -5092,6 +5119,7 @@ function setOwnerTab(tab: 'axies' | 'posts' | 'board'): void {
 }
 
 async function openOwnerHouse(address: string): Promise<void> {
+  setActiveTab('feed')
   const addr = normalizeAddressClient(address)
   if (!addr) return
   viewingOwnerAddress = addr
@@ -5271,6 +5299,7 @@ async function showProfile(): Promise<void> {
     return
   }
   hideAllScreens()
+  setActiveTab('crew')
   profileScreen.hidden = false
   profileScreen.classList.add('active')
   profileAddressEl.textContent = ownerDisplayName(roninAddress)
@@ -5349,6 +5378,16 @@ roninAddressInput.addEventListener('keydown', (e) => {
     void applyRoninAddress(roninAddressInput.value)
   }
   if (e.key === 'Escape') closeRoninModal()
+})
+
+tabbar.addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.tab')
+  if (!b) return
+  const t = b.dataset.tab as TabName
+  if (t === 'feed') void showFeed('global')
+  else if (t === 'snap') showViewfinderFromFeed()
+  else if (t === 'ladder') void showBoard()
+  else if (t === 'crew') void showProfile()
 })
 
 async function boot(): Promise<void> {

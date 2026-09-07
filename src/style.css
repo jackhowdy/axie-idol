@@ -23,7 +23,7 @@
   --radius-card: 16px;
   --radius-tray: 20px;
   --radius-pill: 999px;
-  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-ui: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: "Nunito", var(--font-ui);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
@@ -3360,3 +3360,61 @@ button.id-chip {
   .feed-header .feed-connect-btn { order: 6; }
   .feed-header #btn-feed-to-profile { order: 7; }
 }
+
+/* ===== Field revamp: tab bar ===== */
+.tabbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  height: calc(70px + var(--safe-bottom));
+  padding: 0 8px var(--safe-bottom);
+  background: var(--bg-2);
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
+}
+.tabbar[hidden] { display: none !important; }
+.tab {
+  appearance: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab[aria-current="page"] { color: var(--accent); }
+.tab-label { font-family: var(--font-display); font-size: 11px; font-weight: 800; }
+.tab-ico { display: flex; }
+.tab-ico svg { width: 24px; height: 24px; }
+.tab-snap .tab-label { color: var(--accent-hot); }
+.tab-shutter {
+  width: 56px;
+  height: 56px;
+  margin-top: -26px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-hot);
+  border: 4px solid var(--bg-2);
+  box-shadow: 0 6px 18px rgba(255, 107, 44, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.tab-shutter svg { width: 26px; height: 26px; }
+/* Screens with the bar need room for it */
+#feed.screen.active .feed-list,
+#board.screen.active,
+#profile.screen.active,
+#owner.screen.active { padding-bottom: calc(76px + var(--safe-bottom)); }
+#feed.screen.active .feed-empty,
+#feed.screen.active .feed-error { margin-bottom: calc(76px + var(--safe-bottom)); }
