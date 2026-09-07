@@ -1,0 +1,69 @@
+{
+  "name": "@jaatster/threejs-axie-mixer3d-public",
+  "version": "0.1.0-alpha.0",
+  "description": "A Three.js runtime for assembling and animating modular 3D Axies in approved Axie projects.",
+  "private": true,
+  "license": "SEE LICENSE IN RIGHTS.md",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./three": {
+      "types": "./dist/types/three.d.ts",
+      "import": "./dist/three.js"
+    },
+    "./rendering": {
+      "types": "./dist/types/rendering.d.ts",
+      "import": "./dist/rendering.js"
+    },
+    "./creator": {
+      "types": "./dist/types/creator-api.d.ts",
+      "import": "./dist/creator-api.js"
+    },
+    "./creator/dom": {
+      "types": "./dist/types/creator-dom.d.ts",
+      "import": "./dist/creator-dom.js"
+    },
+    "./compat": {
+      "types": "./dist/types/compat.d.ts",
+      "import": "./dist/compat.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./content-integrity.json": "./content-integrity.json",
+    "./content/*": "./public/assets/axie/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "public/assets/axie",
+    "scripts/copy-assets.mjs",
+    "content-integrity.json",
+    "CHANGELOG.md",
+    "README.md",
+    "RIGHTS.md",
+    "SECURITY.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "bin": {
+    "axie-mixer-copy-assets": "./scripts/copy-assets.mjs"
+  },
+  "peerDependencies": {
+    "three": ">=0.178.0 <0.179.0"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaatster/threejs-axie-mixer3d-public.git"
+  },
+  "homepage": "https://github.com/jaatster/threejs-axie-mixer3d-public#readme",
+  "bugs": {
+    "url": "https://github.com/jaatster/threejs-axie-mixer3d-public/issues"
+  }
+}
