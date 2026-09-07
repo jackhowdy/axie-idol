@@ -8,12 +8,17 @@
  */
 import {
   AmbientLight,
+  BackSide,
   Box3,
   Clock,
   Color,
+  ConeGeometry,
   DirectionalLight,
+  Group,
   HemisphereLight,
+  Matrix4,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
   Scene,
@@ -34,7 +39,7 @@ import type { ThreeAxieMixer3D, AxieMixerManifest } from '@jaatster/threejs-axie
 const MAX_PIXEL_RATIO = 2
 const ASSET_BASE = '/assets/axie/'
 /** Bump when the manifest or derived parts change; the pack is served with long cache headers. */
-const PACK_VERSION = '5'
+const PACK_VERSION = '6'
 
 export type Axie3DSpec =
   | {
@@ -277,6 +282,94 @@ function goldify(root: Object3D): void {
   })
 }
 
+/**
+ * Nightmare body spikes. The pack has no Nightmare body mesh; Sky Mavis's art shows the white body
+ * with pointed thorns in the class accent colour. We add toon cones on an ellipsoid fitted to the
+ * body mesh, parented to the spine bone so they ride the idle animation.
+ */
+const SPIKE_DIRS: [number, number, number][] = [
+  [-0.55, 0.85, 0.1], // crown, front-left
+  [0.5, 0.88, -0.2], // crown, right
+  [-0.2, 0.75, -0.7], // crown, back
+  [-0.98, 0.3, 0.1], // left flank, upper
+  [0.98, 0.25, 0.0], // right flank, upper
+  [-0.8, -0.35, 0.5], // lower left
+  [0.85, -0.4, 0.4], // lower right
+  [-0.6, -0.2, -0.8], // rear left
+  [0.7, 0.1, -0.75], // rear right
+]
+
+function worldPos(root: Object3D, name: string): Vector3 | null {
+  let out: Vector3 | null = null
+  root.traverse((o) => {
+    if (!out && o.name === name) out = o.getWorldPosition(new Vector3())
+  })
+  return out
+}
+
+/**
+ * The skinned body reports a near-zero bounding box (centimetre rig under a 0.01 node), so the body
+ * ellipsoid is fitted from the part attachment joints: eye (front), tail (back), ears (sides),
+ * top horn (top) and feet (bottom).
+ */
+function bodyBounds(root: Object3D): Box3 | null {
+  const eye = worldPos(root, 'Root_Eye_M_JNT')
+  const tail = worldPos(root, 'Root_Tail_M_JNT')
+  const earL = worldPos(root, 'Root_Ear_L_JNT')
+  const earR = worldPos(root, 'Root_Ear_R_JNT')
+  const top = worldPos(root, 'Root_Horn_T_JNT') || worldPos(root, 'Root_Horn_M_JNT')
+  const foot = worldPos(root, 'Fool_L_JNT') || worldPos(root, 'Toe_L_JNT')
+  if (!eye || !tail || !earL || !earR || !top) return null
+  const bottomY = foot ? foot.y : 0
+  const halfW = Math.abs(earL.x - earR.x) * 0.5 * 1.3
+  const min = new Vector3(-halfW, bottomY, tail.z - 0.02)
+  const max = new Vector3(halfW, top.y * 0.97, eye.z + 0.08)
+  return new Box3(min, max)
+}
+
+export function addNightmareSpikes(root: Object3D, colorHex: string): void {
+  root.updateWorldMatrix(true, true)
+  const box = bodyBounds(root)
+  if (!box) return
+  const size = box.getSize(new Vector3())
+  const center = box.getCenter(new Vector3())
+  if (size.y < 0.2) return
+  const radii = new Vector3(size.x * 0.5, size.y * 0.5, size.z * 0.5)
+  const height = size.y
+  let bone: Object3D | null = null
+  root.traverse((o) => {
+    if (!bone && o.name === 'Spine01_JNT') bone = o
+  })
+  root.traverse((o) => {
+    if (!bone && o.name === 'Root_Character') bone = o
+  })
+  const anchor: Object3D = bone ?? root
+  if (location.search.includes('dev=1')) console.info('[axie3d] nightmare body box', box.min.toArray().map((n) => n.toFixed(2)).join(','), box.max.toArray().map((n) => n.toFixed(2)).join(','))
+  const group = new Group()
+  group.name = 'NightmareSpikes'
+  group.matrixAutoUpdate = false
+  // group local space == world space at rest, so spikes follow the bone's delta from the rest pose
+  group.matrix.copy(new Matrix4().copy(anchor.matrixWorld).invert())
+  const fill = new MeshStandardMaterial({ color: new Color(colorHex), roughness: 0.55, metalness: 0 })
+  const line = new MeshBasicMaterial({ color: 0x1a1a1a, side: BackSide })
+  const up = new Vector3(0, 1, 0)
+  SPIKE_DIRS.forEach(([x, y, z], i) => {
+    const dir = new Vector3(x, y, z).normalize()
+    const len = height * (i < 3 ? 0.27 : 0.21)
+    const rad = height * (i < 3 ? 0.07 : 0.055)
+    const surface = new Vector3(dir.x * radii.x, dir.y * radii.y, dir.z * radii.z).multiplyScalar(1.0).add(center)
+    const normal = new Vector3(dir.x / radii.x, dir.y / radii.y, dir.z / radii.z).normalize()
+    const cone = new Mesh(new ConeGeometry(rad, len, 10), fill)
+    cone.position.copy(surface).addScaledVector(normal, len * 0.3)
+    cone.quaternion.setFromUnitVectors(up, normal)
+    const outline = new Mesh(new ConeGeometry(rad * 1.22, len * 1.08, 10), line)
+    outline.position.copy(cone.position).addScaledVector(normal, -len * 0.02)
+    outline.quaternion.copy(cone.quaternion)
+    group.add(outline, cone)
+  })
+  anchor.add(group)
+}
+
 function frameCamera(camera: PerspectiveCamera, root: Object3D): void {
   const box = new Box3().setFromObject(root)
   const size = box.getSize(new Vector3())
@@ -344,6 +437,12 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
         }
         character = next
         if (spec.kind === 'descriptor' && spec.gold) goldify(next.wrapper)
+        if (spec.kind === 'genes' && spec.bodyShape === 'Nightmare') {
+          const variants = (mixer.manifest.creator as unknown as { colorVariants: { primary2: string }[] }).colorVariants
+          const accent = variants[descriptor.colorVariant]?.primary2 || 'ff4363'
+          next.update(0)
+          addNightmareSpikes(next.wrapper, '#' + accent)
+        }
         next.setLocomotion?.('idle', 0)
         next.setMoveSpeed?.(0)
         scene.add(next.wrapper)
