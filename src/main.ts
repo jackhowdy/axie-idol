@@ -1750,6 +1750,12 @@ feedList.addEventListener('click', (e) => {
     void openAxieTimeline(axieEl.dataset.axieId)
     return
   }
+  const followBtn = (e.target as HTMLElement | null)?.closest?.('[data-follow-axie]') as HTMLButtonElement | null
+  if (followBtn?.dataset.followAxie) {
+    e.preventDefault()
+    void toggleFollowCostume(followBtn.dataset.followAxie)
+    return
+  }
   const likeBtn = (e.target as HTMLElement | null)?.closest?.('.like-btn') as HTMLButtonElement | null
   if (likeBtn) {
     e.preventDefault()
@@ -3038,7 +3044,12 @@ function identityChipHtml(opts: {
   const thumb = opts.preview
     ? `<img class="id-chip-thumb" src="${escapeHtml(opts.preview)}" alt="" loading="lazy" />`
     : ''
-  const badge = opts.kind === 'cast' ? '<span class="id-chip-badge">Cast</span>' : ''
+  const badge =
+    opts.kind === 'cast'
+      ? '<span class="id-chip-badge is-cast">Cast</span>'
+      : opts.kind === 'axie'
+        ? '<span class="id-chip-badge is-owned">Owned</span>'
+        : ''
   const cls = `id-chip is-${opts.kind}`
   const attrs = opts.dataAttrs || ''
   if (opts.button) {
@@ -3738,25 +3749,23 @@ function renderFeed(posts: FeedPost[]): void {
       )
       const burnsHtml = burnChipsHtml(p.axieId)
       const seedMark = p.seed ? ' data-seed="1"' : ''
+      const commentCount = (p.comments || []).length
+      const followLabel = castLabelFor(p.axieId)
       return `<article class="feed-card" data-post-id="${p.id}"${seedMark}>
-  <div class="feed-card-top">
-    <div class="feed-card-meta">
-      ${axieChip}
-      <span class="feed-author">${authorChip}</span>
-    </div>
-    <p class="feed-caption">${cap}</p>
-    ${burnsHtml}
-  </div>
   <div class="feed-card-img-wrap">
     <img class="feed-card-img" src="${escapeHtml(p.imagePath)}" alt="${escapeHtml(p.axieLabel || p.axieId)} post" loading="lazy" />
+    <div class="feed-chip-tl">${axieChip}</div>
+    <div class="feed-chip-tr">by ${authorChip}</div>
   </div>
   <div class="feed-card-body">
+    ${cap ? `<p class="feed-caption">${cap}</p>` : ''}
     <div class="feed-like-row">
-      <button type="button" class="btn like-btn${liked ? ' is-liked' : ''}" data-post-id="${p.id}" aria-pressed="${liked ? 'true' : 'false'}">
-        ${liked ? '♥ Liked' : '♡ Like'}
-      </button>
-      <span class="like-count" data-like-count="${p.id}">${p.likes || 0}</span>
+      <button type="button" class="btn like-btn${liked ? ' is-liked' : ''}" data-post-id="${p.id}" aria-pressed="${liked ? 'true' : 'false'}" aria-label="Like">${icon(liked ? 'heartFilled' : 'heart', 18)}<span class="like-count" data-like-count="${p.id}">${p.likes || 0}</span></button>
+      <span class="btn comment-count" aria-label="Comments">${icon('comment', 18)}<span>${commentCount}</span></span>
+      <span class="feed-spacer"></span>
+      <button type="button" class="btn follow-chip" data-follow-axie="${escapeHtml(p.axieId)}">Follow ${escapeHtml(followLabel)}</button>
     </div>
+    ${burnsHtml}
     ${commentsHtml}
     <form class="comment-form" data-post-id="${p.id}">
       <input type="text" class="comment-input" name="text" maxlength="140" placeholder="Add a comment…" autocomplete="off" enterkeyhint="send" />
@@ -3876,17 +3885,16 @@ function renderBoard(
       const r = top[i]
       if (!r) return ''
       const place = r.rank
-      const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : '🥉'
+      const tag = place === 1 ? '<span class="board-top-tag">Top climber</span>' : ''
       const img = escapeHtml(r.preview || previewFor(r.axieId))
       return `<div class="board-podium-card place-${place}${place === 1 ? ' is-crown' : ''}" data-axie-id="${escapeHtml(r.axieId)}" data-poster-key="${escapeHtml(r.posterKey || '')}"${
         r.owner?.address ? ` data-owner-address="${escapeHtml(r.owner.address)}"` : ''
       }>
   <button type="button" class="board-podium-main" data-axie-id="${escapeHtml(r.axieId)}" title="${escapeHtml(r.label)}">
-    <span class="board-medal">${medal}</span>
+    ${tag}
     <img class="board-avatar" src="${img}" alt="" loading="lazy" />
     <span class="board-name">${escapeHtml(r.label)}</span>
-    <strong class="board-points">${boardLevelLabel(r)}</strong>
-    <span class="board-place">#${place}</span>
+    <span class="board-step"><span class="board-place">#${place}</span><strong class="board-points">${boardLevelLabel(r)}</strong></span>
   </button>
   <button type="button" class="btn board-share-btn board-share-podium" data-share-rank="${place}" data-axie-id="${escapeHtml(r.axieId)}" data-poster-key="${escapeHtml(r.posterKey || '')}" title="Share rank card">Share</button>
 </div>`
@@ -3927,7 +3935,7 @@ function renderBoard(
             })
       const nextBlurb =
         r.nextQuest && r.nextQuest.description
-          ? `<span class="board-row-follows" title="${escapeHtml(r.nextQuest.description)}">L${r.nextQuest.level}: ${escapeHtml(
+          ? `<span class="board-row-follows" title="${escapeHtml(r.nextQuest.description)}">next: ${escapeHtml(
               r.nextQuest.description.length > 28
                 ? r.nextQuest.description.slice(0, 28) + '…'
                 : r.nextQuest.description,
@@ -3941,7 +3949,7 @@ function renderBoard(
     <img class="board-row-avatar" src="${img}" alt="" loading="lazy" />
     <span class="board-row-identity">${playerChip}</span>
     ${nextBlurb}
-    <strong class="board-row-points">${boardLevelLabel(r)} <span class="board-pts-label">quest</span></strong>
+    <strong class="board-row-points board-lvl-pill">${boardLevelLabel(r)}</strong>
     ${burns ? `<span class="board-row-burns">${burns}</span>` : ''}
   </button>
   <button type="button" class="btn board-share-btn" data-share-rank="${r.rank}" data-axie-id="${escapeHtml(r.axieId)}" data-poster-key="${escapeHtml(r.posterKey || '')}" title="Share rank card">Share</button>
@@ -4099,6 +4107,13 @@ async function refreshFeed(): Promise<void> {
   }
 }
 
+function paintLike(btn: HTMLButtonElement, liked: boolean): void {
+  const html = icon(liked ? 'heartFilled' : 'heart', 18)
+  const svg = btn.querySelector('svg')
+  if (svg) svg.outerHTML = html
+  else btn.insertAdjacentHTML('afterbegin', html)
+}
+
 async function toggleLike(postId: string, btn: HTMLButtonElement): Promise<void> {
   const wasLiked = likedPosts.has(postId)
   const countEl =
@@ -4111,13 +4126,13 @@ async function toggleLike(postId: string, btn: HTMLButtonElement): Promise<void>
     likedPosts.delete(postId)
     btn.classList.remove('is-liked')
     btn.setAttribute('aria-pressed', 'false')
-    btn.textContent = '♡ Like'
+    paintLike(btn, false)
     if (countEl) countEl.textContent = String(Math.max(0, prevCount - 1))
   } else {
     likedPosts.add(postId)
     btn.classList.add('is-liked')
     btn.setAttribute('aria-pressed', 'true')
-    btn.textContent = '♥ Liked'
+    paintLike(btn, true)
     if (countEl) countEl.textContent = String(prevCount + 1)
   }
   saveLikedSet(likedPosts)
@@ -4180,7 +4195,7 @@ async function toggleLike(postId: string, btn: HTMLButtonElement): Promise<void>
     saveLikedSet(likedPosts)
     btn.classList.toggle('is-liked', liked)
     btn.setAttribute('aria-pressed', liked ? 'true' : 'false')
-    btn.textContent = liked ? '♥ Liked' : '♡ Like'
+    paintLike(btn, liked)
   } catch (err) {
     console.warn('[axie-idol] like failed', err)
     // Revert optimistic
@@ -4188,13 +4203,13 @@ async function toggleLike(postId: string, btn: HTMLButtonElement): Promise<void>
       likedPosts.add(postId)
       btn.classList.add('is-liked')
       btn.setAttribute('aria-pressed', 'true')
-      btn.textContent = '♥ Liked'
+      paintLike(btn, true)
       if (countEl) countEl.textContent = String(prevCount)
     } else {
       likedPosts.delete(postId)
       btn.classList.remove('is-liked')
       btn.setAttribute('aria-pressed', 'false')
-      btn.textContent = '♡ Like'
+      paintLike(btn, false)
       if (countEl) countEl.textContent = String(prevCount)
     }
     saveLikedSet(likedPosts)

@@ -3548,3 +3548,46 @@ button.id-chip {
 .moments-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0 16px; }
 .moment-tile { appearance: none; border: 0; padding: 0; border-radius: 12px; overflow: hidden; aspect-ratio: 1; background: var(--surface-soft); cursor: pointer; }
 .moment-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ===== Field revamp: feed cards + identity badges ===== */
+.id-chip-badge { height: 20px; padding: 0 8px; border-radius: var(--radius-pill); font-family: var(--font-display); font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; }
+.id-chip-badge.is-cast { background: var(--text); color: #fff; }
+.id-chip-badge.is-owned { background: var(--success); color: #0e3d2a; }
+.feed-card { border: 0; }
+.feed-card-img-wrap { max-height: none; }
+.feed-card-img { max-height: 60vh; object-fit: cover; }
+.feed-chip-tl { position: absolute; left: 12px; top: 12px; }
+.feed-chip-tl .id-chip { height: 34px; padding-right: 10px; background: rgba(255, 255, 255, 0.92); border: 0; box-shadow: 0 2px 8px rgba(26, 43, 60, 0.12); }
+.feed-chip-tr { position: absolute; right: 12px; top: 12px; height: 34px; padding: 0 12px; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.92); font-size: 12px; font-weight: 800; color: var(--muted); display: flex; align-items: center; gap: 4px; max-width: 55%; }
+.feed-chip-tr .id-chip { background: none; border: 0; padding: 0; height: auto; }
+.feed-card-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.feed-caption { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.4; }
+.feed-like-row { display: flex; align-items: center; gap: 8px; }
+.feed-spacer { flex: 1 1 auto; }
+#feed .btn.like-btn, #feed .btn.comment-count, #profile .btn.like-btn, #profile .btn.comment-count, #owner .btn.like-btn, #owner .btn.comment-count { height: 40px; min-height: 40px; padding: 0 14px; background: var(--bg-2); border: 1px solid var(--border); gap: 6px; font-family: var(--font-display); font-size: 13px; font-weight: 800; box-shadow: none; color: var(--text); }
+.btn.like-btn svg { color: var(--accent-hot); }
+.btn.like-btn.is-liked { color: var(--accent-hot); }
+.btn.comment-count { cursor: default; }
+#feed .btn.follow-chip, #profile .btn.follow-chip, #owner .btn.follow-chip { height: 40px; min-height: 40px; padding: 0 12px; background: rgba(43, 140, 238, 0.12); border: 1px solid rgba(43, 140, 238, 0.45); color: var(--accent); font-family: var(--font-display); font-size: 13px; font-weight: 800; box-shadow: none; white-space: nowrap; }
+
+/* ===== Field revamp: ladder ===== */
+#board .board-range-tabs { margin: 0 16px 12px; height: 40px; padding: 4px; border-radius: var(--radius-pill); background: var(--bg-2); border: 1px solid var(--border); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+#board .board-range-tab { border-radius: var(--radius-pill); border: 0; background: none; font-family: var(--font-display); font-weight: 800; font-size: 13px; color: var(--muted); min-height: 0; height: 100%; }
+#board .board-range-tab.is-active { background: var(--text); color: #fff; }
+#board .board-podium { margin: 0 16px 12px; padding: 0 12px; min-height: 210px; border-radius: var(--radius-card); background: linear-gradient(180deg, #CFE9FF 0%, var(--bg) 60%, var(--surface-soft) 61%, #CDEFB0 100%); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 8px; overflow: hidden; }
+#board .board-podium:empty { display: none; }
+#board .board-podium-card { background: none; border: 0; box-shadow: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+#board .board-podium-main { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; background: none; border: 0; padding: 0; }
+#board .board-podium-card .board-avatar { width: 58px; height: 58px; border-radius: var(--radius-pill); object-fit: cover; border: 3px solid var(--bg-2); box-shadow: 0 4px 12px rgba(26, 43, 60, 0.18); }
+#board .board-podium-card.place-1 .board-avatar { width: 72px; height: 72px; }
+#board .board-podium-card .board-name { font-family: var(--font-display); font-size: 12px; font-weight: 900; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-step { width: 100%; border-radius: 12px 12px 0 0; background: var(--bg-2); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 44px; }
+#board .board-podium-card.place-1 .board-step { height: 76px; }
+#board .board-podium-card.place-2 .board-step { height: 56px; }
+.board-step .board-place { font-size: 11px; font-weight: 800; color: var(--muted); }
+.board-step .board-points { font-family: var(--font-display); font-size: 16px; font-weight: 900; }
+#board .board-podium-card.place-1 .board-step .board-points { font-size: 20px; }
+.board-top-tag { height: 22px; padding: 0 10px; border-radius: var(--radius-pill); background: var(--accent-hot); color: #fff; font-family: var(--font-display); font-size: 11px; font-weight: 900; text-transform: uppercase; display: inline-flex; align-items: center; }
+#board .board-share-podium { display: none; }
+#board .board-row { border: 0; background: var(--bg-2); border-radius: var(--radius-card); }
+.board-lvl-pill { height: 28px; padding: 0 10px; border-radius: var(--radius-pill); background: var(--surface-soft); font-family: var(--font-display); font-weight: 900; font-size: 12px; display: inline-flex; align-items: center; color: var(--text); }
