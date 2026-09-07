@@ -18,6 +18,31 @@
   </head>
   <body>
     <div id="app">
+      <!-- First minute: shown once to new guests -->
+      <section id="onboard" class="screen onboard" aria-label="Welcome" hidden>
+        <svg class="onboard-hills" viewBox="0 0 375 200" fill="none" aria-hidden="true" preserveAspectRatio="none">
+          <ellipse cx="60" cy="150" rx="190" ry="70" fill="#CDEFB0"></ellipse>
+          <ellipse cx="330" cy="170" rx="210" ry="80" fill="#BFE79E"></ellipse>
+          <ellipse cx="200" cy="215" rx="260" ry="80" fill="#DFF5C8"></ellipse>
+        </svg>
+        <div class="onboard-copy">
+          <div class="onboard-kicker">Axie Idol</div>
+          <h1 class="onboard-title">Take Kotaro somewhere today.</h1>
+          <p class="onboard-sub">Snap him into your world, post the moment, and the rest of the cast will start following you.</p>
+        </div>
+        <div class="onboard-hero">
+          <img src="/stickers/kotaro.png" alt="Kotaro" class="onboard-kotaro" />
+          <div class="onboard-hints">
+            <div class="onboard-hint"><span data-icon="lock"></span>Bing · after your first post</div>
+            <div class="onboard-hint"><span data-icon="lock"></span>Kibo · 10 likes given</div>
+          </div>
+        </div>
+        <div class="onboard-sheet">
+          <button type="button" id="btn-onboard-snap" class="btn primary onboard-cta"><span data-icon="camera"></span>Open the camera</button>
+          <button type="button" id="btn-onboard-feed" class="btn secondary onboard-secondary">See what the cast is up to</button>
+          <p class="onboard-note">No account needed. Bring your own Axies any time.</p>
+        </div>
+      </section>
       <!-- Live / upload viewfinder -->
       <section id="viewfinder" class="screen" aria-label="Viewfinder" hidden>
         <video id="video" playsinline autoplay muted></video>

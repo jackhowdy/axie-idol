@@ -2465,6 +2465,8 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
 
 function hideAllScreens(): void {
   stopFeedAutoRefresh()
+  onboardScreen.classList.remove('active')
+  onboardScreen.hidden = true
   viewfinder.classList.remove('active')
   viewfinder.hidden = true
   previewScreen.classList.remove('active')
@@ -5412,6 +5414,44 @@ document.querySelector<HTMLButtonElement>('#btn-tray-connect')?.addEventListener
   void connectRonin()
 })
 
+const onboardScreen = document.querySelector<HTMLElement>('#onboard')!
+const ONBOARDED_LS = 'axieIdol.onboarded'
+
+function shouldOnboard(): boolean {
+  try {
+    if (localStorage.getItem(ONBOARDED_LS) === '1') return false
+  } catch {
+    return false
+  }
+  if (roninAddress) return false
+  const lvl = (myCastCrew || loadCachedCastCrew())?.level ?? 0
+  return lvl === 0
+}
+
+function markOnboarded(): void {
+  try {
+    localStorage.setItem(ONBOARDED_LS, '1')
+  } catch {
+    /* ignore */
+  }
+}
+
+function showOnboard(): void {
+  hideAllScreens()
+  setActiveTab(null)
+  onboardScreen.hidden = false
+  onboardScreen.classList.add('active')
+}
+
+document.querySelector('#btn-onboard-snap')?.addEventListener('click', () => {
+  markOnboarded()
+  showViewfinderFromFeed()
+})
+document.querySelector('#btn-onboard-feed')?.addEventListener('click', () => {
+  markOnboarded()
+  void showFeed('global')
+})
+
 const feedQuestHud = document.querySelector<HTMLElement>('#feed-quest-hud')
 const boardYouRow = document.querySelector<HTMLElement>('#board-you-row')
 const vfQuestText = document.querySelector<HTMLElement>('#vf-quest-text')
@@ -5529,7 +5569,11 @@ async function boot(): Promise<void> {
   })
 
   // Land on Idol Feed (early Facebook pattern) — camera only via Create
-  await showFeed('global')
+  if (shouldOnboard()) {
+    showOnboard()
+  } else {
+    await showFeed('global')
+  }
 }
 
 void boot()

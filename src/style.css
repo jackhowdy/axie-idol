@@ -3486,3 +3486,22 @@ button.id-chip {
 /* ===== Field revamp: unlock modal ===== */
 .spark-victory-next { margin: 6px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--bg); font-size: 13px; font-weight: 700; line-height: 1.35; text-align: left; color: var(--text); }
 .spark-victory-next strong { font-family: var(--font-display); font-weight: 900; }
+
+/* ===== Field revamp: first-minute onboarding ===== */
+#onboard.screen.active { display: flex; flex-direction: column; background: linear-gradient(180deg, var(--bg) 0%, var(--bg) 55%, var(--surface-soft) 100%); overflow: hidden; user-select: auto; }
+.onboard-hills { position: absolute; left: 0; top: 46%; width: 100%; height: 200px; }
+.onboard-copy { position: relative; padding: calc(56px + var(--safe-top)) 28px 0; display: flex; flex-direction: column; gap: 10px; }
+.onboard-kicker { font-family: var(--font-display); font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.onboard-title { margin: 0; font-family: var(--font-display); font-size: 32px; font-weight: 900; line-height: 1.08; color: var(--text); }
+.onboard-sub { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.45; color: var(--muted); }
+.onboard-hero { position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: flex-end; justify-content: center; }
+.onboard-kotaro { width: min(250px, 62vw); height: auto; max-height: 100%; object-fit: contain; filter: drop-shadow(0 12px 18px rgba(26, 43, 60, 0.22)); margin-bottom: 8px; }
+.onboard-hints { position: absolute; right: 20px; top: 24px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.onboard-hint { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: var(--radius-pill); background: var(--bg-2); box-shadow: var(--shadow); font-family: var(--font-display); font-size: 12px; font-weight: 800; }
+.onboard-hint span { display: flex; color: var(--muted); }
+.onboard-hint svg { width: 14px; height: 14px; }
+.onboard-sheet { position: relative; padding: 16px 20px calc(24px + var(--safe-bottom)); display: flex; flex-direction: column; gap: 10px; background: var(--bg-2); border-radius: 24px 24px 0 0; box-shadow: 0 -6px 24px rgba(26, 43, 60, 0.1); }
+#onboard .btn.onboard-cta { width: 100%; height: 56px; background: var(--accent-hot); color: #fff; font-family: var(--font-display); font-size: 17px; font-weight: 900; gap: 10px; justify-content: center; box-shadow: 0 6px 18px rgba(255, 107, 44, 0.35); }
+#onboard .onboard-cta span { display: flex; }
+#onboard .btn.onboard-secondary { width: 100%; height: 48px; justify-content: center; font-weight: 800; }
+.onboard-note { margin: 0; text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); }
