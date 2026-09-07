@@ -3482,3 +3482,7 @@ button.id-chip {
 .you-rank { font-family: var(--font-display); font-weight: 900; font-size: 13px; width: 40px; height: 40px; border-radius: var(--radius-pill); background: var(--bg-2); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
 #board .board-meta { margin: 0 0 0 auto; font-size: 12px; font-weight: 800; color: var(--muted); }
 .feed-header .board-meta { order: 2; }
+
+/* ===== Field revamp: unlock modal ===== */
+.spark-victory-next { margin: 6px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--bg); font-size: 13px; font-weight: 700; line-height: 1.35; text-align: left; color: var(--text); }
+.spark-victory-next strong { font-family: var(--font-display); font-weight: 900; }

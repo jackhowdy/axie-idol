@@ -1,3 +1,26 @@
 {
-  "byPoster": {}
+  "byPoster": {
+    "guest:548d35c1-d0a8-4491-94fa-021a679462bf": {
+      "level": 1,
+      "unlockedCast": [
+        "kotaro",
+        "bing"
+      ],
+      "unlockedProps": [],
+      "stats": {
+        "posts": 1,
+        "likesGiven": 0,
+        "commentsGiven": 0,
+        "followsGiven": 0,
+        "likesReceivedHuman": 0,
+        "commentsReceivedHuman": 0,
+        "followsReceivedHuman": 0,
+        "distinctPostDays": [
+          "2026-09-07"
+        ],
+        "crewCastFollowers": 1
+      },
+      "updatedAt": "2026-09-07T03:00:44.185Z"
+    }
+  }
 }

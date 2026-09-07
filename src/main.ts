@@ -1459,6 +1459,17 @@ boostSheet?.addEventListener('click', (e) => {
   if (e.target === boostSheet) closeBoostSheet()
 })
 btnSparkVictoryOk?.addEventListener('click', () => {
+  const snapCast = btnSparkVictoryOk.dataset.snapCast
+  const equipId = btnSparkVictoryOk.dataset.equipProp
+  if (snapCast || equipId) {
+    delete btnSparkVictoryOk.dataset.snapCast
+    delete btnSparkVictoryOk.dataset.equipProp
+    hideSparkVictory()
+    showViewfinderFromFeed()
+    if (snapCast) void selectCast(snapCast as CastId)
+    if (equipId) void equipProp(equipId as PropId)
+    return
+  }
   const wasSocial = Boolean(activeCelebrationNotifId)
   const wasCastFollow = sparkVictory?.classList.contains('is-cast-follow') && !sparkVictory?.classList.contains('is-social')
   const shouldConnect = pendingCastFollowSave && !roninAddress && wasCastFollow && !wasSocial
@@ -2860,7 +2871,12 @@ function startSparkConfetti(durationMs = 2600, canvasOverride?: HTMLCanvasElemen
 
 function hideSparkVictory(): void {
   pendingCastFollowSave = false
-  if (btnSparkVictoryOk) btnSparkVictoryOk.textContent = 'Keep chatting'
+  if (btnSparkVictoryOk) {
+    btnSparkVictoryOk.textContent = 'Back to the feed'
+    delete btnSparkVictoryOk.dataset.snapCast
+    delete btnSparkVictoryOk.dataset.equipProp
+  }
+  if (sparkVictoryNext) sparkVictoryNext.hidden = true
   stopSparkConfetti()
   const dismissedId = activeCelebrationNotifId
   activeCelebrationNotifId = null
@@ -3400,6 +3416,19 @@ async function refreshMyCastCrew(): Promise<void> {
   }
 }
 
+const sparkVictoryNext = document.querySelector<HTMLElement>('#spark-victory-next')
+const sparkVictoryNextText = document.querySelector<HTMLElement>('#spark-victory-next-text')
+
+function fillSparkVictoryNext(): void {
+  const p = questHudInput()
+  if (sparkVictoryNext && sparkVictoryNextText && p && p.nextQuest) {
+    sparkVictoryNextText.textContent = questChipText(p)
+    sparkVictoryNext.hidden = false
+  } else if (sparkVictoryNext) {
+    sparkVictoryNext.hidden = true
+  }
+}
+
 function showSparkVictory(opts: SparkVictoryOpts): void {
   if (!sparkVictory) return
   const kind = opts.kind || 'spark'
@@ -3480,10 +3509,12 @@ function showSparkVictory(opts: SparkVictoryOpts): void {
       sparkVictoryBody.innerHTML =
         `Quest reward! <strong>${escapeHtml(label)}</strong> is ready in your Create tray.${extra}`
     }
-    if (sparkVictorySub) {
-      sparkVictorySub.textContent = 'Equip it from the prop tray on Create.'
+    if (sparkVictorySub) sparkVictorySub.textContent = ''
+    fillSparkVictoryNext()
+    if (btnSparkVictoryOk) {
+      btnSparkVictoryOk.textContent = 'Equip it on Snap'
+      btnSparkVictoryOk.dataset.equipProp = propId
     }
-    if (btnSparkVictoryOk) btnSparkVictoryOk.textContent = 'Awesome!'
     if (sparkVictoryDemo) sparkVictoryDemo.hidden = true
     sparkVictory.hidden = false
     startSparkConfetti(2800, sparkVictoryConfetti)
@@ -3498,7 +3529,7 @@ function showSparkVictory(opts: SparkVictoryOpts): void {
     const guestNeedsSave = !roninAddress
     pendingCastFollowSave = guestNeedsSave
     sparkVictory.classList.add('is-cast-follow')
-    if (sparkVictoryKicker) sparkVictoryKicker.textContent = 'CAST CREW'
+    if (sparkVictoryKicker) sparkVictoryKicker.textContent = `LEVEL ${myCastCrew?.level ?? ''} REACHED`.replace(/\s+/g, ' ').trim()
     if (sparkVictoryAvatar) {
       const src = castPreviewSrc(castId)
       sparkVictoryAvatar.src = src
@@ -3509,7 +3540,7 @@ function showSparkVictory(opts: SparkVictoryOpts): void {
       sparkVictoryAmount.textContent = ''
       sparkVictoryAmount.hidden = true
     }
-    if (sparkVictoryTitle) sparkVictoryTitle.textContent = `${label} followed you!`
+    if (sparkVictoryTitle) sparkVictoryTitle.textContent = `${label} joined your crew`
     if (sparkVictoryBody) {
       const extra =
         more.length === 1
@@ -3517,23 +3548,20 @@ function showSparkVictory(opts: SparkVictoryOpts): void {
           : more.length > 1
             ? ` Plus ${more.length} more cast mates.`
             : ''
-      if (guestNeedsSave) {
-        sparkVictoryBody.innerHTML =
-          `Thanks for posting — <strong>${escapeHtml(label)}</strong> just followed you.${extra} ` +
-          `<strong>Connect Ronin</strong> so you don't lose your cast crew when you leave.`
-      } else {
-        sparkVictoryBody.innerHTML =
-          `Thanks for posting — <strong>${escapeHtml(label)}</strong> just followed you.${extra} ` +
-          `Keep questing to unlock more cast mates & props.`
-      }
+      sparkVictoryBody.innerHTML =
+        `<strong>${escapeHtml(label)}</strong> follows you now and will show up in your comments.${extra} ` +
+        `Take ${escapeHtml(label)} out for a photo whenever you like.`
     }
     if (sparkVictorySub) {
       sparkVictorySub.textContent = guestNeedsSave
-        ? 'Guests can post for fun — Connect saves who follows you.'
-        : 'Your cast crew hypes your posts with likes & comments.'
+        ? 'Connect Ronin on the Crew tab to keep your crew across devices.'
+        : ''
     }
+    fillSparkVictoryNext()
+    pendingCastFollowSave = false
     if (btnSparkVictoryOk) {
-      btnSparkVictoryOk.textContent = guestNeedsSave ? 'Save my crew — Connect' : 'Keep chatting'
+      btnSparkVictoryOk.textContent = `Snap with ${label}`
+      btnSparkVictoryOk.dataset.snapCast = castId
     }
     if (sparkVictoryDemo) sparkVictoryDemo.hidden = true
     sparkVictory.hidden = false
