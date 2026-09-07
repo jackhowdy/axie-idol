@@ -6,7 +6,7 @@
 import { icon } from './icons'
 import { unlockLevelFor, CAST_ORDER } from './quests'
 import { questHudHtml, questChipText, type QuestHudInput } from './questHud'
-import { GroupPhoto, squadPhotoSlots, rollShiny, SHINY_FILTER } from './groupPhoto'
+import { GroupPhoto, squadPhotoSlots, rollShiny, SHINY_FILTER, makeGlint, drawGlint } from './groupPhoto'
 import type { Sticker3D } from './sticker3d'
 import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
@@ -1899,6 +1899,10 @@ async function captureComposite(): Promise<void> {
     ctx.restore()
   }
 
+  if (leadShiny && !customAxieId && leadGlint) {
+    await drawGlint(ctx, leadGlint, state.x + state.gyroX, state.y + state.gyroY, state.scale, state.rotation, scaleX)
+  }
+
   // Extra squad mates (group photo)
   await groupPhoto.drawExtras(ctx, scaleX)
 
@@ -2114,8 +2118,23 @@ function announceShiny(id: string): void {
   rememberShiny(id)
   showLiveToast(`Shiny ${castLabelName(id)}! 1 in 256`, 2400)
 }
+let leadGlint: HTMLImageElement | null = null
 function syncLeadShinyClass(): void {
-  stickerTarget.classList.toggle('is-shiny', leadShiny && !customAxieId)
+  const on = leadShiny && !customAxieId
+  stickerTarget.classList.toggle('is-shiny', on)
+  if (on && !leadGlint) {
+    leadGlint = makeGlint()
+    stickerLayer.appendChild(leadGlint)
+  } else if (!on && leadGlint) {
+    leadGlint.remove()
+    leadGlint = null
+  }
+  if (leadGlint) {
+    leadGlint.style.left = stickerTarget.style.left
+    leadGlint.style.top = stickerTarget.style.top
+    leadGlint.style.width = `${stickerTarget.offsetWidth || 220}px`
+    leadGlint.style.transform = stickerTarget.style.transform
+  }
 }
 /** Dev hook (?dev=1 only): <html data-force-shiny="1"> makes every roll shiny for QA. */
 function shinyRandom(): () => number {

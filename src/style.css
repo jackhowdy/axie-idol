@@ -3624,3 +3624,7 @@ button.id-chip {
 .crew-slot.is-golden.is-locked .crew-face .crew-q { font-family: var(--font-display); font-size: 28px; font-weight: 900; color: #FFD36E; }
 .crew-slot .crew-shiny { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: var(--radius-pill); background: linear-gradient(90deg, #7ad0ff, #c9a4ff, #ffd36e); display: flex; align-items: center; justify-content: center; color: #1A2B3C; }
 .crew-slot .crew-shiny svg { width: 12px; height: 12px; }
+
+/* ===== Shiny sparkle overlay ===== */
+.shiny-glint { position: absolute; left: 50%; top: 50%; width: 42vmin; max-width: 220px; height: auto; transform: translate(-50%, -50%); transform-origin: center center; pointer-events: none; z-index: 3; animation: glint-twinkle 1.4s ease-in-out infinite alternate; will-change: opacity; }
+@keyframes glint-twinkle { from { opacity: 0.45; } to { opacity: 1; } }

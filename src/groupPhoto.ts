@@ -13,6 +13,42 @@ export type ExtraSticker = {
   rotation: number
   /** Colour-shifted rare variant (1 in SHINY_ODDS placements). */
   shiny: boolean
+  /** Sparkle overlay that follows a shiny sticker. */
+  glint: HTMLImageElement | null
+}
+
+export const SPARKLE_SRC = './stickers/sparkle.png'
+
+/** Create the sparkle overlay element (pointer-events: none via CSS). */
+export function makeGlint(): HTMLImageElement {
+  const el = document.createElement('img')
+  el.className = 'shiny-glint'
+  el.src = SPARKLE_SRC
+  el.alt = ''
+  el.draggable = false
+  return el
+}
+
+/** Draw a sparkle overlay with the same transform as its sticker. */
+export async function drawGlint(
+  ctx: CanvasRenderingContext2D,
+  glint: HTMLImageElement,
+  x: number,
+  y: number,
+  scale: number,
+  rotation: number,
+  scaleX: number,
+): Promise<void> {
+  if (!glint.complete) await glint.decode().catch(() => undefined)
+  if (!glint.naturalWidth) return
+  const w = glint.offsetWidth * scaleX
+  const hgt = w * (glint.naturalHeight / Math.max(1, glint.naturalWidth))
+  ctx.save()
+  ctx.translate(x * scaleX, y * scaleX)
+  ctx.rotate((rotation * Math.PI) / 180)
+  ctx.scale(scale, scale)
+  ctx.drawImage(glint, -w / 2, -hgt / 2, w, hgt)
+  ctx.restore()
 }
 
 export const SHINY_ODDS = 256
@@ -89,8 +125,10 @@ export class GroupPhoto {
       scale: 0.82,
       rotation: side * -6,
       shiny,
+      glint: shiny ? makeGlint() : null,
     }
     this.layer.appendChild(el)
+    if (s.glint) this.layer.appendChild(s.glint)
     this.bind(s)
     this.apply(s)
     this.extras.push(s)
@@ -102,12 +140,16 @@ export class GroupPhoto {
     const i = this.extras.findIndex((s) => s.id === id)
     if (i === -1) return
     this.extras[i]!.el.remove()
+    this.extras[i]!.glint?.remove()
     this.extras.splice(i, 1)
     this.onChange()
   }
 
   clear(): void {
-    for (const s of this.extras) s.el.remove()
+    for (const s of this.extras) {
+      s.el.remove()
+      s.glint?.remove()
+    }
     this.extras = []
     this.onChange()
   }
@@ -116,6 +158,12 @@ export class GroupPhoto {
     s.el.style.left = `${s.x}px`
     s.el.style.top = `${s.y}px`
     s.el.style.transform = `translate(-50%, -50%) rotate(${s.rotation}deg) scale(${s.scale})`
+    if (s.glint) {
+      s.glint.style.left = s.el.style.left
+      s.glint.style.top = s.el.style.top
+      s.glint.style.width = `${s.el.offsetWidth || 200}px`
+      s.glint.style.transform = s.el.style.transform
+    }
   }
 
   private bind(s: ExtraSticker): void {
@@ -139,8 +187,9 @@ export class GroupPhoto {
       } catch {
         /* ignore */
       }
-      // Bring to front
+      // Bring to front (glint stays just above its sticker)
       this.layer.appendChild(el)
+      if (s.glint) this.layer.appendChild(s.glint)
       if (pointers.size === 1) {
         dragId = e.pointerId
         last = pos(e)
@@ -212,6 +261,7 @@ export class GroupPhoto {
       ctx.scale(s.scale, s.scale)
       ctx.drawImage(img, -baseW / 2, -baseH / 2, baseW, baseH)
       ctx.restore()
+      if (s.shiny && s.glint) await drawGlint(ctx, s.glint, s.x, s.y, s.scale, s.rotation, scaleX)
     }
   }
 }
