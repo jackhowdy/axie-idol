@@ -1,0 +1,17 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 760, "h": 1200, "title": "Brand board" },
+    { "file": "Onboarding.dc.html", "x": 860, "y": 0, "w": 375, "h": 812, "title": "1 · Name your squad" },
+    { "file": "Feed.dc.html", "x": 1335, "y": 0, "w": 375, "h": 812, "title": "2 · Feed" },
+    { "file": "Unlock.dc.html", "x": 1810, "y": 0, "w": 375, "h": 812, "title": "3 · Squad +1" },
+    { "file": "Squad.dc.html", "x": 2285, "y": 0, "w": 375, "h": 812, "title": "4 · Squad tab" }
+  ],
+  "annotations": [
+    { "id": "note-brand", "x": 0, "y": -150, "w": 760, "text": "Pick a wordmark (A, B or C). The icon in C is the app icon, favicon and Squad tab icon. Nothing else on the brand board needs a decision." },
+    { "id": "note-onboard", "x": 860, "y": -190, "w": 375, "text": "NEW — the squad gets a name on day one.\nReplaces \"Guest-7F2A\" everywhere: posts, ladder, share card. Three suggestions plus Shuffle so a kid never faces an empty box. Skip keeps the old guest label." },
+    { "id": "note-feed", "x": 1335, "y": -190, "w": 375, "text": "Header now leads with squad size (\"squad 2 of 18\"), not level. Posts are \"by Hill Runners\". Bing's comment says \"in your squad\"." },
+    { "id": "note-unlock", "x": 1810, "y": -190, "w": 375, "text": "Kicker becomes SQUAD +1. Body names the whole squad so far. Same button: Snap with Bing." },
+    { "id": "note-squad", "x": 2285, "y": -190, "w": 375, "text": "Crew tab renamed Squad. Header: squad name, \"Squad of 2\". Everything else is the built screen." }
+  ],
+  "launch": { "view": "canvas" }
+}
