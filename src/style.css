@@ -3628,3 +3628,7 @@ button.id-chip {
 /* ===== Shiny sparkle overlay ===== */
 .shiny-glint { position: absolute; left: 50%; top: 50%; width: 42vmin; max-width: 220px; height: auto; transform: translate(-50%, -50%); transform-origin: center center; pointer-events: none; z-index: 3; animation: glint-twinkle 1.4s ease-in-out infinite alternate; will-change: opacity; }
 @keyframes glint-twinkle { from { opacity: 0.45; } to { opacity: 1; } }
+
+/* ===== Mixer-backed 3D Axie sticker ===== */
+#axie3d, .axie3d-canvas { position: absolute; left: 50%; top: 50%; width: 42vmin; max-width: 240px; height: 42vmin; max-height: 240px; transform: translate(-50%, -50%); transform-origin: center center; pointer-events: auto; touch-action: none; cursor: grab; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35)); will-change: transform; z-index: 1; }
+#axie3d:active { cursor: grabbing; }

@@ -1148,6 +1148,55 @@ async function graphqlRequestKeyed(payload) {
   return json.data
 }
 
+/** Genes/class/name for an Axie, cached forever in the 'axies' store (genes are immutable). */
+async function fetchAxieGenes(axieId) {
+  const cache = storage.get('axies', () => ({}))
+  const hit = cache[axieId]
+  if (hit && hit.genes) return hit
+  const data = await graphqlRequest(
+    `query($axieId: ID!) {
+      axie(axieId: $axieId) { id name class newGenes genes bodyShape }
+    }`,
+    { axieId: String(axieId) },
+  )
+  const axie = data?.axie
+  if (!axie || !axie.id) return null
+  const rec = {
+    id: String(axie.id),
+    name: (axie.name && String(axie.name).trim()) || `Axie #${axie.id}`,
+    class: axie.class || null,
+    genes: axie.newGenes || axie.genes || '',
+    bodyShape: axie.bodyShape || null,
+    fetchedAt: Date.now(),
+  }
+  if (rec.genes) {
+    cache[axieId] = rec
+    storage.set('axies', cache)
+  }
+  return rec
+}
+
+async function handleAxieGenes(_req, res, id) {
+  if (!ID_RE.test(id)) {
+    sendJson(res, 400, { error: 'Invalid Axie ID' })
+    return
+  }
+  try {
+    const rec = await fetchAxieGenes(id)
+    if (!rec) {
+      sendJson(res, 404, { error: 'Axie not found' })
+      return
+    }
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'public, max-age=86400',
+    })
+    res.end(JSON.stringify(rec))
+  } catch (err) {
+    sendJson(res, err?.statusCode || 502, { error: err instanceof Error ? err.message : 'Genes lookup failed' })
+  }
+}
+
 function axieLabelFrom(name, id) {
   const n = (name && String(name).trim()) || `Axie #${id}`
   // Avoid "Axie #90 #90" when chain name already ends with #id
@@ -3643,6 +3692,11 @@ async function handleApi(req) {
   if (!url.pathname.startsWith('/api/')) return null
   const res = new ResponseShim()
   const route = async () => {
+    const genesMatch = /^\/api\/axie\/([^/]+)$/.exec(url.pathname)
+    if (genesMatch && req.method === 'GET') {
+      await handleAxieGenes(req, res, decodeURIComponent(genesMatch[1]))
+      return
+    }
     if (url.pathname.startsWith('/api/metadata/')) {
       let id = url.pathname.slice('/api/metadata/'.length)
       if (id.endsWith('/')) id = id.slice(0, -1)

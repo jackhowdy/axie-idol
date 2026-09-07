@@ -8,6 +8,8 @@ import { unlockLevelFor, CAST_ORDER } from './quests'
 import { questHudHtml, questChipText, type QuestHudInput } from './questHud'
 import { GroupPhoto, squadPhotoSlots, rollShiny, SHINY_FILTER, makeGlint, drawGlint } from './groupPhoto'
 import type { Sticker3D } from './sticker3d'
+import { createAxie3D, getAxieMixer, type Axie3D, type Axie3DSpec } from './axie3d'
+import { descriptorFor, isCustomFace } from './castDescriptors'
 import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
 import {
@@ -108,6 +110,8 @@ function propLabelName(id: string): string {
 }
 
 function isCastUnlocked(id: string): boolean {
+  // Dev preview (?dev=1): every face can be placed on the camera; the server still enforces posting.
+  if (isDevMode()) return true
   if (id === 'kotaro') return true
   const unlocked = myCastCrew?.unlockedCast || myCastCrew?.unlocked || []
   return unlocked.includes(id)
@@ -652,6 +656,91 @@ let celebratingSocial = false
 let activeCelebrationNotifId: string | null = null
 const INVENTORY_TRAY_CAP = 12
 let sticker3d: Sticker3D | null = null
+/** Mixer-backed animated 3D Axie (numeric cast, owned Axies, Olek, villain, golden). */
+let axie3d: Axie3D | null = null
+const snapshotCache = new Map<string, string>()
+
+function is3DMixerFace(id: string): boolean {
+  return /^\d+$/.test(id) || isCustomFace(id)
+}
+
+async function specForFace(id: string): Promise<Axie3DSpec | null> {
+  if (isCustomFace(id)) {
+    const mixer = await getAxieMixer()
+    const { descriptor, gold } = descriptorFor(id, mixer)
+    return { kind: 'descriptor', descriptor, gold, label: id }
+  }
+  if (/^\d+$/.test(id)) {
+    const res = await fetch(`/api/axie/${encodeURIComponent(id)}`, { headers: { Accept: 'application/json' } })
+    if (!res.ok) throw new Error(`genes ${res.status}`)
+    const data = (await res.json()) as { genes?: string; name?: string }
+    if (!data.genes) throw new Error('no genes')
+    return { kind: 'genes', genes: data.genes, label: data.name || `Axie #${id}` }
+  }
+  return null
+}
+
+function disposeAxie3D(): void {
+  if (!axie3d) return
+  axie3d.dispose()
+  axie3d = null
+  stickerImg.hidden = false
+  stickerImg.style.pointerEvents = 'auto'
+  bindStickerPointers(stickerImg)
+  applyStickerTransform()
+}
+
+/** Show a mixer-backed 3D face on the camera; PNG stays until the model is ready. */
+async function showAxie3D(id: string, req: number): Promise<boolean> {
+  try {
+    const spec = await specForFace(id)
+    if (!spec) return false
+    if (req !== castRequest) return false
+    if (!axie3d) {
+      axie3d = createAxie3D('axie3d')
+      axie3d.canvas.className = 'axie3d-canvas'
+      stickerLayer.appendChild(axie3d.canvas)
+    }
+    const ok = await axie3d.load(spec)
+    if (req !== castRequest) return false
+    if (!ok) return false
+    stickerImg.hidden = true
+    stickerImg.style.pointerEvents = 'none'
+    stickerTarget = axie3d.canvas
+    bindStickerPointers(axie3d.canvas)
+    applyStickerTransform()
+    axie3d.resume()
+    console.info('[axie-idol] mixer 3D active', id)
+    return true
+  } catch (err) {
+    console.warn('[axie-idol] mixer 3D failed', id, err)
+    return false
+  }
+}
+
+/** Transparent PNG of a 3D face for group-photo extras (rendered offscreen once). */
+async function snapshotFace(id: string): Promise<string | null> {
+  const hit = snapshotCache.get(id)
+  if (hit) return hit
+  try {
+    const spec = await specForFace(id)
+    if (!spec) return null
+    const off = createAxie3D(`axie3d-snap-${id}`)
+    off.canvas.style.position = 'absolute'
+    off.canvas.style.left = '-9999px'
+    off.canvas.style.width = '512px'
+    off.canvas.style.height = '512px'
+    document.body.appendChild(off.canvas)
+    const ok = await off.load(spec)
+    const url = ok ? off.snapshot(512) : null
+    off.dispose()
+    if (url) snapshotCache.set(id, url)
+    return url
+  } catch (err) {
+    console.warn('[axie-idol] snapshot failed', id, err)
+    return null
+  }
+}
 let spineSticker: SpineSticker | null = null
 let propOverlay: PropOverlay | null = null
 let equippedProp: PropId | null = null
@@ -1145,7 +1234,7 @@ function beginVfPinch(): void {
 function isStickerPointerTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
   if (target === stickerTarget) return true
-  return Boolean(target.closest('#sticker, #sticker3d, #sticker-layer canvas'))
+  return Boolean(target.closest('#sticker, #sticker3d, #axie3d, #sticker-layer canvas'))
 }
 
 function onVfPointerDown(e: PointerEvent): void {
@@ -1859,7 +1948,20 @@ async function captureComposite(): Promise<void> {
 
   const useSpine = Boolean(spineSticker?.ready && spineSticker.canvas)
   const use3d = Boolean(sticker3d?.ready)
-  if (useSpine && spineSticker) {
+  const useMixer = Boolean(axie3d?.ready)
+  if (useMixer && axie3d) {
+    axie3d.renderNow()
+    const mc = axie3d.canvas
+    const baseW = mc.clientWidth * scaleX
+    const baseH = mc.clientHeight * scaleX
+    ctx.save()
+    if (leadShiny && !customAxieId) ctx.filter = SHINY_FILTER
+    ctx.translate(cx, cy)
+    ctx.rotate((state.rotation * Math.PI) / 180)
+    ctx.scale(state.scale, state.scale)
+    ctx.drawImage(mc, -baseW / 2, -baseH / 2, baseW, baseH)
+    ctx.restore()
+  } else if (useSpine && spineSticker) {
     spineSticker.renderNow()
     const spCanvas = spineSticker.canvas
     const baseW = spCanvas.clientWidth * scaleX
@@ -1938,6 +2040,7 @@ async function captureComposite(): Promise<void> {
 
   disposeSpineSticker()
   disposeSticker3D()
+  disposeAxie3D()
   disposePropOverlay()
   viewfinder.classList.remove('active')
   viewfinder.hidden = true
@@ -2321,6 +2424,7 @@ function disposeSpineSticker(): void {
 
 function disposeSticker3D(): void {
   if (!sticker3d) return
+  if (stickerTarget === sticker3d.canvas) stickerTarget = stickerImg
   sticker3d.dispose()
   sticker3d = null
   stickerImg.hidden = false
@@ -2350,7 +2454,18 @@ async function initSticker3D(): Promise<void> {
   setMascotLoading(true, heavy ? `Loading ${label}… (~7MB)` : `Loading ${label}…`)
   applyPngFallback(cast)
 
-  // No GLB for starters / numeric / Agonia Echo — PNG/CDN only
+  // Mixer-backed faces: numeric cast, Olek, Agonia Echo, Golden
+  if (!url && is3DMixerFace(cast)) {
+    disposeSticker3D()
+    const ok = await showAxie3D(cast, req)
+    if (req !== castRequest) return
+    setMascotLoading(false)
+    if (!ok) applyPngFallback(cast)
+    return
+  }
+  disposeAxie3D()
+
+  // No GLB and not a mixer face — PNG only
   if (!url) {
     setMascotLoading(false)
     disposeSticker3D()
@@ -2467,7 +2582,12 @@ castTray.addEventListener('click', (e) => {
     return
   }
   const shiny = rollShiny(shinyRandom())
-  groupPhoto.add(id, groupStickerSrc(id), { x: state.x, y: state.y }, groupPhoto.count(), shiny)
+  const extra = groupPhoto.add(id, groupStickerSrc(id), { x: state.x, y: state.y }, groupPhoto.count(), shiny)
+  if (extra && is3DMixerFace(id)) {
+    void snapshotFace(id).then((url) => {
+      if (url && groupPhoto.has(id)) extra.el.src = url
+    })
+  }
   if (shiny) announceShiny(id)
   else showLiveToast(`${castLabelName(id)} joined the photo · double-tap to make lead`, 1800)
 })
@@ -2486,76 +2606,8 @@ function axieCdnPng(id: string): string {
 }
 
 
-async function upgradeAxieIdToSpine(id: string, req: number): Promise<void> {
-  if (req !== castRequest || customAxieId !== id) return
-  setMascotLoading(true, `Animating #${id}…`)
-  try {
-    const metaRes = await fetch(`/api/metadata/${id}`)
-    if (req !== castRequest || customAxieId !== id) {
-      setMascotLoading(false)
-      return
-    }
-    if (!metaRes.ok) {
-      throw new Error(`metadata ${metaRes.status}`)
-    }
-    const meta = (await metaRes.json()) as { genes?: string }
-    const genes = meta?.genes
-    if (!genes || genes === '0x0' || genes === '0x') {
-      throw new Error('No genes available')
-    }
+// (2D Spine upgrade retired: numeric Axies render as animated 3D via the mixer — see showAxie3D)
 
-    // Ensure Three mascot WebGL is gone before Pixi
-    disposeSticker3D()
-    if (req !== castRequest || customAxieId !== id) {
-      setMascotLoading(false)
-      return
-    }
-
-    const { createSpineSticker } = await import('./spineSticker')
-    if (req !== castRequest || customAxieId !== id) {
-      setMascotLoading(false)
-      return
-    }
-
-    disposeSpineSticker()
-    const handle = await createSpineSticker(stickerLayer)
-    if (req !== castRequest || customAxieId !== id) {
-      handle?.dispose()
-      setMascotLoading(false)
-      return
-    }
-    if (!handle) {
-      throw new Error('Spine sticker init failed')
-    }
-
-    await handle.renderFromGenes(genes)
-    if (req !== castRequest || customAxieId !== id) {
-      handle.dispose()
-      setMascotLoading(false)
-      return
-    }
-
-    spineSticker = handle
-    stickerImg.hidden = true
-    stickerImg.style.pointerEvents = 'none'
-    bindStickerPointers(handle.canvas)
-    applyStickerTransform()
-    setMascotLoading(false)
-    showLiveToast(`Axie #${id} alive`)
-  } catch (err) {
-    console.warn('[axie-idol] Spine skipped', err)
-    if (req !== castRequest) return
-    setMascotLoading(false)
-    // Keep PNG path
-    if (customAxieId === id && !spineSticker) {
-      stickerImg.hidden = false
-      stickerImg.style.pointerEvents = 'auto'
-      bindStickerPointers(stickerImg)
-      applyStickerTransform()
-      showLiveToast('Spine skipped')
-    }
-  }
-}
 
 async function loadAxieIdSticker(
   id: string,
@@ -2580,6 +2632,7 @@ async function loadAxieIdSticker(
   const req = ++castRequest
   disposeSpineSticker()
   disposeSticker3D()
+  disposeAxie3D()
   syncCastTrayUI()
   void clearEquippedProp()
   const toastName = opts?.toastName || opts?.label || `Axie #${trimmed}`
@@ -2603,10 +2656,8 @@ async function loadAxieIdSticker(
       setMascotLoading(false)
       showLiveToast(`${toastName} on camera`)
       resolve()
-      // Spine optional — skip for inventory speed
-      if (!opts?.skipSpine) {
-        void upgradeAxieIdToSpine(trimmed, req)
-      }
+      // Animated 3D via the mixer (PNG stays until ready)
+      void showAxie3D(trimmed, req)
     }
     const onError = () => {
       cleanup()

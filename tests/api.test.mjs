@@ -175,3 +175,11 @@ test('SPA fallback serves index.html for unknown routes', async () => {
   assert.equal(r.status, 200)
   assert.match(r.headers.get('content-type'), /text\/html/)
 })
+
+test('GET /api/axie/:id validates the id and reports a missing API key clearly', async () => {
+  const bad = await api('/api/axie/abc')
+  assert.equal(bad.status, 400)
+  const nokey = await api('/api/axie/4154')
+  assert.equal(nokey.status, 502)
+  assert.match(nokey.json.error, /SKYMAVIS_API_KEY/)
+})
