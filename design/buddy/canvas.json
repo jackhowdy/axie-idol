@@ -1,0 +1,235 @@
+{
+  "artboards": [
+    {
+      "file": "Egg.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "R1 · 1. The egg: odds ladder + hatch now"
+    },
+    {
+      "file": "Hatch.dc.html",
+      "x": 475,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "R1 · 2. Hatch"
+    },
+    {
+      "file": "Claim.dc.html",
+      "x": 950,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "R1 · 2b. Own an Axie? Skip the egg"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 1425,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "R1 · 3. Home = your Axie"
+    },
+    {
+      "file": "Snap.dc.html",
+      "x": 1900,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "R1 · 4. Snap"
+    },
+    {
+      "file": "Voice.dc.html",
+      "w": 375,
+      "h": 812,
+      "x": 2375,
+      "y": 0,
+      "title": "R1 · 6. Voice: it talks and reacts"
+    },
+    {
+      "file": "Moment.dc.html",
+      "x": 2850,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "R1 · 5. Surprise: a moment"
+    },
+    {
+      "file": "Diary.dc.html",
+      "w": 375,
+      "h": 812,
+      "x": 3325,
+      "y": 0,
+      "title": "R1 · 8. Diary: it remembers"
+    },
+    {
+      "file": "Evolve.dc.html",
+      "x": 3800,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "R1 · 6. Evolution moment"
+    },
+    {
+      "file": "Idol.dc.html",
+      "x": 4275,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "R1 · 7. Status: monthly Idol ladder"
+    },
+    {
+      "file": "Ladder.dc.html",
+      "x": 4750,
+      "y": 0,
+      "w": 375,
+      "h": 1180,
+      "title": "R1 · Growth ladder"
+    },
+    {
+      "file": "Personality.dc.html",
+      "x": 5225,
+      "y": 0,
+      "w": 375,
+      "h": 1320,
+      "title": "R1 · Personalities (10 traits)"
+    },
+    {
+      "file": "Feed.dc.html",
+      "x": 0,
+      "y": 1560,
+      "w": 375,
+      "h": 812,
+      "title": "R2 vision · Feed with cheers"
+    },
+    {
+      "file": "Squad.dc.html",
+      "x": 475,
+      "y": 1560,
+      "w": 375,
+      "h": 812,
+      "title": "R2 vision · Squad (people)"
+    },
+    {
+      "file": "Duo.dc.html",
+      "x": 950,
+      "y": 1560,
+      "w": 375,
+      "h": 812,
+      "title": "R2 vision · Duo snap"
+    },
+    {
+      "file": "Card.dc.html",
+      "x": 1425,
+      "y": 1560,
+      "w": 375,
+      "h": 812,
+      "title": "R2 vision · Buddy card"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "note-r1",
+      "x": 0,
+      "y": -300,
+      "w": 800,
+      "text": "R1 FLOW · one Axie that grows with your photos. On top of companionship: PROGRESS YOU CAN SEE (ladder, evolutions, rarity score), SURPRISES (egg odds, moments the Axie reacts to), STATUS (monthly Idol ladder, crown in every photo), and A WILL OF ITS OWN (personality, voice, reacting to the photo, gentle needs, memory). No feed, no squad."
+    },
+    {
+      "id": "note-egg",
+      "x": 0,
+      "y": -190,
+      "w": 375,
+      "text": "Day 1 you find an egg; it comes into every photo. From 5 snaps a HATCH NOW button is always there. The odds ladder is shown live: 5 common, 20 one rare part guaranteed, 50 two rare + 5% Mystic, 100 max (15% Mystic) + keepsake shell. New places nudge odds up. Egg photos count as bond after hatching, so waiting is never wasted. Small cracks appear as you go. Hatch-now is also the demo path. Wallet owners skip this."
+    },
+    {
+      "id": "note-hatch",
+      "x": 475,
+      "y": -190,
+      "w": 375,
+      "text": "The hatch: a unique Axie rolled from 6 parts and a colour, one rare part called out. Its personality is revealed as speech: three first lines, one trait each, chips appear only after. Name it. The egg photos become the first scrapbook entries."
+    },
+    {
+      "id": "note-claim",
+      "x": 950,
+      "y": -190,
+      "w": 375,
+      "text": "Owners: connect Ronin Wallet, sign a message (no transaction), pick one Axie. Starts at Hatch with an OWNED badge and grows on the same ladder."
+    },
+    {
+      "id": "note-home",
+      "x": 1425,
+      "y": -190,
+      "w": 375,
+      "text": "Home is your Axie. PROGRESS: bond meter naming the next unlock, rarity score (top 8%), Idol ladder rank, wardrobe, scrapbook of firsts. One button: Snap. Not the one? Start a fresh egg any time: the old Axie is retired to the scrapbook (never deleted), only one Axie is active, and the new egg starts from zero, so the odds ladder is the only re-roll."
+    },
+    {
+      "id": "note-snap",
+      "x": 1900,
+      "y": -190,
+      "w": 375,
+      "text": "Camera: buddy chip with bond bar, today's wish, wardrobe tray with the next unlock and its level."
+    },
+    {
+      "id": "note-moment",
+      "x": 2850,
+      "y": -190,
+      "w": 375,
+      "text": "SURPRISE: the Axie reacts to the real world. Night, rain, beach, golden hour, a new district each unlock a pose or look you have not seen. Rare ones say how few players have them. 24 moments to collect; a hint points at the next one."
+    },
+    {
+      "id": "note-evolve",
+      "x": 3800,
+      "y": -190,
+      "w": 375,
+      "text": "PROGRESS at bond 4, 6 and 8: one part evolves to its stage-2 form, the evolution Axie players know from Origins. Stage-2 parts already render in our 3D rig."
+    },
+    {
+      "id": "note-idol",
+      "x": 4275,
+      "y": -190,
+      "w": 375,
+      "text": "STATUS: the existing monthly ladder, re-based on bond earned this month so a new Axie can win. Podium, rarity shown per Axie, OWNED badges, your row with the gap to the next tier. The month's Idol wears the crown in every photo. Share card for Discord/X."
+    },
+    {
+      "id": "note-ladder",
+      "x": 4750,
+      "y": -190,
+      "w": 375,
+      "text": "All 10 levels mapped: 120 snaps from egg to Idol, first unlock inside the first 5 snaps, half wardrobe, half evolution. 10 snaps a day cap. Wallet owners start at Hatch."
+    },
+    {
+      "id": "note-r2",
+      "x": 0,
+      "y": 1300,
+      "w": 800,
+      "text": "R2 VISION (not built for R1) · Feed with cheers that feed bond, Squad as the people you snap with, Duo pairing that puts both Axies in both frames and adds their Axie to your squad as a cameo, and the shareable buddy card."
+    },
+    {
+      "id": "note-voice",
+      "x": 2375,
+      "y": -190,
+      "w": 375,
+      "text": "IT HAS A WILL. Personality rolled at hatch (Explorer · Foodie · Goofball) shapes its voice and wishes. Before the shot it asks for something; after, it reacts to what the captioner actually saw (sea, boats, a dog). Kid's voice, one line each, written by the AI captioner we already run. Wishes come from context (weather, place, day), not a random list."
+    },
+    {
+      "id": "note-diary",
+      "x": 3325,
+      "y": -190,
+      "w": 375,
+      "text": "IT REMEMBERS. A weekly diary written by the Axie from the photos, places and moments (never the camera roll). Place memory, anniversaries (one week since you named me), gentle needs (wants to go back to where it hatched), and 'other Axies were here' from the community wall. Read-aloud option."
+    },
+    {
+      "id": "note-personality",
+      "x": 5225,
+      "y": -190,
+      "w": 375,
+      "text": "TEN TRAITS, THREE PER AXIE. Rolled at hatch, no opposites together, first trait leads the voice. Each trait changes wishes, what it notices, how it talks, what it needs. How you carried the egg nudges the roll (many places -> Explorer, travelled far between snaps -> Athlete). Owned Axies roll from class and parts. Class sets the tone on top. WHEN: wild Axies at hatch, revealed as three spoken lines; owned Axies at claim, derived from ID/class/parts so the same Axie always has the same personality; a fresh egg is a fresh roll. Fixed for life, plus one EARNED 4th trait at bond 10 from how you played."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}
