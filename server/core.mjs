@@ -7,6 +7,7 @@
  */
 import { Buffer } from 'node:buffer'
 import { ResponseShim } from './shim.mjs'
+import { createBuddyModule } from './buddy.mjs'
 
 const randomUUID = () => crypto.randomUUID()
 
@@ -3033,7 +3034,7 @@ async function handleCreatePost(req, res) {
     authorGuestId: typeof body.authorGuestId === 'string' ? body.authorGuestId.trim().slice(0, 64) : '',
     deviceKey,
   })
-  if (isFreeCast && axieId !== 'kotaro') {
+  if (isFreeCast && axieId !== 'kotaro' && body.buddy !== true) {
     const crew = getCastCrewForKey(earlyPosterKey)
     if (!(crew.unlockedCast || []).includes(axieId)) {
       sendJson(res, 403, { error: `Cast "${axieId}" is locked — complete quests to unlock` })
@@ -3131,11 +3132,27 @@ async function handleCreatePost(req, res) {
     authorGuestId,
     deviceKey,
   })
-  let castCrew = applyCastCrewOnPost(store, post, posterKey)
+  let castCrew = body.buddy === true ? null : applyCastCrewOnPost(store, post, posterKey)
   if (golden) {
     const granted = grantCast(posterKey, GOLDEN_ID)
     if (granted) castCrew = { ...granted, engagement: castCrew?.engagement || [] }
   }
+
+  // Buddy: convert this snap into egg/bond progress before the post is persisted, so
+  // any buddyId stamped on the post is saved with it. Never gates on the quest system.
+  const buddyResult = buddy.recordSnap(post, {
+    buddy: body.buddy === true,
+    ownerKey: buddy.ownerKeyFrom(req, body),
+    lat: typeof body.lat === 'number' ? body.lat : undefined,
+    lng: typeof body.lng === 'number' ? body.lng : undefined,
+    hour: typeof body.hour === 'number' ? body.hour : undefined,
+    weather: typeof body.weather === 'string' ? body.weather.slice(0, 16) : undefined,
+    placeType: typeof body.placeType === 'string' ? body.placeType.slice(0, 16) : undefined,
+    placeName: typeof body.placeName === 'string' ? body.placeName.slice(0, 40) : undefined,
+    district: typeof body.district === 'string' ? body.district.slice(0, 40) : undefined,
+    labels: Array.isArray(body.labels) ? body.labels.slice(0, 12).map(String) : [],
+  })
+  if (buddyResult) post.buddyId = buddy.getActive(buddy.ownerKeyFrom(req, body))?.id || null
 
   saveStore(store)
   recordRate(deviceKey, 'posts')
@@ -3151,6 +3168,7 @@ async function handleCreatePost(req, res) {
     ...scoresPayload(store),
     burns: burnsTodayPayload(store),
     castCrew,
+    buddy: buddyResult,
   }
   if (sparkBurn) payload.sparkBurn = sparkBurn
   if (golden) payload.goldenFound = true
@@ -3697,11 +3715,18 @@ async function handleSettleDay(req, res) {
   sendJson(res, 200, { result, burns: burnsTodayPayload(store) })
 }
 
+const buddy = createBuddyModule({
+  storage, env,
+  helpers: { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress },
+})
+
 async function handleApi(req) {
   const url = req.url
   if (!url.pathname.startsWith('/api/')) return null
   const res = new ResponseShim()
   const route = async () => {
+    if (await buddy.handle(req, res, url)) return
+
     const genesMatch = /^\/api\/axie\/([^/]+)$/.exec(url.pathname)
     if (genesMatch && req.method === 'GET') {
       await handleAxieGenes(req, res, decodeURIComponent(genesMatch[1]))
