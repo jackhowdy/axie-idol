@@ -13,6 +13,7 @@ run_worker_first = ["/api/*", "/uploads/*"]
 SEED_POSTS = "0"
 # 1-in-N chance a post contains the Golden Axie (set to "1" for a demo day)
 GOLDEN_ODDS = "5000"
+BUDDY = "1"
 
 [[durable_objects.bindings]]
 name = "STORE"
