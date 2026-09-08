@@ -12,7 +12,8 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "dev:worker": "wrangler dev --port 8788",
     "deploy": "npm run build && wrangler deploy",
-    "copy-mixer-assets": "node scripts/copy-mixer-assets.mjs"
+    "copy-mixer-assets": "node scripts/copy-mixer-assets.mjs",
+    "catalogue": "node scripts/build-part-catalogue.mjs"
   },
   "devDependencies": {
     "@types/three": "0.178.1",
