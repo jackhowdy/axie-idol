@@ -9,7 +9,7 @@ export { IdolStore } from './store.mjs'
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Device-Key',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Device-Key, X-Buddy-Session',
 }
 
 export default {

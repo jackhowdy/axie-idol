@@ -5,6 +5,7 @@ import {
   wishForToday, detectMoments, MOMENTS, hashInt,
 } from './buddyRules.mjs'
 import { pickLine } from './voiceLines.mjs'
+import { signInMessage, recoverAddress } from './roninSig.mjs'
 
 const NAME_RE = /^[\p{L}\p{N} '’-]{2,16}$/u
 const BAD_WORDS = ['shit', 'fuck', 'cunt', 'nigg', 'fag', 'bitch', 'dick', 'porn', 'nazi']
@@ -35,6 +36,16 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
   function verifySession(store, token) {
     for (const acc of Object.values(store.accounts)) if (acc.session === token && acc.ownerKey.startsWith('ronin:')) return acc.ownerKey.slice(6)
     return null
+  }
+
+  /** Move all of fromKey's buddies onto toKey's account (device -> wallet on sign-in, recovery-code redemption). */
+  function mergeAccounts(store, fromKey, toKey) {
+    if (fromKey === toKey) return
+    const from = store.accounts[fromKey]; if (!from) return
+    const to = accountFor(store, toKey)
+    for (const id of from.buddyIds) { const b = store.buddies[id]; if (!b) continue; b.ownerKey = toKey; if (!to.buddyIds.includes(id)) to.buddyIds.push(id) }
+    if (!to.activeBuddyId || !store.buddies[to.activeBuddyId]?.hatchedAt) to.activeBuddyId = from.activeBuddyId || to.activeBuddyId
+    from.buddyIds = []; from.activeBuddyId = null
   }
 
   function newEgg(ownerKey) {
@@ -188,7 +199,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
   }
 
   async function handle(req, res, url) {
-    if (!enabled || !/^\/api\/(buddy|ladder)\b/.test(url.pathname)) return false
+    if (!enabled || !/^\/api\/(buddy|ronin|ladder|account)\b/.test(url.pathname)) return false
     let body = {}
     if (req.method === 'POST') { try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}') } catch { sendJson(res, 400, { error: 'Invalid JSON' }); return true } }
     const ownerKey = ownerKeyFrom(req, body, url)
@@ -255,6 +266,67 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       if (!active?.hatchedAt) { sendJson(res, 200, { line: null }); return true }
       const line = say(active, 'before', { thing: url.searchParams.get('thing') || 'the whole street', place: url.searchParams.get('place') || 'here' })
       save(store); sendJson(res, 200, { line }); return true
+    }
+    if (p === '/api/ronin/nonce' && req.method === 'GET') {
+      const address = normalizeAddress(url.searchParams.get('address') || '')
+      if (!address) { sendJson(res, 400, { error: 'address required' }); return true }
+      const nonce = crypto.randomUUID().replace(/-/g, '').slice(0, 16)
+      const nonceAcc = accountFor(store, `ronin:${address}`)
+      nonceAcc.nonces[nonce] = now(); for (const k of Object.keys(nonceAcc.nonces)) if (now() - nonceAcc.nonces[k] > 10 * 60_000) delete nonceAcc.nonces[k]
+      save(store); sendJson(res, 200, { nonce, message: signInMessage(address, nonce) }); return true
+    }
+    if (p === '/api/ronin/verify' && req.method === 'POST') {
+      const address = normalizeAddress(String(body.address || ''))
+      const verifyAcc = address ? store.accounts[`ronin:${address}`] : null
+      const nonce = verifyAcc && Object.keys(verifyAcc.nonces).find((n) => recoverAddress(signInMessage(address, n), String(body.signature || '')) === address)
+      if (!address || !verifyAcc || !nonce) { sendJson(res, 401, { error: 'Signature does not match' }); return true }
+      delete verifyAcc.nonces[nonce]
+      verifyAcc.session = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, '')
+      const dk = deviceKeyFrom(req, body)
+      if (dk) mergeAccounts(store, `device:${dk}`, verifyAcc.ownerKey)
+      save(store); sendJson(res, 200, { session: verifyAcc.session, address }); return true
+    }
+    if (p === '/api/ronin/axies' && req.method === 'GET') {
+      if (!ownerKey.startsWith('ronin:')) { sendJson(res, 401, { error: 'Sign in first' }); return true }
+      const axies = env.BUDDY_TEST_SKIP_CHAIN === '1' ? [{ id: '6', name: 'Axie #6', class: 'Aquatic' }] : (await fetchAllOwnerAxies(ownerKey.slice(6))).map((a) => ({ id: a.id, name: a.name, class: a.class }))
+      sendJson(res, 200, { axies }); return true
+    }
+    if (p === '/api/buddy/claim' && req.method === 'POST') {
+      if (!ownerKey.startsWith('ronin:')) { sendJson(res, 401, { error: 'Sign in first' }); return true }
+      const axieId = String(body.axieId || '').trim()
+      if (!/^\d+$/.test(axieId)) { sendJson(res, 400, { error: 'axieId required' }); return true }
+      let rec
+      if (env.BUDDY_TEST_SKIP_CHAIN === '1') rec = { id: axieId, class: 'Aquatic', parts: [{ name: 'Tricky' }, { name: 'Catfish' }, { name: 'Clamshell' }, { name: 'Hero' }, { name: 'Iguana' }, { name: 'Ear Breathing' }], genes: '0x0' }
+      else {
+        const owned = await fetchAllOwnerAxies(ownerKey.slice(6))
+        if (!owned.some((a) => String(a.id) === axieId)) { sendJson(res, 403, { error: 'Not in your wallet' }); return true }
+        rec = await fetchAxieGenes(axieId)
+      }
+      if (!rec) { sendJson(res, 404, { error: 'Axie not found' }); return true }
+      const existing = acc.buddyIds.map((id) => store.buddies[id]).find((b) => b?.kind === 'owned' && b.axieId === axieId)
+      if (existing) { existing.retiredAt = null; acc.activeBuddyId = existing.id; save(store); sendJson(res, 200, payload(store, ownerKey)); return true }
+      const b = newEgg(ownerKey)
+      b.kind = 'owned'; b.axieId = axieId; b.class = rec.class || null; b.name = (rec.name && !/^Axie #\d+$/.test(rec.name) ? rec.name : `Axie #${axieId}`).slice(0, 16)
+      b.traits = traitsForOwned(axieId, rec.class || '', (rec.parts || []).map((x) => x.name))
+      b.hatchedAt = b.createdAt; b.mystic = (rec.parts || []).some((x) => x.specialGenes === 'Mystic'); b.rarity = b.mystic ? 0.03 : 0.5
+      if (active && !active.hatchedAt) { acc.buddyIds = acc.buddyIds.filter((id) => id !== active.id); delete store.buddies[active.id] }
+      store.buddies[b.id] = b; acc.buddyIds.push(b.id); acc.activeBuddyId = b.id
+      addBondIgnoringCap(b, 5); ensureWish(b)
+      save(store); sendJson(res, 201, payload(store, ownerKey, { lines: b.traits.map((t) => pickLine({ traits: [t], situation: 'hatch', rng })) })); return true
+    }
+    if (p === '/api/account/recovery' && req.method === 'POST') {
+      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+      const chunk = () => Array.from({ length: 4 }, () => alphabet[Math.floor(rng() * alphabet.length)]).join('')
+      acc.recoveryCode = `${chunk()}-${chunk()}-${chunk()}`
+      save(store); sendJson(res, 200, { code: acc.recoveryCode }); return true
+    }
+    if (p === '/api/account/recover' && req.method === 'POST') {
+      const code = String(body.code || '').trim().toUpperCase()
+      const from = Object.values(store.accounts).find((a) => a.recoveryCode && a.recoveryCode === code && !store.usedRecoveryCodes[code])
+      if (!from) { sendJson(res, 404, { error: 'Code not found' }); return true }
+      store.usedRecoveryCodes[code] = now(); from.recoveryCode = null
+      mergeAccounts(store, from.ownerKey, ownerKey)
+      save(store); sendJson(res, 200, payload(store, ownerKey)); return true
     }
     if (p === '/api/ladder/monthly' && req.method === 'GET') {
       const key = monthKey()

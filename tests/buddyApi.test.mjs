@@ -2,11 +2,17 @@ import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { startNodeServer } from './helpers/start-node-server.mjs'
 import { createBuddyModule } from '../server/buddy.mjs'
+import * as secp from '@noble/secp256k1'
+import { hmac } from '@noble/hashes/hmac'
+import { sha256 } from '@noble/hashes/sha256'
+import { keccak_256 } from '@noble/hashes/sha3'
+import { hashPersonalMessage } from '../server/roninSig.mjs'
+secp.etc.hmacSha256Sync = (k, ...m) => hmac(sha256, k, secp.etc.concatBytes(...m))
 
 const PNG_1x1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
 let base = process.env.BASE_URL || ''
 let server = null
-before(async () => { if (!base) { server = await startNodeServer({ BUDDY: '1' }); base = server.baseUrl } })
+before(async () => { if (!base) { server = await startNodeServer({ BUDDY: '1', BUDDY_TEST_SKIP_CHAIN: '1' }); base = server.baseUrl } })
 after(async () => { if (server) await server.stop() })
 
 async function api(path, { method = 'GET', body, device = 'dev-a' } = {}) {
@@ -169,4 +175,43 @@ test('diary lists the week from the buddy record', async () => {
   assert.ok(r.json.entries.length >= 2, 'egg day and hatch day at least')
   assert.equal(r.json.entries[0].title, 'Found')
   assert.ok(r.json.entries.every((e) => typeof e.line === 'string' && e.line.length > 0))
+})
+
+function wallet() {
+  const priv = secp.utils.randomPrivateKey()
+  const pub = secp.getPublicKey(priv, false)
+  const address = '0x' + Buffer.from(keccak_256(pub.subarray(1)).subarray(12)).toString('hex')
+  const sign = (msg) => { const s = secp.sign(hashPersonalMessage(msg), priv); return '0x' + Buffer.from(s.toCompactRawBytes()).toString('hex') + (27 + s.recovery).toString(16) }
+  return { address, sign }
+}
+
+test('ronin sign-in merges the device account and claim makes an owned buddy', async () => {
+  const d = dev(); const w = wallet()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  const n = await api(`/api/ronin/nonce?address=${w.address}`, { device: d })
+  assert.equal(n.status, 200)
+  const v = await api('/api/ronin/verify', { method: 'POST', device: d, body: { address: w.address, signature: w.sign(n.json.message) } })
+  assert.equal(v.status, 200, v.text)
+  const session = v.json.session
+  const me = await fetch(base + '/api/buddy', { headers: { 'X-Device-Key': d, 'X-Buddy-Session': session } }).then((r) => r.json())
+  assert.equal(me.buddies.length, 1, 'device egg moved under the wallet')
+  const c = await fetch(base + '/api/buddy/claim', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Device-Key': d, 'X-Buddy-Session': session }, body: JSON.stringify({ axieId: '6' }) }).then(async (r) => ({ status: r.status, json: await r.json() }))
+  assert.equal(c.status, 201, JSON.stringify(c.json))
+  assert.equal(c.json.active.kind, 'owned')
+  assert.equal(c.json.active.axieId, '6')
+  assert.equal(c.json.active.bond, 5)
+  assert.equal(c.json.active.traits.length, 3)
+  const bad = await api('/api/ronin/verify', { method: 'POST', device: d, body: { address: w.address, signature: w.sign('nope') } })
+  assert.equal(bad.status, 401)
+})
+
+test('recovery code moves a guest account to a new device once', async () => {
+  const d1 = dev(); const d2 = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d1 })
+  const c = await api('/api/account/recovery', { method: 'POST', device: d1 })
+  assert.equal(c.status, 200); assert.match(c.json.code, /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/)
+  const r = await api('/api/account/recover', { method: 'POST', device: d2, body: { code: c.json.code } })
+  assert.equal(r.status, 200); assert.equal(r.json.buddies.length, 1)
+  const again = await api('/api/account/recover', { method: 'POST', device: dev(), body: { code: c.json.code } })
+  assert.equal(again.status, 404)
 })
