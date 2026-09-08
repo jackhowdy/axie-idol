@@ -145,3 +145,28 @@ test('buddy posts still respect the cast lock for non-neutral cast ids', async (
   const p = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'bing', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
   assert.equal(p.status, 403, p.text)
 })
+
+test('monthly ladder ranks by bond this month and includes your row', async () => {
+  const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  for (let i = 0; i < 5; i++) await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
+  await api('/api/buddy/hatch', { method: 'POST', device: d, body: { name: 'Miso' } })
+  const l = await api('/api/ladder/monthly', { device: d })
+  assert.equal(l.status, 200)
+  assert.ok(l.json.rows.length >= 1)
+  assert.equal(l.json.you.monthlyBond, 5)
+  assert.ok(l.json.rows.every((r, i) => i === 0 || l.json.rows[i - 1].monthlyBond >= r.monthlyBond))
+  assert.ok(!('bondByDay' in l.json.rows[0]), 'ladder rows are public shapes only')
+})
+
+test('diary lists the week from the buddy record', async () => {
+  const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  for (let i = 0; i < 5; i++) await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true, lat: 22.3 + i * 0.01, lng: 114.2 } })
+  await api('/api/buddy/hatch', { method: 'POST', device: d, body: { name: 'Miso' } })
+  const r = await api('/api/buddy/diary', { device: d })
+  assert.equal(r.status, 200)
+  assert.ok(r.json.entries.length >= 2, 'egg day and hatch day at least')
+  assert.equal(r.json.entries[0].title, 'Found')
+  assert.ok(r.json.entries.every((e) => typeof e.line === 'string' && e.line.length > 0))
+})

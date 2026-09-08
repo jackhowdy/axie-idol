@@ -188,7 +188,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
   }
 
   async function handle(req, res, url) {
-    if (!enabled || !url.pathname.startsWith('/api/buddy')) return false
+    if (!enabled || !/^\/api\/(buddy|ladder)\b/.test(url.pathname)) return false
     let body = {}
     if (req.method === 'POST') { try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}') } catch { sendJson(res, 400, { error: 'Invalid JSON' }); return true } }
     const ownerKey = ownerKeyFrom(req, body, url)
@@ -256,7 +256,45 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const line = say(active, 'before', { thing: url.searchParams.get('thing') || 'the whole street', place: url.searchParams.get('place') || 'here' })
       save(store); sendJson(res, 200, { line }); return true
     }
+    if (p === '/api/ladder/monthly' && req.method === 'GET') {
+      const key = monthKey()
+      const rows = Object.values(store.buddies)
+        .filter((b) => b.hatchedAt && !b.retiredAt && b.monthly.key === key && b.monthly.bond > 0)
+        .sort((a, b) => b.monthly.bond - a.monthly.bond || Date.parse(a.hatchedAt) - Date.parse(b.hatchedAt))
+        .map((b, i) => ({ rank: i + 1, buddyId: b.id, name: b.name, class: b.class, kind: b.kind, traits: b.traits, level: levelFor(b.bond), monthlyBond: b.monthly.bond, rarity: rarityFor(b) }))
+      const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 50))
+      const mine = active ? rows.find((r) => r.buddyId === active.id) : null
+      const tierAbove = mine ? rows.filter((r) => r.rank < mine.rank).at(-1) : null
+      const you = mine ? { rank: mine.rank, monthlyBond: mine.monthlyBond, toNextTier: tierAbove ? tierAbove.monthlyBond - mine.monthlyBond + 1 : 0 } : null
+      const [y, m] = key.split('-').map(Number)
+      const endsAt = new Date(Date.UTC(y, m, 1) - 8 * 3600 * 1000).toISOString()
+      sendJson(res, 200, { month: key, endsAt, rows: rows.slice(0, limit), you }); return true
+    }
+    if (p === '/api/buddy/diary' && req.method === 'GET') {
+      if (!active) { sendJson(res, 200, { entries: [] }); return true }
+      sendJson(res, 200, diaryFor(active)); return true
+    }
     return false
+  }
+  function rarityFor(b) {
+    if (b.kind === 'owned') return b.rarity ?? 0.5
+    const score = 0.6 - b.rareIds.length * 0.2 - (b.mystic ? 0.3 : 0)
+    return Math.max(0.02, Math.round(score * 100) / 100) // share of Axies at least this rare; lower is rarer
+  }
+  function diaryFor(b) {
+    const dayLabel = (iso) => manilaDayKey(new Date(Date.parse(iso)))
+    const entries = []
+    const createdDay = dayLabel(b.createdAt)
+    entries.push({ day: 1, dayKey: createdDay, title: 'Found', line: 'Someone picked me up. It was warm and bumpy. I think this is my person.', photoId: b.photoIds[0] || null })
+    if (b.hatchedAt) entries.push({ day: Math.max(1, daysSince(b.createdAt) - daysSince(b.hatchedAt) + 1), dayKey: dayLabel(b.hatchedAt), title: 'Hatched', line: pickLine({ traits: b.traits, situation: 'hatch', recent: [], rng }), photoId: b.photoIds[b.egg.snaps] || null })
+    for (const m of b.moments.slice(-3)) {
+      const def = MOMENTS.find((x) => x.id === m.id)
+      if (def) entries.push({ day: Math.max(1, daysSince(b.createdAt) - daysSince(m.at) + 1), dayKey: dayLabel(m.at), title: def.title, line: def.line, photoId: m.photoId })
+    }
+    const dayN = daysSince(b.createdAt)
+    const anniversary = b.hatchedAt && daysSince(b.hatchedAt) === 6 ? 'Tomorrow: one week since you named me.' : null
+    const next = b.hatchGrid ? 'I want to go back to where I hatched.' : pickLine({ traits: b.traits, situation: 'wish', recent: [], rng })
+    return { week: Math.ceil(dayN / 7), entries: entries.slice(0, 5), anniversary, next }
   }
   function addBondIgnoringCap(b, amount) {
     const before = levelFor(b.bond); b.bond += amount; b.monthly = { key: monthKey(), bond: (b.monthly.key === monthKey() ? b.monthly.bond : 0) + amount }
