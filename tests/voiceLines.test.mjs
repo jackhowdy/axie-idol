@@ -30,6 +30,16 @@ test('pickLine prefers the lead trait, avoids recent lines, fills slots', () => 
   assert.ok(!recent.includes(l), 'skips lines said in the last seven days')
   const filled = fillSlots('Get {thing} in it. Closer.', { thing: 'the noodles' })
   assert.equal(filled, 'Get the noodles in it. Closer.')
-  const t = pickLine({ traits: ['Shy'], situation: 'before', slots: { thing: 'a dog' }, recent: [...LINES.Shy.before, ...TEMPLATES.before], rng: () => 0 })
+
+  // When all trait lines and all template lines are in recent, fallback to templates only
+  const shyBefore = LINES.Shy.before
+  const templatesBefore = TEMPLATES.before
+  const recentAll = [...shyBefore, ...templatesBefore]
+  const t = pickLine({ traits: ['Shy'], situation: 'before', slots: { thing: 'a dog' }, recent: recentAll, rng: () => 0 })
   assert.ok(typeof t === 'string' && t.length > 0, 'always returns something')
+  assert.ok(!shyBefore.includes(t), 'never returns a trait line from recent')
+
+  // Should return one of the filled template lines
+  const filledTemplates = templatesBefore.map((line) => fillSlots(line, { thing: 'a dog' })).filter((line) => line.includes('a dog') || !line.includes('{'))
+  assert.ok(filledTemplates.includes(t), 'returns a template line when no fresh trait line exists')
 })

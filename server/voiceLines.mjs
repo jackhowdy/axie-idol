@@ -146,17 +146,21 @@ function usable(line, slots) {
 /** Lead trait first, second trait as a fallback, then templates. Never repeats a recent line. */
 export function pickLine({ traits = [], situation, slots = {}, recent = [], rng = Math.random }) {
   const seen = new Set(recent)
-  const pools = [
-    ...traits.slice(0, 2).map((t) => LINES[t]?.[situation] || []),
-    TEMPLATES[situation] || [],
-  ]
-  for (const pool of pools) {
+  const traitPools = traits.slice(0, 2).map((t) => LINES[t]?.[situation] || [])
+  const templatePool = TEMPLATES[situation] || []
+
+  // First pass: try to find fresh (not in recent) line from trait pools, then templates
+  for (const pool of traitPools) {
     const fresh = pool.filter((l) => !seen.has(l) && usable(l, slots))
     if (fresh.length) return fillSlots(fresh[Math.floor(rng() * fresh.length)], slots)
   }
-  for (const pool of pools) {
-    const any = pool.filter((l) => usable(l, slots))
-    if (any.length) return fillSlots(any[Math.floor(rng() * any.length)], slots)
-  }
+  const freshTemplates = templatePool.filter((l) => !seen.has(l) && usable(l, slots))
+  if (freshTemplates.length) return fillSlots(freshTemplates[Math.floor(rng() * freshTemplates.length)], slots)
+
+  // Second pass: if no fresh line found, try any usable line from templates only (not trait pools)
+  const templateUsable = templatePool.filter((l) => usable(l, slots))
+  if (templateUsable.length) return fillSlots(templateUsable[Math.floor(rng() * templateUsable.length)], slots)
+
+  // Fallback: talk template
   return fillSlots(TEMPLATES.talk[0], { thing: slots.thing || 'the sky' })
 }
