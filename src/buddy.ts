@@ -35,6 +35,8 @@ export type Buddy = {
   moments: { id: string; at: string; photoId: string }[]
   momentsTotal: number
   photoIds: string[]
+  /** Post id + the stored upload path, newest last, capped server-side at 60. Real scrapbook thumbnails. */
+  photos: { id: string; imagePath: string; at: string }[]
   snapCount: number
   bondToday: number
   dailyCap: number

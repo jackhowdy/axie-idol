@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -9,7 +9,7 @@ const egg = {
   name: '', traits: [], bond: 0, level: 0, next: null,
   wish: { id: null, text: '', bonus: 1, done: false },
   wardrobe: { unlocked: [], worn: null },
-  moments: [], momentsTotal: 24, photoIds: [], snapCount: 12, bondToday: 3, dailyCap: 10, streak: 2,
+  moments: [], momentsTotal: 24, photoIds: [], photos: [], snapCount: 12, bondToday: 3, dailyCap: 10, streak: 2,
   ladder: [], mystic: false, mysticId: null, rareIds: [], descriptor: null, class: null, axieId: null,
   retiredAt: null, levelName: null,
 }
@@ -106,6 +106,46 @@ test('every renderer escapes user-provided strings', () => {
     assert.match(html, /&lt;img src=x/)
   }
   assert.doesNotMatch(claimHtml([{ id: evil, name: evil, class: evil }], evil, evil), /<img src=x/)
+})
+
+test('the camera chip counts egg snaps before hatching and bond after', () => {
+  const eggChip = vfChipHtml(egg)
+  assert.match(eggChip, /Egg · 12 of 20/)
+  assert.match(eggChip, /bd-meter mini/)
+  const bondChip = vfChipHtml({ ...miso, ladder: [{ level: 3, bond: 18, reward: 'Good friends', unlock: null }] })
+  assert.match(bondChip, /Miso · Bond 3/)
+  // 21 bond, floor 18, next at 24 -> halfway
+  assert.match(bondChip, /width:50%/)
+  assert.doesNotMatch(vfChipHtml({ ...miso, name: '<img src=x>' }), /<img src=x/)
+})
+
+test('the wish pill is tappable on Home and read-only in the camera HUD', () => {
+  const wishing = { ...miso, wish: { id: 'rain', text: 'I want to see the rain', bonus: 2, done: false } }
+  assert.match(wishPillHtml(wishing), /data-action="wish-done"/)
+  const hud = wishPillHtml(wishing, { interactive: false })
+  assert.doesNotMatch(hud, /data-action="wish-done"/)
+  assert.doesNotMatch(hud, /<button/)
+  assert.match(hud, /I want to see the rain/)
+  assert.match(hud, /\+2 bond/)
+  assert.doesNotMatch(hud, /Done today/, 'a wish that is not done never reads as done')
+  assert.equal(wishPillHtml({ ...miso, wish: { id: null, text: '', bonus: 1, done: false } }), '')
+})
+
+test('scrapbook and diary render the stored upload path, not the post id', () => {
+  const b = { ...miso, photoIds: ['p1', 'p2'], photos: [{ id: 'p1', imagePath: '/uploads/a.png', at: 'x' }] }
+  const home = homeHtml(b, null)
+  assert.match(home, /<img class="bd-thumb-img" src="\/uploads\/a\.png"/)
+  assert.doesNotMatch(home, /src="\/api\/image/)
+  // p2 has no record yet — the tile stays a placeholder rather than a broken image
+  assert.equal((home.match(/bd-thumb-img/g) || []).length, 1)
+  const diary = diaryHtml({ week: 1, entries: [{ day: 1, dayKey: 'x', title: 'Found', line: 'Warm.', photoId: 'p1' }], anniversary: null, next: 'n' }, b)
+  assert.match(diary, /<img class="bd-thumb-img" src="\/uploads\/a\.png"/)
+})
+
+test('moment and unlock sheets advance the queue instead of just closing', () => {
+  assert.match(momentHtml({ id: 'dog', title: 'A dog', line: 'A DOG.', rarity: 0.4 }, miso), /data-action="sheet-next"/)
+  assert.match(unlockHtml({ level: 4, reward: 'Signature pose', unlock: 'pose-1', line: 'Watch this.' }, miso), /data-action="sheet-next"/)
+  assert.match(reactionHtml({ kind: 'snap', granted: 1, bond: 5, level: 1, next: null, line: 'A DOG.', labels: [], isNewPlace: false, wishDone: null, unlocks: [], moments: [], bondToday: 1, dailyCap: 10 }), /data-action="save"/)
 })
 
 test('suggestName picks a name for the class', () => {

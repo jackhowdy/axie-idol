@@ -12,8 +12,12 @@ import { createAxie3D, getAxieMixer, isAxieMixerReady, parsePartId, type Axie3D,
 import { descriptorFor, isCustomFace } from './castDescriptors'
 import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
-import { buddyEnabled, bindDeviceKey, loadBuddy } from './buddy'
+import {
+  buddyEnabled, bindDeviceKey, loadBuddy, buddyState, faceIdForBuddy, snapContext, beforeLine,
+  type SnapResult,
+} from './buddy'
 import { mountBuddyScreens } from './buddyScreens'
+import { reactionHtml, momentHtml, unlockHtml, vfChipHtml, wishPillHtml } from './buddyHtml.ts'
 import {
   clearWaypointToken,
   connectWithWaypoint,
@@ -51,6 +55,12 @@ const CAST_MASCOTS = [
 ] as const
 
 type CastId = (typeof CAST_MASCOTS)[number]['id']
+/**
+ * What can sit on the camera. `buddy` (the hatched one-Axie character, rendered by the
+ * mixer) and `egg` (a flat SVG sprite) are never in the cast tray, so they are not
+ * CastIds — the tray keeps working untouched while the buddy flag owns the lead face.
+ */
+type FaceId = CastId | 'buddy' | 'egg'
 
 /** Vibeathon kit equipment props (jaatster/axie-3d-assets). */
 const EQUIPMENT_PROPS = [
@@ -79,13 +89,24 @@ function castMeta(id: string): CastDef | null {
   return (CAST_MASCOTS as readonly CastDef[]).find((c) => c.id === id) || null
 }
 
-function mascotGlbUrl(id: CastId): string {
+/** Egg sprite stage: 1 under five snaps, 2 from five, 3 from twenty. */
+function eggStage(): 1 | 2 | 3 {
+  const s = buddyState.active?.egg.snaps ?? 0
+  return s >= 20 ? 3 : s >= 5 ? 2 : 1
+}
+function eggSpriteUrl(): string {
+  return `/previews/egg-${eggStage()}.svg`
+}
+
+function mascotGlbUrl(id: FaceId): string {
   const meta = castMeta(id)
   if (!meta?.glb) return ''
   return `./models/mascots/${meta.glb}`
 }
 
 function mascotStickerUrl(id: string): string {
+  // The unhatched buddy is a flat sprite, not a mixer face.
+  if (id === 'egg') return eggSpriteUrl()
   const meta = castMeta(id)
   if (!meta) return ''
   if (meta.kind === 'axie' || /^\d+$/.test(id)) return axieCdnPngLocal(id)
@@ -112,6 +133,8 @@ function propLabelName(id: string): string {
 }
 
 function isCastUnlocked(id: string): boolean {
+  // The one-Axie loop's own face is always available — it is not a quest reward.
+  if (id === 'buddy' || id === 'egg') return true
   // Dev preview (?dev=1): every face can be placed on the camera; the server still enforces posting.
   if (isDevMode()) return true
   if (id === 'kotaro') return true
@@ -453,6 +476,11 @@ const stickerImg = document.querySelector<HTMLImageElement>('#sticker')!
 const stickerLayer = document.querySelector<HTMLElement>('#sticker-layer')!
 const viewfinder = document.querySelector<HTMLElement>('#viewfinder')!
 const previewScreen = document.querySelector<HTMLElement>('#preview')!
+/** One-Axie loop camera HUD (VITE_BUDDY=1): buddy chip, today's wish, the before-the-shot line. */
+const bdChip = document.querySelector<HTMLElement>('#bd-chip')
+const bdWishPill = document.querySelector<HTMLElement>('#bd-wish-pill')
+const bdSpeechVf = document.querySelector<HTMLElement>('#bd-speech-vf')
+let bdSpeechTimer: number | null = null
 const previewImg = document.querySelector<HTMLImageElement>('#preview-img')!
 const frameCanvas = document.querySelector<HTMLCanvasElement>('#frame-canvas')!
 const cameraDenied = document.querySelector<HTMLElement>('#camera-denied')!
@@ -665,10 +693,19 @@ let axie3d: Axie3D | null = null
 const snapshotCache = new Map<string, string>()
 
 function is3DMixerFace(id: string): boolean {
-  return /^\d+$/.test(id) || isCustomFace(id) || (isDevMode() && id.startsWith('dev:'))
+  return /^\d+$/.test(id) || id === 'buddy' || isCustomFace(id) || (isDevMode() && id.startsWith('dev:'))
 }
 
 async function specForFace(id: string): Promise<Axie3DSpec | null> {
+  // The one-Axie buddy: a wild Axie carries its own generated descriptor, an owned one
+  // resolves through the numeric genes path below. Unhatched -> no 3D face at all.
+  if (id === 'buddy') {
+    const b = buddyState.active
+    if (!b || !b.hatchedAt) return null
+    if (b.kind === 'wild' && b.descriptor) return { kind: 'descriptor', descriptor: b.descriptor, label: b.name || 'Axie' }
+    if (b.axieId) return specForFace(b.axieId)
+    return null
+  }
   if (isDevMode() && id.startsWith('dev:')) {
     // Dev preview of arbitrary part ids (used to check derived pack parts)
     const parts = id
@@ -793,7 +830,7 @@ let propOverlay: PropOverlay | null = null
 let equippedProp: PropId | null = null
 let equipRequest = 0
 /** Active kit mascot — default Kotaro */
-let activeCast: CastId = 'kotaro'
+let activeCast: FaceId = 'kotaro'
 let castRequest = 0
 /** Official Axie ID PNG sticker (CDN) — null when using kit cast */
 let customAxieId: string | null = null
@@ -2485,10 +2522,18 @@ function disposeSticker3D(): void {
   applyStickerTransform()
 }
 
-function applyPngFallback(cast: CastId): void {
+function applyPngFallback(cast: FaceId): void {
   const meta = castMeta(cast)
-  stickerImg.src = mascotStickerUrl(cast)
-  stickerImg.alt = `${meta?.label || cast} Axie sticker`
+  const src = mascotStickerUrl(cast)
+  if (!src) {
+    // No 2D art for this face (the hatched buddy is mixer-only) — leave the layer empty
+    // rather than pointing the <img> at the page URL, which renders as a broken image.
+    stickerImg.hidden = true
+    stickerImg.style.pointerEvents = 'none'
+    return
+  }
+  stickerImg.src = src
+  stickerImg.alt = cast === 'egg' ? 'Your egg' : `${meta?.label || cast} Axie sticker`
   stickerImg.hidden = false
   stickerImg.style.pointerEvents = "auto"
   bindStickerPointers(stickerImg)
@@ -2502,7 +2547,11 @@ async function initSticker3D(): Promise<void> {
   const url = mascotGlbUrl(cast)
   const meta = castMeta(cast)
   const heavy = cast === 'tripp'
-  const label = meta?.label || cast
+  const label = cast === 'buddy'
+    ? buddyState.active?.name || 'your Axie'
+    : cast === 'egg'
+      ? 'your egg'
+      : meta?.label || cast
   setMascotLoading(true, heavy ? `Loading ${label}… (~7MB)` : `Loading ${label}…`)
   applyPngFallback(cast)
 
@@ -2585,7 +2634,7 @@ async function initSticker3D(): Promise<void> {
   }
 }
 
-async function selectCast(id: CastId): Promise<void> {
+async function selectCast(id: FaceId): Promise<void> {
   if (!isCastUnlocked(id)) {
     showLiveToast('Keep questing to unlock this cast', 1800)
     return
@@ -2790,6 +2839,10 @@ function hideAllScreens(): void {
     ownerScreen.hidden = true
   }
   if (profileBellPanel) profileBellPanel.hidden = true
+  // One-Axie loop screens live outside the legacy screen set; hide them too so the camera
+  // never opens with a buddy screen still painted underneath it.
+  for (const s of document.querySelectorAll<HTMLElement>('.screen.buddy')) s.hidden = true
+  pauseBuddyFace()
   stopBoardCountdown()
 }
 
@@ -2810,17 +2863,43 @@ function castOrAxieLabel(id: string): string {
 }
 
 /**
- * Paint the buddy's face into a screen's hero box.
- * Placeholder for Task 9: Task 10 swaps this for the live 3D character.
+ * Live buddy character inside a buddy screen's hero box. A second mixer handle, separate
+ * from the camera's `axie3d`, so moving between Home and the camera never tears either down.
+ * Unhatched buddies get the flat egg sprite instead — there is nothing to render yet.
  */
+let buddyHero: Axie3D | null = null
+let buddyHeroRequest = 0
 async function showBuddyFaceIn(host: HTMLElement): Promise<void> {
-  host.querySelector('[data-buddy-face-placeholder]')?.remove()
-  const img = document.createElement('img')
-  img.src = '/previews/kotaro.png'
-  img.alt = ''
-  img.dataset.buddyFacePlaceholder = '1'
-  img.style.cssText = 'width:100%;height:100%;object-fit:contain'
-  host.append(img)
+  const req = ++buddyHeroRequest
+  for (const old of host.querySelectorAll('[data-buddy-face]')) old.remove()
+  const spec = await specForFace('buddy').catch(() => null)
+  if (req !== buddyHeroRequest) return
+  if (!spec) {
+    buddyHero?.pause()
+    const img = document.createElement('img')
+    img.src = eggSpriteUrl()
+    img.alt = ''
+    img.dataset.buddyFace = 'egg'
+    img.className = 'bd-hero-art'
+    host.append(img)
+    return
+  }
+  if (!buddyHero) {
+    buddyHero = createAxie3D('buddy-hero')
+    buddyHero.canvas.className = 'bd-hero-canvas'
+    buddyHero.canvas.dataset.buddyFace = '3d'
+  }
+  const hero = buddyHero
+  await hero.load(spec)
+  if (req !== buddyHeroRequest) return
+  host.append(hero.canvas)
+  hero.resume()
+}
+
+/** No hero box on the screen that just opened (ladder, monthly, claim) — stop rendering. */
+function pauseBuddyFace(): void {
+  buddyHeroRequest++
+  buddyHero?.pause()
 }
 
 function showViewfinderFromFeed(): void {
@@ -2828,8 +2907,15 @@ function showViewfinderFromFeed(): void {
   setActiveTab(null)
   viewfinder.hidden = false
   viewfinder.classList.add('active')
-  // Guest dopamine: default Kotaro on camera if none selected
-  if (!customAxieId) {
+  if (buddyEnabled && buddyState.active) {
+    // R1: the lead face is always the buddy — the egg sprite before hatching, the character after.
+    const want = faceIdForBuddy()
+    if (activeCast !== want) void selectCast(want)
+    else syncCastTrayUI()
+    syncQuestHud()
+    requestBuddyBeforeLine()
+  } else if (!customAxieId) {
+    // Guest dopamine: default Kotaro on camera if none selected
     if (activeCast !== 'kotaro') {
       void selectCast('kotaro')
     } else {
@@ -2847,6 +2933,26 @@ function showViewfinderFromFeed(): void {
       else showCameraGate(false)
     })()
   }
+}
+
+/**
+ * The before-the-shot line, over the character for four seconds. Fire-and-forget: it must
+ * never gate the shutter, and a slow or failed request just leaves the viewfinder as it was.
+ */
+function requestBuddyBeforeLine(): void {
+  if (!buddyEnabled || !buddyState.active?.hatchedAt || !bdSpeechVf) return
+  void beforeLine({ place: 'here' })
+    .then((line) => {
+      if (!line || !bdSpeechVf || viewfinder.hidden) return
+      bdSpeechVf.textContent = line
+      bdSpeechVf.hidden = false
+      if (bdSpeechTimer !== null) window.clearTimeout(bdSpeechTimer)
+      bdSpeechTimer = window.setTimeout(() => {
+        if (bdSpeechVf) bdSpeechVf.hidden = true
+        bdSpeechTimer = null
+      }, 4000)
+    })
+    .catch(() => {})
 }
 
 function castLabelFor(id: string): string {
@@ -4670,7 +4776,8 @@ async function submitPost(): Promise<void> {
     }
     {
       const shinyIds = [...groupPhoto.shinyIds()]
-      if (leadShiny && !customAxieId) shinyIds.unshift(activeCast)
+      // 'buddy'/'egg' are not costume ids — the server drops them, so never send them.
+      if (leadShiny && !customAxieId && castMeta(activeCast)) shinyIds.unshift(activeCast)
       if (shinyIds.length) body.shiny = shinyIds
     }
     if (postingOwned) {
@@ -4678,6 +4785,20 @@ async function submitPost(): Promise<void> {
     }
     if (roninAddress) {
       body.address = roninAddress
+    }
+
+    // One-Axie loop: this snap is also egg progress / bond. `labels` stays empty until a
+    // captioner exists; location comes from snapContext(), which never blocks the shutter.
+    if (buddyEnabled && buddyState.active) {
+      const b = buddyState.active
+      const ctx = await snapContext()
+      Object.assign(body, { buddy: true, hour: ctx.hour, labels: [] as string[] })
+      if (ctx.lat !== undefined) Object.assign(body, { lat: ctx.lat, lng: ctx.lng })
+      if (!postingOwned) {
+        // 'kotaro' is the server's neutral cast id: 'buddy'/'egg' would fail the cast lock.
+        body.axieId = 'kotaro'
+        body.axieLabel = b.hatchedAt ? b.name || 'Axie' : 'Egg'
+      }
     }
 
     const res = await fetch('/api/posts', {
@@ -4694,6 +4815,7 @@ async function submitPost(): Promise<void> {
       sparkBurn?: { axieId: string; amount: number; mode?: string }
       burns?: BurnsToday
       castCrew?: CastCrewPayload
+      buddy?: SnapResult | null
     }
     if (!res.ok) {
       throw new Error(data.error || `Post failed (${res.status})`)
@@ -4725,6 +4847,14 @@ async function submitPost(): Promise<void> {
     if (captureUrl) URL.revokeObjectURL(captureUrl)
     captureUrl = null
     captureBlob = null
+    // One-Axie loop: never the legacy feed. Stay on the camera so Retake works, and float the
+    // after-the-shot sheets over it; the last sheet lands on Home.
+    if (buddyEnabled) {
+      viewfinder.hidden = false
+      viewfinder.classList.add('active')
+      await handleBuddySnap(data.buddy ?? null)
+      return
+    }
     await showFeed()
     if (newly.length) {
       postToast.hidden = true
@@ -4768,6 +4898,49 @@ async function submitPost(): Promise<void> {
     btnPost.disabled = false
     btnPost.textContent = prevLabel || 'Post'
   }
+}
+
+/**
+ * After-the-shot sheets, in order: reaction, then one card per new moment, then one per bond
+ * unlock. A module-level queue (not a DOM event per post) so nothing accumulates listeners —
+ * `buddyScreens` calls `advanceBuddySheet` from its single delegated handler.
+ */
+let buddySheetQueue: string[] = []
+
+async function handleBuddySnap(snap: SnapResult | null): Promise<void> {
+  buddySheetQueue = []
+  if (!snap) {
+    await buddyUi?.show('auto')
+    return
+  }
+  try {
+    await loadBuddy()
+  } catch (err) {
+    console.warn('[buddy] reload after snap failed', err)
+  }
+  syncQuestHud()
+  if (snap.kind === 'egg') {
+    showLiveToast(snap.canHatch ? `${snap.snaps} snaps. Hatch whenever you like.` : `${snap.snaps} of 5`, 2200)
+    return
+  }
+  const b = buddyState.active
+  if (b) {
+    buddySheetQueue = [
+      ...snap.moments.map((m) => momentHtml(m, b)),
+      ...snap.unlocks.map((u) => unlockHtml(u, b)),
+    ]
+  }
+  buddyUi?.sheet(reactionHtml(snap))
+}
+
+function advanceBuddySheet(): void {
+  const html = buddySheetQueue.shift()
+  if (html) {
+    buddyUi?.sheet(html)
+    return
+  }
+  buddyUi?.hideSheet()
+  void buddyUi?.show('auto')
 }
 
 function openFeedLightbox(src: string, alt: string): void {
@@ -5788,6 +5961,11 @@ roninAddressInput.addEventListener('keydown', (e) => {
 })
 
 document.querySelector<HTMLButtonElement>('#btn-vf-back')?.addEventListener('click', () => {
+  // R1 has no tab bar and no legacy feed: closing the camera goes back to the buddy screens.
+  if (buddyEnabled) {
+    void buddyUi?.show('auto')
+    return
+  }
   void showFeed('global')
 })
 document.querySelector<HTMLButtonElement>('#btn-crew-connect')?.addEventListener('click', () => {
@@ -5838,6 +6016,7 @@ document.querySelector('#btn-onboard-feed')?.addEventListener('click', () => {
 const feedQuestHud = document.querySelector<HTMLElement>('#feed-quest-hud')
 const boardYouRow = document.querySelector<HTMLElement>('#board-you-row')
 const vfQuestText = document.querySelector<HTMLElement>('#vf-quest-text')
+const vfQuestChip = document.querySelector<HTMLElement>('#vf-quest-chip')
 
 function questHudInput(): QuestHudInput | null {
   const d = myCastCrew || loadCachedCastCrew()
@@ -5852,6 +6031,28 @@ function questHudInput(): QuestHudInput | null {
 
 /** Re-render the pinned quest card (Feed), the You row (Ladder) and the Snap chip. */
 function syncQuestHud(): void {
+  // One-Axie loop owns the camera HUD: the buddy chip and today's wish replace the quest chip.
+  if (buddyEnabled && buddyState.active) {
+    const b = buddyState.active
+    if (vfQuestChip) vfQuestChip.hidden = true
+    if (vfQuestText) vfQuestText.hidden = true
+    if (bdChip) {
+      bdChip.innerHTML = vfChipHtml(b)
+      bdChip.hidden = false
+    }
+    if (bdWishPill) {
+      // Read-only in the HUD: marking a wish done mid-shot would navigate off the camera.
+      const html = b.hatchedAt && b.wish.id && !b.wish.done ? wishPillHtml(b, { interactive: false }) : ''
+      bdWishPill.innerHTML = html
+      bdWishPill.hidden = !html
+    }
+    return
+  }
+  // Flag off (or no buddy yet): the legacy quest chip owns the HUD again.
+  if (bdChip) bdChip.hidden = true
+  if (bdWishPill) bdWishPill.hidden = true
+  if (vfQuestChip) vfQuestChip.hidden = false
+  if (vfQuestText) vfQuestText.hidden = false
   const p = questHudInput()
   if (!p) return
   const html = questHudHtml(p)
@@ -5883,6 +6084,8 @@ async function boot(): Promise<void> {
     buddyUi = mountBuddyScreens({
       goSnap: () => showViewfinderFromFeed(),
       showFace: (host) => showBuddyFaceIn(host),
+      hideFace: () => pauseBuddyFace(),
+      onSheetNext: () => advanceBuddySheet(),
     })
     try {
       await loadBuddy()

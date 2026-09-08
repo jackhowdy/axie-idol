@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 640" width="512" height="640" role="img" aria-label="Wild egg, nearly hatched">
+  <defs>
+    <radialGradient id="shell" cx="38%" cy="28%" r="82%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="35%" stop-color="#FFE8B0"/>
+      <stop offset="100%" stop-color="#F4B36A"/>
+    </radialGradient>
+    <clipPath id="egg">
+      <path d="M256 28C152 28 44 214 44 386c0 126 95 226 212 226s212-100 212-226C468 214 360 28 256 28Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#egg)">
+    <path d="M256 28C152 28 44 214 44 386c0 126 95 226 212 226s212-100 212-226C468 214 360 28 256 28Z" fill="url(#shell)"/>
+    <ellipse cx="300" cy="440" rx="220" ry="230" fill="#C87832" opacity="0.22"/>
+    <g fill="#7FB7F0" opacity="0.8">
+      <ellipse cx="152" cy="216" rx="46" ry="32"/>
+      <ellipse cx="356" cy="312" rx="36" ry="25"/>
+      <ellipse cx="216" cy="460" rx="54" ry="36"/>
+      <ellipse cx="384" cy="500" rx="29" ry="20"/>
+    </g>
+    <!-- stage 3: a crack network running most of the shell -->
+    <g fill="none" stroke="#B8742E" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+      <path d="M254 60l26 52-22 36 30 50-18 40 28 46"/>
+      <path d="M258 148l-52-18-30 28"/>
+      <path d="M266 274l50-24 34 22"/>
+      <path d="M272 388l-56 12-26 40"/>
+      <path d="M160 252l-36 40 24 34-14 40"/>
+      <path d="M362 400l30 34-16 38"/>
+    </g>
+  </g>
+</svg>

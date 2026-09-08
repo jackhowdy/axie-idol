@@ -15,7 +15,17 @@ import {
 } from './buddyHtml.ts'
 
 export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary'
-export type BuddyNav = { goSnap: () => void; showFace: (host: HTMLElement) => Promise<void> }
+export type BuddyNav = {
+  goSnap: () => void
+  showFace: (host: HTMLElement) => Promise<void>
+  /** No hero box on this screen — let the owner pause the 3D character. */
+  hideFace: () => void
+  /**
+   * Advance the after-the-shot sheet queue (reaction -> moments -> unlocks -> home).
+   * A module-level queue in main.ts, not a DOM event, so nothing accumulates listeners.
+   */
+  onSheetNext: () => void
+}
 export type BuddyUi = {
   show: (which: BuddyScreen) => Promise<void>
   sheet: (html: string) => void
@@ -68,6 +78,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (scroller) scroller.scrollTop = 0
     const face = el.querySelector<HTMLElement>('[data-face="buddy"]')
     if (face) void nav.showFace(face)
+    else nav.hideFace()
   }
 
   async function getJson<T>(path: string): Promise<T> {
@@ -100,7 +111,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   async function run(a: HTMLElement): Promise<void> {
     const act = a.dataset.action
     const b = buddyState.active
-    if (act === 'snap') { nav.goSnap(); return }
+    if (act === 'snap') { hideSheet(); nav.goSnap(); return }
     if (act === 'hatch-now') { pendingLines = []; await show('hatch'); return }
     if (act === 'hatch-confirm') {
       const input = document.querySelector<HTMLInputElement>('#bd-name')
@@ -161,9 +172,10 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       if (code) { await redeemRecovery(code); await show('auto') }
       return
     }
-    // Task 10 replaces these two with the real save/retake of the post flow.
+    // After-the-shot sheets: Retake drops back to the camera, everything else walks the
+    // queue main.ts filled from the snap result and lands on Home when it runs dry.
     if (act === 'retake') { hideSheet(); nav.goSnap(); return }
-    if (act === 'save') { hideSheet(); await show('auto'); return }
+    if (act === 'save' || act === 'sheet-next') { nav.onSheetNext(); return }
     if (act === 'close-sheet') { hideSheet(); return }
   }
 

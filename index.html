@@ -60,12 +60,18 @@
             <span class="mascot-loading-spin" aria-hidden="true"></span>
             <span id="mascot-loading-text">Loading…</span>
           </div>
+          <!-- One-Axie loop: the before-the-shot line, over the character for 4s -->
+          <div id="bd-speech-vf" class="bd-speech-vf" hidden></div>
         </div>
 
         <div class="chrome top vf-top">
           <button type="button" id="btn-vf-back" class="btn icon vf-round" title="Back to Feed" aria-label="Back to Feed"><span data-icon="back"></span></button>
           <div id="vf-quest-chip" class="vf-quest-chip"><span class="vf-dot"></span><span id="vf-quest-text">Post to unlock Bing</span></div>
+          <!-- One-Axie loop HUD (VITE_BUDDY=1): replaces the quest chip, filled by syncQuestHud() -->
+          <div id="bd-chip" class="bd-chip-vf" hidden></div>
           <button type="button" id="btn-flip" class="btn icon vf-round" title="Flip camera" aria-label="Flip camera"><span data-icon="flip"></span></button>
+          <!-- after the flip button so it wraps onto its own row instead of pushing the chrome down -->
+          <div id="bd-wish-pill" class="bd-wish-pill" hidden></div>
           <button type="button" id="btn-to-feed" class="btn nav-chip" hidden>Feed</button>
           <button type="button" id="btn-to-profile" class="btn nav-chip" hidden>Profile</button>
           <div id="auth-bar" class="auth-bar" hidden>

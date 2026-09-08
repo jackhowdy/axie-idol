@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 640" width="512" height="640" role="img" aria-label="Wild egg">
+  <defs>
+    <radialGradient id="shell" cx="38%" cy="28%" r="82%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="35%" stop-color="#FFE8B0"/>
+      <stop offset="100%" stop-color="#F4B36A"/>
+    </radialGradient>
+    <clipPath id="egg">
+      <path d="M256 28C152 28 44 214 44 386c0 126 95 226 212 226s212-100 212-226C468 214 360 28 256 28Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#egg)">
+    <path d="M256 28C152 28 44 214 44 386c0 126 95 226 212 226s212-100 212-226C468 214 360 28 256 28Z" fill="url(#shell)"/>
+    <!-- warm inner shading on the lower right, matching design/buddy/Egg.dc.html -->
+    <ellipse cx="300" cy="440" rx="220" ry="230" fill="#C87832" opacity="0.22"/>
+    <g fill="#7FB7F0" opacity="0.8">
+      <ellipse cx="152" cy="216" rx="46" ry="32"/>
+      <ellipse cx="356" cy="312" rx="36" ry="25"/>
+      <ellipse cx="216" cy="460" rx="54" ry="36"/>
+      <ellipse cx="384" cy="500" rx="29" ry="20"/>
+    </g>
+  </g>
+</svg>

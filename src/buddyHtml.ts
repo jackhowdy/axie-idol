@@ -46,11 +46,31 @@ export function chipHtml(label: string, kind: 'plain' | 'rare' | 'mystic' = 'pla
   return `<span class="bd-chip${cls}">${mark}${esc(label)}</span>`
 }
 
-export function wishPillHtml(b: Buddy): string {
+/**
+ * Compact buddy chip for the camera HUD (`#bd-chip`): egg progress before hatching,
+ * bond progress after. Named `vfChipHtml` because `chipHtml` above is the part/trait chip.
+ */
+export function vfChipHtml(b: Buddy): string {
+  if (!b.hatchedAt) {
+    const target = b.eggOdds?.nextTier ?? 100
+    return `<b>Egg · ${b.egg.snaps} of ${target}</b><div class="bd-meter mini"><i style="width:${pct(b.egg.snaps / Math.max(1, target))}%"></i></div>`
+  }
+  const floorBond = b.ladder.find((r) => r.level === b.level)?.bond ?? 0
+  const width = b.next ? pct((b.bond - floorBond) / Math.max(1, b.next.bond - floorBond)) : 100
+  return `<b>${esc(b.name)} · Bond ${b.level}</b><div class="bd-meter mini"><i style="width:${width}%"></i></div>`
+}
+
+/**
+ * Today's wish. `interactive: false` (the camera HUD) drops the tap-to-complete button:
+ * the delegated handler only runs inside `.buddy` / `#buddy-sheet`, and marking a wish
+ * done mid-shot would navigate away from the viewfinder.
+ */
+export function wishPillHtml(b: Buddy, opts: { interactive?: boolean } = {}): string {
   if (!b.wish.id) return ''
   const done = b.wish.done
-  const tag = done ? 'div' : 'button'
-  const extra = done ? '' : ' type="button" data-action="wish-done"'
+  const tappable = !done && opts.interactive !== false
+  const tag = tappable ? 'button' : 'div'
+  const extra = tappable ? ' type="button" data-action="wish-done"' : ''
   return `<${tag} class="bd-row bd-wish${done ? ' done' : ''}"${extra}>
     <span class="bd-wish-dot">${icon(done ? 'star' : 'heart', 15)}</span>
     <span class="bd-wish-text">${esc(b.wish.text)}<small>${done ? 'Done today' : "Today's wish · tap when you have it"}</small></span>
@@ -157,6 +177,17 @@ export function hatchHtml(b: Buddy, lines: string[]): string {
 
 const WEARABLES = ['hat', 'scarf', 'shades', 'cape', 'crown']
 
+/**
+ * `photoIds` are post ids, and `/api/image/<id>` serves marketplace art — the stored
+ * upload path is the only thing that renders the real photo. Older buddy records have
+ * no `photos` array, so a miss just leaves the placeholder tile.
+ */
+function photoPath(b: Buddy, photoId: string | null): string | null {
+  if (!photoId) return null
+  const hit = (b.photos || []).find((p) => p.id === photoId)
+  return hit?.imagePath || null
+}
+
 export function homeHtml(b: Buddy, greeting: string | null): string {
   const filled = Math.ceil(b.level / 2)
   const hearts = Array.from({ length: 5 }, (_, i) => `<span class="bd-heart${i < filled ? ' on' : ''}">${icon(i < filled ? 'heartFilled' : 'heart', 18)}</span>`).join('')
@@ -173,9 +204,12 @@ export function homeHtml(b: Buddy, greeting: string | null): string {
     const label = unlocked ? (worn ? 'Worn' : it[0].toUpperCase() + it.slice(1)) : `Bond ${row?.level ?? '?'}`
     return `<button type="button" class="bd-item ${unlocked ? 'on' : 'locked'}${worn ? ' worn' : ''}" data-action="wear" data-item="${esc(it)}"${unlocked ? '' : ' disabled'} aria-label="${esc(it)}">${icon(it, 26)}<small>${esc(label)}</small></button>`
   }).join('')
-  // Real thumbnails need the post records — Task 10 fills these in from the feed.
   const book = b.photoIds.slice(-4).reverse()
-    .map((id, i) => `<span class="bd-thumb" data-photo-id="${esc(id)}"><small>${b.photoIds.length - i}</small></span>`).join('')
+    .map((id, i) => {
+      const path = photoPath(b, id)
+      const art = path ? `<img class="bd-thumb-img" src="${esc(path)}" alt="" loading="lazy">` : ''
+      return `<span class="bd-thumb" data-photo-id="${esc(id)}">${art}<small>${b.photoIds.length - i}</small></span>`
+    }).join('')
     || '<span class="bd-small bd-muted">No photos yet. The first one starts the book.</span>'
   const who = b.kind === 'owned' ? `${esc(b.name)} · owned${b.axieId ? ` #${esc(b.axieId)}` : ''}` : `Wild ${esc(b.class ?? 'Axie')}`
   return `
@@ -290,7 +324,7 @@ export function momentHtml(m: Moment, b: Buddy): string {
       </div>
     </div>
     <p class="bd-small">Moments · ${b.moments.length} of ${b.momentsTotal}</p>
-    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="close-sheet">Keep it in the book</button></div>`
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="sheet-next">Keep it in the book</button></div>`
 }
 
 export function unlockHtml(u: Unlock, b: Buddy): string {
@@ -299,7 +333,7 @@ export function unlockHtml(u: Unlock, b: Buddy): string {
     <h2>${esc(b.name)}: ${esc(u.reward)}</h2>
     <div class="bd-speech">${esc(u.line)}</div>
     <div class="bd-actions">
-      <button type="button" class="bd-btn bd-btn-ghost" data-action="close-sheet">Later</button>
+      <button type="button" class="bd-btn bd-btn-ghost" data-action="sheet-next">Later</button>
       <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="snap">${icon('camera', 20)} Snap the new look</button>
     </div>`
 }
@@ -363,14 +397,17 @@ export function monthlyHtml(data: Monthly): string {
 }
 
 export function diaryHtml(d: Diary, b: Buddy): string {
-  const entries = d.entries.map((e) => `
+  const entries = d.entries.map((e) => {
+    const path = photoPath(b, e.photoId)
+    return `
     <div class="bd-diary-row">
-      <span class="bd-diary-art"${e.photoId ? ` data-photo-id="${esc(e.photoId)}"` : ''}></span>
+      <span class="bd-diary-art"${e.photoId ? ` data-photo-id="${esc(e.photoId)}"` : ''}>${path ? `<img class="bd-thumb-img" src="${esc(path)}" alt="" loading="lazy">` : ''}</span>
       <div class="bd-hero-text">
         <p class="bd-eyebrow">Day ${e.day} · ${esc(e.title)}</p>
         <p class="bd-diary-line">${esc(e.line)}</p>
       </div>
-    </div>`).join('') || '<p class="bd-small bd-muted">The first page is written after the first photo.</p>'
+    </div>`
+  }).join('') || '<p class="bd-small bd-muted">The first page is written after the first photo.</p>'
   return `
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
