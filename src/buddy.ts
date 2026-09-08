@@ -5,6 +5,14 @@ export const buddyEnabled = import.meta.env.VITE_BUDDY === '1'
 const SESSION_LS = 'axieIdol.buddySession'
 const ADDRESS_LS = 'axieIdol.buddyAddress'
 
+/** localStorage can throw (private browsing, some in-app browsers incl. Ronin Wallet's) — never let a read/write crash the module. */
+function lsGet(key: string): string | null {
+  try { return localStorage.getItem(key) } catch { return null }
+}
+function lsSet(key: string, value: string): void {
+  try { localStorage.setItem(key, value) } catch { /* ignore */ }
+}
+
 export type Buddy = {
   id: string
   kind: 'wild' | 'owned'
@@ -22,7 +30,7 @@ export type Buddy = {
   level: number
   levelName: string | null
   next: { level: number; bond: number; reward: string; remaining: number } | null
-  wish: { id: string; text: string; bonus: number; done: boolean }
+  wish: { id: string | null; text: string; bonus: number; done: boolean }
   wardrobe: { unlocked: string[]; worn: string | null }
   moments: { id: string; at: string; photoId: string }[]
   momentsTotal: number
@@ -58,8 +66,8 @@ export const buddyState = {
   active: null as Buddy | null,
   buddies: [] as Buddy[],
   greeting: null as string | null,
-  session: localStorage.getItem(SESSION_LS),
-  address: localStorage.getItem(ADDRESS_LS),
+  session: lsGet(SESSION_LS),
+  address: lsGet(ADDRESS_LS),
 }
 
 let deviceKeyProvider: () => string = () => ''
@@ -107,7 +115,7 @@ export async function roninSignIn(): Promise<string> {
   const signature = (await p.request({ method: 'personal_sign', params: [message, address] })) as string
   const v = await call<{ session: string; address: string }>('/api/ronin/verify', { address, signature })
   buddyState.session = v.session; buddyState.address = v.address
-  localStorage.setItem(SESSION_LS, v.session); localStorage.setItem(ADDRESS_LS, v.address)
+  lsSet(SESSION_LS, v.session); lsSet(ADDRESS_LS, v.address)
   await loadBuddy()
   return v.address
 }
@@ -116,7 +124,7 @@ export async function claim(axieId: string): Promise<{ lines: string[] }> { cons
 export async function issueRecovery(): Promise<string> { return (await call<{ code: string }>('/api/account/recovery', {})).code }
 export async function redeemRecovery(code: string): Promise<void> { apply(await call<Payload>('/api/account/recover', { code })) }
 
-/** Location once per snap; never blocks the shutter. */
+/** Location once per snap; never blocks the shutter. placeType/district are reserved for a later task and never set here. */
 export async function snapContext(): Promise<{ lat?: number; lng?: number; hour: number; placeType?: string; district?: string }> {
   const hour = new Date().getHours()
   if (!('geolocation' in navigator)) return { hour }
