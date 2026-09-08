@@ -278,7 +278,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     if (p === '/api/ronin/verify' && req.method === 'POST') {
       const address = normalizeAddress(String(body.address || ''))
       const verifyAcc = address ? store.accounts[`ronin:${address}`] : null
-      const nonce = verifyAcc && Object.keys(verifyAcc.nonces).find((n) => recoverAddress(signInMessage(address, n), String(body.signature || '')) === address)
+      const nonce = verifyAcc && Object.keys(verifyAcc.nonces).find((n) => now() - verifyAcc.nonces[n] <= 10 * 60_000 && recoverAddress(signInMessage(address, n), String(body.signature || '')) === address)
       if (!address || !verifyAcc || !nonce) { sendJson(res, 401, { error: 'Signature does not match' }); return true }
       delete verifyAcc.nonces[nonce]
       verifyAcc.session = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, '')
