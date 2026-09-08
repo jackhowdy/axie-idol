@@ -62,6 +62,20 @@ test('egg -> snaps -> hatch produces a named wild Axie with three traits and con
   assert.ok(b.wardrobe.unlocked.includes('hat'))
 })
 
+test('a buddy post records the photo path so the scrapbook can render a real thumbnail', async () => {
+  const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  const p = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
+  assert.equal(p.status, 201, p.text)
+  const g = await api('/api/buddy', { device: d })
+  const photos = g.json.active.photos
+  assert.ok(Array.isArray(photos), 'publicBuddy exposes photos')
+  assert.equal(photos.length, 1)
+  assert.match(photos[0].imagePath, /^\/uploads\//)
+  assert.equal(photos[0].id, g.json.active.photoIds[0], 'photo id matches the post id in photoIds')
+  assert.ok(typeof photos[0].at === 'string' && photos[0].at.length > 0)
+})
+
 test('name filter and length', async () => {
   const d = dev()
   await api('/api/buddy/egg', { method: 'POST', device: d })

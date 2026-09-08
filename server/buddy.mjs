@@ -11,6 +11,8 @@ const NAME_RE = /^[\p{L}\p{N} '’-]{2,16}$/u
 const BAD_WORDS = ['shit', 'fuck', 'cunt', 'nigg', 'fag', 'bitch', 'dick', 'porn', 'nazi']
 const DAILY_CAP = 10
 const PLACE_GRID_DEG = 0.003 // ~300 m
+/** Scrapbook keeps the last N photo records (id + upload path); photoIds stays uncapped. */
+const PHOTO_CAP = 60
 
 export function createBuddyModule({ storage, helpers, env = {}, catalogue = catalogueJson, now = () => Date.now(), rng = Math.random }) {
   const { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress } = helpers
@@ -56,7 +58,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       bond: 0, bondByDay: {}, monthly: { key: monthKey(), bond: 0 },
       wish: { day: null, id: null, text: '', bonus: 1, done: false }, firstsDone: [],
       wardrobe: { unlocked: [], worn: null }, moments: [], places: {},
-      photoIds: [], snapCount: 0, lastSnapAt: null, recentLines: [], hatchGrid: null, rareIds: [], mysticId: null, mystic: false,
+      photoIds: [], photos: [], snapCount: 0, lastSnapAt: null, recentLines: [], hatchGrid: null, rareIds: [], mysticId: null, mystic: false,
     }
   }
 
@@ -75,6 +77,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const level = b.hatchedAt ? levelFor(b.bond) : 0
     return {
       ...b, level, levelName: LEVEL_NAMES[level] || null, next: b.hatchedAt ? nextStep(b.bond) : null,
+      photos: b.photos || [], // records written before this field existed
       eggOdds: b.hatchedAt ? null : eggOdds(b.egg.snaps, b.egg.grids.length),
       momentsTotal: MOMENTS.length, ladder: LADDER, bondToday: b.bondByDay[manilaDayKey()] || 0, dailyCap: DAILY_CAP,
       streak: streakFor(b),
@@ -141,6 +144,9 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const hour = Number(ctx.hour ?? new Date(now()).getUTCHours() + 8) % 24
     const labels = Array.isArray(ctx.labels) ? ctx.labels.slice(0, 12).map(String) : []
     b.photoIds.push(post.id); b.snapCount += 1; b.lastSnapAt = new Date(now()).toISOString()
+    // `photoIds` are post ids; /api/image/<id> serves marketplace art, so the scrapbook needs the
+    // stored upload path too. Kept alongside photoIds (never instead of it) and capped at the last 60.
+    b.photos = [...(b.photos || []), { id: post.id, imagePath: post.imagePath || '', at: b.lastSnapAt }].slice(-PHOTO_CAP)
     const isNewPlace = Boolean(grid && !b.places[grid])
     if (grid) { const p = (b.places[grid] ||= { first: b.lastSnapAt, count: 0, district: ctx.district || null }); p.count += 1 }
 
