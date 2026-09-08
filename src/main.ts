@@ -2907,8 +2907,10 @@ function showViewfinderFromFeed(): void {
   setActiveTab(null)
   viewfinder.hidden = false
   viewfinder.classList.add('active')
-  if (buddyEnabled && buddyState.active) {
-    // R1: the lead face is always the buddy — the egg sprite before hatching, the character after.
+  if (buddyEnabled) {
+    // R1: the lead face is always the buddy — the egg sprite before hatching, the character
+    // after. Gated on the flag, not on an active buddy: if loadBuddy() failed at boot the
+    // legacy Kotaro cast must still never take the camera. faceIdForBuddy() handles null.
     const want = faceIdForBuddy()
     if (activeCast !== want) void selectCast(want)
     else syncCastTrayUI()
@@ -4789,27 +4791,32 @@ async function submitPost(): Promise<void> {
 
     // One-Axie loop: this snap is also egg progress / bond. `labels` stays empty until a
     // captioner exists; location comes from snapContext(), which never blocks the shutter.
-    if (buddyEnabled && buddyState.active) {
+    // An owned buddy posts under its real Axie id so spark and ownership attribution land;
+    // a wild one posts under 'kotaro', the server's neutral cast id ('buddy'/'egg' would
+    // fail the cast lock).
+    let buddyOwnedPost = false
+    if (buddyEnabled) {
       const b = buddyState.active
       const ctx = await snapContext()
       Object.assign(body, { buddy: true, hour: ctx.hour, labels: [] as string[] })
       if (ctx.lat !== undefined) Object.assign(body, { lat: ctx.lat, lng: ctx.lng })
-      if (!postingOwned) {
-        // 'kotaro' is the server's neutral cast id: 'buddy'/'egg' would fail the cast lock.
+      const buddyOwner = buddyState.address || roninAddress
+      const buddyName = b?.name || 'Axie'
+      if (b?.kind === 'owned' && b.axieId && buddyOwner) {
+        buddyOwnedPost = true
+        body.axieId = b.axieId
+        body.ownerAddress = buddyOwner
+        body.address = buddyOwner
+        // The server rewrites both labels from chain data on an owned post; these are the fallback.
+        body.axieLabel = buddyName
+        body.authorLabel = buddyName
+      } else if (!postingOwned) {
         body.axieId = 'kotaro'
-        body.axieLabel = b.hatchedAt ? b.name || 'Axie' : 'Egg'
+        body.axieLabel = b?.hatchedAt ? buddyName : 'Egg'
       }
     }
 
-    const res = await fetch('/api/posts', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Device-Key': deviceKey,
-      },
-      body: JSON.stringify(body),
-    })
-    const data = (await res.json().catch(() => ({}))) as {
+    type PostResponse = {
       error?: string
       post?: FeedPost
       sparkBurn?: { axieId: string; amount: number; mode?: string }
@@ -4817,9 +4824,35 @@ async function submitPost(): Promise<void> {
       castCrew?: CastCrewPayload
       buddy?: SnapResult | null
     }
+    const sendPost = async (): Promise<{ res: Response; data: PostResponse }> => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Device-Key': deviceKey,
+      }
+      // Without the session header the server resolves the account by device key, which a
+      // Ronin sign-in has already emptied — the snap would earn no bond at all.
+      if (buddyEnabled && buddyState.session) headers['X-Buddy-Session'] = buddyState.session
+      const r = await fetch('/api/posts', { method: 'POST', headers, body: JSON.stringify(body) })
+      return { res: r, data: (await r.json().catch(() => ({}))) as PostResponse }
+    }
+
+    let { res, data } = await sendPost()
+    let ownedBadgeLost = false
+    if (!res.ok && (res.status === 403 || res.status === 502) && buddyOwnedPost) {
+      // The on-chain owner check disagreed with the wallet that claimed this buddy (403), or the
+      // chain was unreachable (502). Never lose the snap or its bond over a badge: repost as the
+      // neutral cast id and say so.
+      body.axieId = 'kotaro'
+      body.axieLabel = buddyState.active?.name || 'Axie'
+      body.authorLabel = authorLabel
+      delete body.ownerAddress
+      ;({ res, data } = await sendPost())
+      ownedBadgeLost = res.ok
+    }
     if (!res.ok) {
       throw new Error(data.error || `Post failed (${res.status})`)
     }
+    if (ownedBadgeLost) showLiveToast('Posted without the owned badge (wallet check failed)', 2800)
     applyBurnsPayload(data.burns)
     const goldenHit = Boolean((data as { goldenFound?: boolean }).goldenFound)
     applyGoldenSummary((data as { golden?: GoldenSummary }).golden)
@@ -6032,17 +6065,19 @@ function questHudInput(): QuestHudInput | null {
 /** Re-render the pinned quest card (Feed), the You row (Ladder) and the Snap chip. */
 function syncQuestHud(): void {
   // One-Axie loop owns the camera HUD: the buddy chip and today's wish replace the quest chip.
-  if (buddyEnabled && buddyState.active) {
+  // Gated on the flag alone — with no active buddy (a failed loadBuddy() at boot) the chip goes
+  // empty rather than falling back to the legacy quest chip, which R1 has no screens for.
+  if (buddyEnabled) {
     const b = buddyState.active
     if (vfQuestChip) vfQuestChip.hidden = true
     if (vfQuestText) vfQuestText.hidden = true
     if (bdChip) {
-      bdChip.innerHTML = vfChipHtml(b)
-      bdChip.hidden = false
+      bdChip.innerHTML = b ? vfChipHtml(b) : ''
+      bdChip.hidden = !b
     }
     if (bdWishPill) {
       // Read-only in the HUD: marking a wish done mid-shot would navigate off the camera.
-      const html = b.hatchedAt && b.wish.id && !b.wish.done ? wishPillHtml(b, { interactive: false }) : ''
+      const html = b?.hatchedAt && b.wish.id && !b.wish.done ? wishPillHtml(b, { interactive: false }) : ''
       bdWishPill.innerHTML = html
       bdWishPill.hidden = !html
     }
@@ -6086,6 +6121,7 @@ async function boot(): Promise<void> {
       showFace: (host) => showBuddyFaceIn(host),
       hideFace: () => pauseBuddyFace(),
       onSheetNext: () => advanceBuddySheet(),
+      clearSheetQueue: () => { buddySheetQueue = [] },
     })
     try {
       await loadBuddy()

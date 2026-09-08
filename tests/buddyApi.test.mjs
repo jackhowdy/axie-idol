@@ -219,6 +219,35 @@ test('ronin sign-in merges the device account and claim makes an owned buddy', a
   assert.equal(bad.status, 401)
 })
 
+test('a signed-in wallet only earns bond when the post carries the buddy session header', async () => {
+  const d = dev(); const w = wallet()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  const n = await api(`/api/ronin/nonce?address=${w.address}`, { device: d })
+  const v = await api('/api/ronin/verify', { method: 'POST', device: d, body: { address: w.address, signature: w.sign(n.json.message) } })
+  const session = v.json.session
+  const post = (headers) => fetch(base + '/api/posts', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'X-Device-Key': d, ...headers },
+    body: JSON.stringify({ axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true }),
+  }).then(async (r) => ({ status: r.status, json: await r.json() }))
+  const read = () => fetch(base + '/api/buddy', { headers: { 'X-Device-Key': d, 'X-Buddy-Session': session } }).then((r) => r.json())
+
+  // Sign-in moved the egg from device:<key> to ronin:<addr>, so a device-key-only post has
+  // no active buddy to credit — the snap earns nothing and the response carries no result.
+  const blind = await post({})
+  assert.equal(blind.status, 201, 'the post itself still succeeds')
+  assert.equal(blind.json.buddy, null, 'no buddy result without the session header')
+  assert.equal((await read()).active.egg.snaps, 0, 'the wallet buddy earned nothing')
+
+  const signed = await post({ 'X-Buddy-Session': session })
+  assert.equal(signed.status, 201, JSON.stringify(signed.json))
+  assert.ok(signed.json.buddy, 'the session header credits the wallet account')
+  assert.equal(signed.json.buddy.kind, 'egg')
+  const after = await read()
+  assert.equal(after.active.egg.snaps, 1)
+  assert.match(after.active.photos[0].imagePath, /^\/uploads\//)
+})
+
 test('recovery code moves a guest account to a new device once', async () => {
   const d1 = dev(); const d2 = dev()
   await api('/api/buddy/egg', { method: 'POST', device: d1 })

@@ -25,6 +25,8 @@ export type BuddyNav = {
    * A module-level queue in main.ts, not a DOM event, so nothing accumulates listeners.
    */
   onSheetNext: () => void
+  /** Drop the queued sheets — the shot they belonged to is being retaken. */
+  clearSheetQueue: () => void
 }
 export type BuddyUi = {
   show: (which: BuddyScreen) => Promise<void>
@@ -174,7 +176,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     }
     // After-the-shot sheets: Retake drops back to the camera, everything else walks the
     // queue main.ts filled from the snap result and lands on Home when it runs dry.
-    if (act === 'retake') { hideSheet(); nav.goSnap(); return }
+    if (act === 'retake') { nav.clearSheetQueue(); hideSheet(); nav.goSnap(); return }
     if (act === 'save' || act === 'sheet-next') { nav.onSheetNext(); return }
     if (act === 'close-sheet') { hideSheet(); return }
   }
