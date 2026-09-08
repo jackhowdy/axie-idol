@@ -46,16 +46,32 @@ export function parsePartId(id) {
   return { type: m[5].toLowerCase(), skin: Number(m[1]), class: m[2], variant: Number(m[3]), level: Number(m[4]) }
 }
 
-/** Roll a wild Axie. Own-class parts 60% of the time, like real Axies. */
+/**
+ * Roll a wild Axie. Own-class parts 60% of the time, like real Axies.
+ * Rare slots are chosen first via a partial Fisher-Yates draw; the Mystic
+ * slot (if rolled) is then drawn from the remaining, still-unassigned
+ * types, so a Mystic part is always in ADDITION to the guaranteed rare
+ * parts, never a substitute for one of them.
+ */
 export function rollWild(rng, snaps, places, catalogue) {
   const odds = eggOdds(snaps, places)
   const cls = pick(rng, CLASSES)
+  const slots = [...TYPES]
+  for (let i = 0; i < odds.rareParts; i++) {
+    const j = i + Math.floor(rng() * (slots.length - i))
+    ;[slots[i], slots[j]] = [slots[j], slots[i]]
+  }
+  const rareSlots = new Set(slots.slice(0, odds.rareParts))
   const mystic = odds.mysticChance > 0 && rng() < odds.mysticChance
-  const rareSlots = new Set()
-  const order = [...TYPES].sort(() => rng() - 0.5)
-  for (const t of order.slice(0, odds.rareParts)) rareSlots.add(t)
-  const mysticSlot = mystic ? pick(rng, TYPES) : null
+  let mysticSlot = null
+  if (mystic) {
+    const i = odds.rareParts
+    const j = i + Math.floor(rng() * (slots.length - i))
+    ;[slots[i], slots[j]] = [slots[j], slots[i]]
+    mysticSlot = slots[i]
+  }
   const rareIds = []
+  let mysticId = null
   const parts = TYPES.map((type) => {
     const partClass = rng() < 0.6 ? cls : pick(rng, CLASSES)
     const bucket = catalogue.parts[partClass][type]
@@ -64,11 +80,12 @@ export function rollWild(rng, snaps, places, catalogue) {
     else if (rareSlots.has(type) && bucket.rare.length) pool = bucket.rare
     else pool = bucket.normal.length ? bucket.normal : bucket.rare
     const id = pick(rng, pool)
-    if (pool === bucket.rare || pool === bucket.mystic) rareIds.push(id)
+    if (pool === bucket.mystic) mysticId = id
+    else if (pool === bucket.rare) rareIds.push(id)
     return parsePartId(id)
   })
   const colorVariant = pick(rng, catalogue.colorVariants[cls])
-  return { descriptor: { colorVariant, body: 'normal', parts }, class: cls, rareIds, mystic }
+  return { descriptor: { colorVariant, body: 'normal', parts }, class: cls, rareIds, mysticId, mystic }
 }
 
 export const TRAITS = ['Explorer', 'Homebody', 'Foodie', 'Athlete', 'Goofball', 'Show-off', 'Shy', 'Brave', 'Dreamer', 'Collector']

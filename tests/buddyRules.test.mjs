@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   LADDER, levelFor, nextStep, eggOdds, rollWild, rollTraits, traitsForOwned,
-  TRAITS, OPPOSITES, wishForToday, detectMoments, MOMENTS, hashInt,
+  TRAITS, OPPOSITES, wishForToday, detectMoments, MOMENTS, hashInt, parsePartId,
 } from '../server/buddyRules.mjs'
 import catalogue from '../server/partCatalogue.json' with { type: 'json' }
 
@@ -41,6 +41,15 @@ test('rollWild honours tier guarantees and produces a valid descriptor', () => {
   const r0 = rollWild(seq(0.99), 5, 1, catalogue)
   assert.equal(r0.rareIds.length, 0)
   assert.equal(r0.mystic, false)
+})
+
+test('rollWild: Mystic is in addition to the guaranteed rares, never instead of one', () => {
+  const r = rollWild(seq(0.01), 50, 1, catalogue)
+  assert.equal(r.mystic, true)
+  assert.equal(r.rareIds.length, 2)
+  assert.ok(r.mysticId)
+  const slotTypes = new Set([...r.rareIds, r.mysticId].map((id) => parsePartId(id).type))
+  assert.equal(slotTypes.size, 3, 'two rare slots plus one distinct Mystic slot')
 })
 
 test('traits: three, no opposites, nudged by the egg', () => {
