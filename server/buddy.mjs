@@ -315,6 +315,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       save(store); sendJson(res, 201, payload(store, ownerKey, { lines: b.traits.map((t) => pickLine({ traits: [t], situation: 'hatch', rng })) })); return true
     }
     if (p === '/api/account/recovery' && req.method === 'POST') {
+      if (!ownerKey.startsWith('device:')) { sendJson(res, 400, { error: 'Recovery codes are for guest accounts; your wallet already keeps your Axies' }); return true }
       const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
       const chunk = () => Array.from({ length: 4 }, () => alphabet[Math.floor(rng() * alphabet.length)]).join('')
       acc.recoveryCode = `${chunk()}-${chunk()}-${chunk()}`
@@ -322,8 +323,9 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     }
     if (p === '/api/account/recover' && req.method === 'POST') {
       const code = String(body.code || '').trim().toUpperCase()
-      const from = Object.values(store.accounts).find((a) => a.recoveryCode && a.recoveryCode === code && !store.usedRecoveryCodes[code])
+      const from = Object.values(store.accounts).find((a) => a.recoveryCode && a.recoveryCode === code && a.ownerKey.startsWith('device:') && !store.usedRecoveryCodes[code])
       if (!from) { sendJson(res, 404, { error: 'Code not found' }); return true }
+      if (from.ownerKey === ownerKey) { sendJson(res, 200, payload(store, ownerKey)); return true }
       store.usedRecoveryCodes[code] = now(); from.recoveryCode = null
       mergeAccounts(store, from.ownerKey, ownerKey)
       save(store); sendJson(res, 200, payload(store, ownerKey)); return true

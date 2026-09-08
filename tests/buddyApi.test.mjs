@@ -215,3 +215,27 @@ test('recovery code moves a guest account to a new device once', async () => {
   const again = await api('/api/account/recover', { method: 'POST', device: dev(), body: { code: c.json.code } })
   assert.equal(again.status, 404)
 })
+
+test('recovery codes are guest-only: a signed-in wallet cannot mint one', async () => {
+  const d = dev(); const w = wallet()
+  const n = await api(`/api/ronin/nonce?address=${w.address}`, { device: d })
+  const v = await api('/api/ronin/verify', { method: 'POST', device: d, body: { address: w.address, signature: w.sign(n.json.message) } })
+  const session = v.json.session
+  const r = await fetch(base + '/api/account/recovery', { method: 'POST', headers: { 'X-Device-Key': d, 'X-Buddy-Session': session } })
+  assert.equal(r.status, 400)
+  const j = await r.json()
+  assert.equal(j.error, 'Recovery codes are for guest accounts; your wallet already keeps your Axies')
+})
+
+test('a device redeeming its own recovery code is a no-op that does not burn the code', async () => {
+  const d1 = dev(); const d2 = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d1 })
+  const c = await api('/api/account/recovery', { method: 'POST', device: d1 })
+  assert.equal(c.status, 200)
+  const self = await api('/api/account/recover', { method: 'POST', device: d1, body: { code: c.json.code } })
+  assert.equal(self.status, 200); assert.equal(self.json.buddies.length, 1, 'self-redeem is a no-op, still one buddy')
+  const other = await api('/api/account/recover', { method: 'POST', device: d2, body: { code: c.json.code } })
+  assert.equal(other.status, 200, 'code was not burned by the self-redeem'); assert.equal(other.json.buddies.length, 1)
+  const again = await api('/api/account/recover', { method: 'POST', device: dev(), body: { code: c.json.code } })
+  assert.equal(again.status, 404, 'code is burned once actually redeemed elsewhere')
+})
