@@ -28,6 +28,12 @@ const RAW: Record<string, string> = {
   share: '<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3M8 7l4-4 4 4"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+  // Buddy wardrobe (one-Axie loop) — shapes from design/buddy/Home.dc.html
+  hat: '<path d="M4 18l8-13 8 13z"/><path d="M8 18a4 2 0 0 0 8 0"/>',
+  scarf: '<path d="M6 9c2-3 10-3 12 0v10H6z"/><path d="M6 13h12"/>',
+  shades: '<circle cx="7" cy="13" r="4"/><circle cx="17" cy="13" r="4"/><path d="M11 13h2M3 12l2-4h14l2 4"/>',
+  cape: '<path d="M12 4l6 3-2 13H8L6 7z"/><path d="M9 7h6"/>',
+  crown: '<path d="M4 18l-1-9 5 4 4-7 4 7 5-4-1 9z"/>',
 }
 
 export type IconName = keyof typeof RAW | 'heartFilled'

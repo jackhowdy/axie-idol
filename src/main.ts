@@ -12,6 +12,8 @@ import { createAxie3D, getAxieMixer, isAxieMixerReady, parsePartId, type Axie3D,
 import { descriptorFor, isCustomFace } from './castDescriptors'
 import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
+import { buddyEnabled, bindDeviceKey, loadBuddy } from './buddy'
+import { mountBuddyScreens } from './buddyScreens'
 import {
   clearWaypointToken,
   connectWithWaypoint,
@@ -608,6 +610,8 @@ let cameraStarted = false
 let guestId = ''
 let authorLabel = ''
 let deviceKey = ''
+/** One-Axie loop UI (VITE_BUDDY=1); null when the flag is off. */
+let buddyUi: ReturnType<typeof mountBuddyScreens> | null = null
 let likedPosts = new Set<string>()
 let posting = false
 let feedLoading = false
@@ -2803,6 +2807,20 @@ function castOrAxieLabel(id: string): string {
   if (inv?.label) return inv.label
   if (/^\d+$/.test(id)) return `Axie #${id}`
   return id
+}
+
+/**
+ * Paint the buddy's face into a screen's hero box.
+ * Placeholder for Task 9: Task 10 swaps this for the live 3D character.
+ */
+async function showBuddyFaceIn(host: HTMLElement): Promise<void> {
+  host.querySelector('[data-buddy-face-placeholder]')?.remove()
+  const img = document.createElement('img')
+  img.src = '/previews/kotaro.png'
+  img.alt = ''
+  img.dataset.buddyFacePlaceholder = '1'
+  img.style.cssText = 'width:100%;height:100%;object-fit:contain'
+  host.append(img)
 }
 
 function showViewfinderFromFeed(): void {
@@ -5858,6 +5876,22 @@ tabbar.addEventListener('click', (e) => {
 async function boot(): Promise<void> {
   if (isWaypointConfigured()) preloadWaypointSdk()
   deviceKey = ensureDeviceKey()
+
+  // One-Axie loop (VITE_BUDDY=1): the buddy screens replace the feed as the app.
+  if (buddyEnabled) {
+    bindDeviceKey(() => deviceKey)
+    buddyUi = mountBuddyScreens({
+      goSnap: () => showViewfinderFromFeed(),
+      showFace: (host) => showBuddyFaceIn(host),
+    })
+    try {
+      await loadBuddy()
+    } catch (err) {
+      console.warn('[buddy] load failed', err)
+    }
+    setActiveTab(null) // no tab bar in R1
+  }
+
   likedPosts = loadLikedSet()
   ownerNameByAddress = loadOwnerNames()
   roninAddress = loadSavedRoninAddress()
@@ -5950,6 +5984,12 @@ async function boot(): Promise<void> {
     hasMediaDevices: Boolean(navigator.mediaDevices),
     hasGetUserMedia: typeof navigator.mediaDevices?.getUserMedia === 'function',
   })
+
+  // R1: the one-Axie loop owns the first screen — egg, hatch or home.
+  if (buddyEnabled) {
+    await buddyUi!.show('auto')
+    return
+  }
 
   // Land on Idol Feed (early Facebook pattern) — camera only via Create
   if (shouldOnboard()) {
