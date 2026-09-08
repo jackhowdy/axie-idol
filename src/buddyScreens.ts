@@ -11,7 +11,7 @@ import {
 } from './buddy'
 import {
   eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml,
-  suggestName, type Monthly, type Diary, type OwnedAxie,
+  suggestName, esc, type Monthly, type Diary, type OwnedAxie,
 } from './buddyHtml.ts'
 
 export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary'
@@ -64,7 +64,8 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     hideAll()
     el.innerHTML = html
     el.hidden = false
-    el.scrollTop = 0
+    const scroller = el.querySelector<HTMLElement>('.bd-scroll')
+    if (scroller) scroller.scrollTop = 0
     const face = el.querySelector<HTMLElement>('[data-face="buddy"]')
     if (face) void nav.showFace(face)
   }
@@ -86,7 +87,9 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   }
 
   document.addEventListener('click', (e) => {
-    const a = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-action]')
+    const target = e.target
+    if (!(target instanceof Element)) return
+    const a = target.closest<HTMLElement>('[data-action]')
     if (!a || !a.closest('.buddy, #buddy-sheet')) return
     e.preventDefault()
     if (busy) return
@@ -148,7 +151,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (act === 'back') { await show('auto'); return }
     if (act === 'recovery') {
       const code = await issueRecovery()
-      sheet(`<p class="bd-eyebrow">Recovery code</p><h2 class="bd-code">${code}</h2>
+      sheet(`<p class="bd-eyebrow">Recovery code</p><h2 class="bd-code">${esc(code)}</h2>
         <p class="bd-small">Screenshot this. Enter it on another phone to move your Axie there. It works once.</p>
         <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="close-sheet">Done</button></div>`)
       return
