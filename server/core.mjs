@@ -3034,7 +3034,7 @@ async function handleCreatePost(req, res) {
     authorGuestId: typeof body.authorGuestId === 'string' ? body.authorGuestId.trim().slice(0, 64) : '',
     deviceKey,
   })
-  if (isFreeCast && axieId !== 'kotaro' && body.buddy !== true) {
+  if (isFreeCast && axieId !== 'kotaro') {
     const crew = getCastCrewForKey(earlyPosterKey)
     if (!(crew.unlockedCast || []).includes(axieId)) {
       sendJson(res, 403, { error: `Cast "${axieId}" is locked — complete quests to unlock` })

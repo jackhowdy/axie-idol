@@ -219,7 +219,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       active.descriptor = roll.descriptor; active.class = roll.class; active.rareIds = roll.rareIds; active.mysticId = roll.mysticId ?? null; active.mystic = roll.mystic
       active.traits = rollTraits(rng, { places: active.egg.grids.length, distanceKm: active.egg.distanceKm, foodSnaps: active.egg.foodSnaps, oneSpot: active.egg.grids.length <= 1 && active.egg.snaps >= 10 })
       active.name = name; active.hatchedAt = new Date(now()).toISOString(); active.hatchGrid = active.egg.grids.at(-1) || null
-      active.bond = 0; active.bondByDay = {}
+      active.bond = 0
       const conv = addBondIgnoringCap(active, active.egg.snaps)
       const lines = active.traits.map((t) => pickLine({ traits: [t], situation: 'hatch', rng }))
       ensureWish(active)

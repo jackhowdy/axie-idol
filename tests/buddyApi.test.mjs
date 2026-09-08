@@ -1,6 +1,7 @@
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { startNodeServer } from './helpers/start-node-server.mjs'
+import { createBuddyModule } from '../server/buddy.mjs'
 
 const PNG_1x1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
 let base = process.env.BASE_URL || ''
@@ -80,4 +81,67 @@ test('retire keeps the old buddy and starts a fresh egg; switch changes the acti
   assert.equal(s.status, 200)
   assert.equal(s.json.active.id, firstId)
   assert.equal(s.json.active.retiredAt, null, 'switching back un-retires')
+})
+
+// NOTE: this test drives server/buddy.mjs directly instead of through the running
+// HTTP server. The daily bond cap (10) and the server's unrelated post rate limit
+// (MAX_POSTS_PER_HOUR = 10, core.mjs) are numerically equal, so proving "one snap
+// past the cap grants 0" needs an 11th /api/posts call in the same hour on one
+// device — the rate limiter would 429 that call before buddy logic ever ran it.
+// Calling buddy.handle()/recordSnap() directly exercises the exact fixed code path
+// (bondByDay must survive the hatch reset) without that unrelated collision.
+test('daily cap holds across hatch: egg snaps and post-hatch snaps share the same day bucket', async () => {
+  const storeState = {}
+  const storage = {
+    get: (name, makeEmpty) => (storeState[name] ??= makeEmpty()),
+    set: (name, val) => { storeState[name] = val },
+  }
+  // Date-aware, like the real manilaDayKey(date?) in core.mjs: must vary with the
+  // date argument, or streakFor's backward-walking loop (called from publicBuddy)
+  // never terminates.
+  const helpers = {
+    sendJson: (res, status, body) => { res.status = status; res.body = body },
+    readBody: async (req) => Buffer.from(JSON.stringify(req._body ?? {})),
+    deviceKeyFrom: (req) => req._device || '',
+    manilaDayKey: (d) => (d instanceof Date ? d : new Date()).toISOString().slice(0, 10),
+    fetchAxieGenes: async () => null,
+    fetchAllOwnerAxies: async () => [],
+    normalizeAddress: (a) => a,
+  }
+  const buddy = createBuddyModule({ storage, helpers, env: { BUDDY: '1' } })
+  const call = async (pathname, { method = 'GET', body } = {}) => {
+    const req = { method, headers: { get: () => null }, _body: body, _device: 'unit-dev' }
+    const res = {}
+    const handled = await buddy.handle(req, res, { pathname, searchParams: new URLSearchParams() })
+    assert.ok(handled, `${pathname} should be handled by buddy.handle`)
+    return res
+  }
+  const ownerKey = 'device:unit-dev'
+  const snap = (id) => buddy.recordSnap({ id }, { buddy: true, ownerKey, hour: 12 })
+
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) {
+    const r = snap(`egg-${i}`)
+    assert.equal(r.kind, 'egg')
+  }
+  const h = await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  assert.equal(h.status, 200, JSON.stringify(h.body))
+  assert.equal(h.body.active.bond, 6, 'egg snaps converted to bond')
+  assert.equal(h.body.active.bondToday, 6, 'bondByDay carried across hatch, not reset')
+
+  let last = null
+  for (let i = 0; i < 10; i++) last = snap(`post-${i}`)
+  assert.equal(last.granted, 0, 'daily cap of 10 already reached; the 10th post-hatch snap grants nothing')
+  assert.equal(last.bond, 10, '6 converted + 4 more counted before the day cap of 10')
+  assert.equal(last.bondToday, 10)
+
+  const g = await call('/api/buddy')
+  assert.equal(g.body.active.bond, 10)
+  assert.equal(g.body.active.bondToday, 10)
+})
+
+test('buddy posts still respect the cast lock for non-neutral cast ids', async () => {
+  const d = dev()
+  const p = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'bing', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
+  assert.equal(p.status, 403, p.text)
 })
