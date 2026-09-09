@@ -19,7 +19,8 @@ the buddy's wardrobe and (from bond 5) the photo frames instead.
 1. You find an egg. Taking photos with it is the only thing that grows it.
 2. Five photos in, it hatches into a wild Axie nobody else has — you name it, it says three lines.
 3. Every snap is one bond and the day's wish adds one or two, up to ten bond a day, no further.
-4. Each level changes the next photo: something to wear, a pose, a trick, finally the Mystic glow.
+4. Each level unlocks something: in R1 the worn items and the Mystic glow change the photo, the
+   pose and trick levels are labels for now (see the ladder table below).
 5. Bond earned this month ranks you on the monthly Idol ladder; the month's Idol wears the crown.
 
 Own an Axie on Ronin? Sign a message and it skips the egg, starting at bond level 1 with a badge.
@@ -31,18 +32,29 @@ Own an Axie on Ronin? Sign a message and it skips the egg, starting at bond leve
 | 1 | 5 | Name and party hat | `hat` |
 | 2 | 10 | Scarf | `scarf` |
 | 3 | 16 | Shades ("Good friends") | `shades` |
-| 4 | 24 | Signature pose | `pose-1` |
+| 4 | 24 | Signature pose * | `pose-1` |
 | 5 | 34 | Cape and frames | `cape` |
-| 6 | 46 | First trick | `trick-1` |
+| 6 | 46 | First trick * | `trick-1` |
 | 7 | 60 | Crown ("Best friends") | `crown` |
-| 8 | 76 | Second trick | `trick-2` |
-| 9 | 95 | Sparkle trail | `trail` |
+| 8 | 76 | Second trick * | `trick-2` |
+| 9 | 95 | Sparkle trail * | `trail` |
 | 10 | 120 | Mystic glow and Idol card ("Idol") | `glow` |
+
+\* label only in R1, animation rewards land in R2. The four starred levels grant the unlock and show
+on the ladder, but nothing about the character changes yet. Levels 1, 2, 3, 5 and 7 are worn items
+that really appear in the photo, and level 10's Mystic glow is a real effect in the live view and in
+the capture.
 
 Ten bond a day is the cap, so the 120 bond to Idol is twelve days of hitting the cap every single
 day, and a few weeks at any realistic pace. Buddy posts are rate limited at
 40/hour per device (legacy posts stay at 10) — the extra snaps past the daily cap still go in the
-scrapbook, they just earn no bond.
+scrapbook, they just earn no bond. A post only counts as a buddy post when the caller actually has
+an active buddy; the flag alone does not buy the higher ceiling.
+
+The state-creating buddy routes share a second per-device hourly bucket: `egg` and `retire` 5/hour,
+`/api/account/recovery` and `/api/account/recover` 10/hour, `/api/ronin/nonce` and
+`/api/ronin/verify` 20/hour, each answered with a 429 and a `limit`. One account holds at most 20
+Axies; past that `egg` and `retire` answer 409.
 
 **Flags**
 

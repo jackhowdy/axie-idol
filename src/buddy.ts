@@ -21,6 +21,8 @@ export type Buddy = {
   descriptor: AxieDescriptor | null
   name: string
   traits: string[]
+  /** The fourth trait, earned at bond level 10 from how the Axie was actually played. */
+  earnedTrait: string | null
   createdAt: string
   hatchedAt: string | null
   retiredAt: string | null

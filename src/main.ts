@@ -796,6 +796,17 @@ function syncFrameTray(): void {
   frameTray.hidden = !on
 }
 
+/**
+ * The Mystic glow, bond level 10. No new art: the live 3D layer and the Home hero box get a CSS
+ * drop-shadow halo, and `captureComposite` paints the same colour into the photo.
+ */
+function buddyGlowOn(): boolean {
+  return buddyEnabled && (buddyState.active?.level ?? 0) >= 10
+}
+function syncBuddyGlow(): void {
+  stickerLayer.classList.toggle('bd-glow', buddyGlowOn())
+}
+
 /** The buddy's wardrobe chips. Empty (and hidden) with no active hatched Axie. */
 function syncWardrobeTray(): void {
   if (!wardrobeTray) return
@@ -821,6 +832,7 @@ function syncCameraTrays(): void {
   if (btnToFeed) btnToFeed.hidden = true
   if (btnToProfile) btnToProfile.hidden = true
   syncWardrobeTray()
+  syncBuddyGlow()
 }
 
 wardrobeTray?.addEventListener('click', (e) => {
@@ -2191,6 +2203,18 @@ async function captureComposite(): Promise<void> {
     const mc = axie3d.canvas
     const baseW = mc.clientWidth * scaleX
     const baseH = mc.clientHeight * scaleX
+    // Mystic glow (bond level 10): the same layer drawn once behind itself with a shadow, so the
+    // halo the live view shows in CSS lands in the photo too. Only the character, not the frame.
+    if (buddyGlowOn()) {
+      ctx.save()
+      ctx.shadowColor = 'rgba(255, 209, 102, 0.9)'
+      ctx.shadowBlur = 26 * scaleX
+      ctx.translate(cx, cy)
+      ctx.rotate((state.rotation * Math.PI) / 180)
+      ctx.scale(state.scale, state.scale)
+      ctx.drawImage(mc, -baseW / 2, -baseH / 2, baseW, baseH)
+      ctx.restore()
+    }
     ctx.save()
     if (leadShiny && !customAxieId) ctx.filter = SHINY_FILTER
     ctx.translate(cx, cy)
@@ -6479,9 +6503,16 @@ async function boot(): Promise<void> {
     hasGetUserMedia: typeof navigator.mediaDevices?.getUserMedia === 'function',
   })
 
-  // R1: the one-Axie loop owns the first screen — egg, hatch or home.
+  // R1: the one-Axie loop owns the first screen — egg, hatch or home. If that first request cannot
+  // reach the server (loadBuddy above already failed quietly, or startEgg fails here), show the
+  // retry card: every screen is hidden by now, so anything else leaves a blank document.
   if (buddyEnabled) {
-    await buddyUi!.show('auto')
+    try {
+      await buddyUi!.show('auto')
+    } catch (err) {
+      console.warn('[buddy] boot failed', err)
+      buddyUi!.showBootError()
+    }
     return
   }
 

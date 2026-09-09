@@ -41,10 +41,12 @@ export function dayCount(b: Pick<Buddy, 'createdAt' | 'hatchedAt'>): number {
   return Math.max(1, Math.floor((Date.now() - from) / 864e5) + 1)
 }
 
-export function chipHtml(label: string, kind: 'plain' | 'rare' | 'mystic' = 'plain'): string {
-  const cls = kind === 'rare' ? ' bd-chip-rare' : kind === 'mystic' ? ' bd-chip-mystic' : ''
+export function chipHtml(label: string, kind: 'plain' | 'rare' | 'mystic' | 'earned' = 'plain'): string {
+  const cls = kind === 'rare' ? ' bd-chip-rare' : kind === 'mystic' ? ' bd-chip-mystic' : kind === 'earned' ? ' bd-chip-earned' : ''
   const mark = kind === 'plain' ? '' : icon('star', 10)
-  return `<span class="bd-chip${cls}">${mark}${esc(label)}</span>`
+  // The earned fourth trait carries its own little marker: it was played for, not rolled.
+  const tail = kind === 'earned' ? '<i class="bd-chip-mark">earned</i>' : ''
+  return `<span class="bd-chip${cls}">${mark}${esc(label)}${tail}</span>`
 }
 
 /**
@@ -53,7 +55,10 @@ export function chipHtml(label: string, kind: 'plain' | 'rare' | 'mystic' = 'pla
  */
 export function vfChipHtml(b: Buddy): string {
   if (!b.hatchedAt) {
-    const target = b.eggOdds?.nextTier ?? 100
+    // Past 100 snaps the odds top out and there is no next tier — "120 of 100" would be nonsense,
+    // so the chip just counts.
+    const target = b.eggOdds ? b.eggOdds.nextTier : 100
+    if (target == null) return `<b>Egg · ${b.egg.snaps} snaps</b><div class="bd-meter mini"><i style="width:100%"></i></div>`
     return `<b>Egg · ${b.egg.snaps} of ${target}</b><div class="bd-meter mini"><i style="width:${pct(b.egg.snaps / Math.max(1, target))}%"></i></div>`
   }
   const floorBond = b.ladder.find((r) => r.level === b.level)?.bond ?? 0
@@ -196,7 +201,15 @@ const FRAME_LABELS: Record<string, string> = {
 export function wardrobeTrayHtml(b: Buddy | null): string {
   if (!b || !b.hatchedAt) return ''
   const levelByUnlock = new Map(b.ladder.map((r) => [r.unlock, r.level]))
-  return WEARABLES.map((it) => {
+  // The Mystic glow is not a worn item — it is always on once bond level 10 grants it, so it shows
+  // as a badge with no `data-wear` and nothing to toggle.
+  const glow = b.wardrobe.unlocked.includes('glow')
+    ? `<span class="prop-chip wardrobe-chip is-badge" title="Mystic glow, on for good">
+  <span class="prop-ico" aria-hidden="true">${icon('star', 16)}</span>
+  <span class="prop-name">Glow</span>
+</span>`
+    : ''
+  return glow + WEARABLES.map((it) => {
     const unlocked = b.wardrobe.unlocked.includes(it)
     const worn = b.wardrobe.worn === it
     const level = levelByUnlock.get(it)
@@ -256,14 +269,18 @@ export function homeHtml(b: Buddy, greeting: string | null): string {
     const label = unlocked ? (worn ? 'Worn' : it[0].toUpperCase() + it.slice(1)) : `Bond ${row?.level ?? '?'}`
     return `<button type="button" class="bd-item ${unlocked ? 'on' : 'locked'}${worn ? ' worn' : ''}" data-action="wear" data-item="${esc(it)}"${unlocked ? '' : ' disabled'} aria-label="${esc(it)}">${icon(it, 26)}<small>${esc(label)}</small></button>`
   }).join('')
+  // `photoIds` is capped server-side (head + tail), so the true photo count is `snapCount`.
   const book = b.photoIds.slice(-4).reverse()
     .map((id, i) => {
       const path = photoPath(b, id)
       const art = path ? `<img class="bd-thumb-img" src="${esc(path)}" alt="" loading="lazy">` : ''
-      return `<span class="bd-thumb" data-photo-id="${esc(id)}">${art}<small>${b.photoIds.length - i}</small></span>`
+      return `<span class="bd-thumb" data-photo-id="${esc(id)}">${art}<small>${b.snapCount - i}</small></span>`
     }).join('')
     || '<span class="bd-small bd-muted">No photos yet. The first one starts the book.</span>'
   const who = b.kind === 'owned' ? `${esc(b.name)} · owned${b.axieId ? ` #${esc(b.axieId)}` : ''}` : `Wild ${esc(b.class ?? 'Axie')}`
+  // The Mystic glow arrives at bond level 10 and stays on: the hero box glows in the CSS, the
+  // camera layer and the capture get the same treatment from main.ts.
+  const glow = b.level >= 10 ? ' bd-glow' : ''
   return `
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
@@ -276,11 +293,11 @@ export function homeHtml(b: Buddy, greeting: string | null): string {
       }</div>
       <div class="bd-card bd-hero">
         <div class="bd-hero-row">
-          <div class="bd-hero-3d" data-face="buddy" data-action="talk"><span class="bd-badge">${icon('star', 11)} Bond ${b.level}</span></div>
+          <div class="bd-hero-3d${glow}" data-face="buddy" data-action="talk"><span class="bd-badge">${icon('star', 11)} Bond ${b.level}</span></div>
           <div class="bd-hero-text">
             <b>${esc(b.levelName || `Bond ${b.level}`)}</b>
             <span class="bd-muted">${who} · ${b.snapCount} snaps · ${b.moments.length} of ${b.momentsTotal} moments</span>
-            <div class="bd-chips">${b.traits.map((t) => chipHtml(t)).join('')}${b.mystic ? chipHtml('Mystic', 'mystic') : ''}</div>
+            <div class="bd-chips">${b.traits.map((t) => chipHtml(t)).join('')}${b.earnedTrait ? chipHtml(b.earnedTrait, 'earned') : ''}${b.mystic ? chipHtml('Mystic', 'mystic') : ''}</div>
             <div class="bd-hearts">${hearts}</div>
           </div>
         </div>
@@ -290,12 +307,30 @@ export function homeHtml(b: Buddy, greeting: string | null): string {
       ${wishPillHtml(b) || '<p class="bd-small bd-muted">A new wish arrives each morning.</p>'}
       <div class="bd-card-head"><span class="bd-label">Wardrobe · ${b.wardrobe.unlocked.filter((u) => WEARABLES.includes(u)).length} of ${WEARABLES.length}</span><a class="bd-link" data-action="ladder">Growth ladder</a></div>
       <div class="bd-items">${wardrobe}</div>
-      <div class="bd-card-head"><span class="bd-label">Scrapbook · ${b.photoIds.length}</span><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>
+      <div class="bd-card-head"><span class="bd-label">Scrapbook · ${b.snapCount}</span><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>
       <div class="bd-book">${book}</div>
       <p class="bd-small bd-center">Not the one? <a class="bd-link" data-action="fresh-egg">Start a fresh egg</a> · ${esc(b.name)} stays in your scrapbook · <a class="bd-link" data-action="recovery">Recovery code</a></p>
     </div>
     <div class="bd-actions">
       <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="snap">${icon('camera', 20)} Snap with ${esc(b.name)}</button>
+    </div>`
+}
+
+/**
+ * Boot could not reach the server. Without this the app painted an empty document — every screen
+ * hidden, nothing to tap — and looked broken rather than offline. Rendered into `#buddy-egg`.
+ */
+export function bootErrorHtml(): string {
+  return `
+    <div class="bd-scroll">
+      <header class="bd-head bd-center">
+        <p class="bd-eyebrow">Offline</p>
+        <h1>Couldn't reach the server</h1>
+        <p class="bd-muted">Your Axie is safe. Check the connection and try again.</p>
+      </header>
+    </div>
+    <div class="bd-actions">
+      <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="retry-boot">Retry</button>
     </div>`
 }
 
@@ -393,15 +428,23 @@ export function unlockHtml(u: Unlock, b: Buddy): string {
     </div>`
 }
 
+/**
+ * Rewards that grant the unlock and show on the ladder, but change nothing about the character
+ * in R1. Said out loud on the row rather than left for the player to discover.
+ */
+const R2_UNLOCKS = new Set(['pose-1', 'trick-1', 'trick-2', 'trail'])
+
 export function ladderHtml(b: Buddy): string {
   const rows = b.ladder.map((r) => {
     const done = b.level >= r.level
     const isNext = b.next?.level === r.level
+    const later = r.unlock && R2_UNLOCKS.has(r.unlock) ? '<small class="bd-muted">coming in R2</small>' : ''
     return `<div class="bd-step${done ? ' done' : ''}${isNext ? ' next' : ''}">
       <span class="bd-step-dot">${done ? icon('star', 14) : r.level}</span>
       <div class="bd-step-body">
         <b>${esc(r.reward)}</b>
         <small class="bd-muted">${r.unlock ? `Unlocks ${esc(r.unlock)}` : 'Milestone'}</small>
+        ${later}
       </div>
       <b class="${isNext ? 'bd-hot' : 'bd-muted'}">${r.bond} bond</b>
     </div>`
@@ -424,6 +467,16 @@ export function ladderHtml(b: Buddy): string {
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="snap">${icon('camera', 20)} Snap with ${esc(b.name || 'your Axie')}</button></div>`
 }
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+/** `2026-09` is a storage key, not a headline: the ladder says "September Idols". */
+export function monthLabel(key: string): string {
+  const m = /^\d{4}-(\d{2})$/.exec(String(key || ''))
+  return (m && MONTH_NAMES[Number(m[1]) - 1]) || String(key || '')
+}
+
 export function monthlyHtml(data: Monthly): string {
   const rows = data.rows.map((r) => `
     <div class="bd-rank${data.you && data.you.rank === r.rank ? ' me' : ''}">
@@ -440,7 +493,7 @@ export function monthlyHtml(data: Monthly): string {
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
         <button type="button" class="bd-round" data-action="home" aria-label="Back">${icon('back', 18)}</button>
-        <p class="bd-eyebrow">${esc(data.month)} idols · ends in ${days} day${days === 1 ? '' : 's'}</p>
+        <p class="bd-eyebrow">${esc(monthLabel(data.month))} Idols · ends in ${days} day${days === 1 ? '' : 's'}</p>
         <span class="bd-round bd-round-ghost"></span>
       </header>
       <div class="bd-card bd-note">${icon('trophy', 18)}<p class="bd-small">The month's Idol wears the crown in every photo until the next month ends. Only bond earned this month counts, so a new Axie can win.</p></div>
@@ -471,7 +524,7 @@ export function diaryHtml(d: Diary, b: Buddy): string {
         <span class="bd-round bd-round-ghost"></span>
       </header>
       <div class="bd-diary">${entries}
-        <div class="bd-diary-foot"><span>${b.photoIds.length} photos · ${b.moments.length} moments</span></div>
+        <div class="bd-diary-foot"><span>${b.snapCount} photos · ${b.moments.length} moments</span></div>
       </div>
       <div class="bd-card bd-note">${icon('bell', 18)}<p class="bd-small">${esc(d.anniversary || `Next: ${d.next}`)}</p></div>
     </div>

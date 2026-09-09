@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -11,7 +11,7 @@ const egg = {
   wardrobe: { unlocked: [], worn: null },
   moments: [], momentsTotal: 24, photoIds: [], photos: [], snapCount: 12, bondToday: 3, dailyCap: 10, streak: 2,
   ladder: [], mystic: false, mysticId: null, rareIds: [], descriptor: null, class: null, axieId: null,
-  retiredAt: null, levelName: null,
+  retiredAt: null, levelName: null, earnedTrait: null,
 }
 const miso = {
   ...egg,
@@ -187,6 +187,81 @@ test('moment and unlock sheets advance the queue instead of just closing', () =>
   assert.match(momentHtml({ id: 'dog', title: 'A dog', line: 'A DOG.', rarity: 0.4 }, miso), /data-action="sheet-next"/)
   assert.match(unlockHtml({ level: 4, reward: 'Signature pose', unlock: 'pose-1', line: 'Watch this.' }, miso), /data-action="sheet-next"/)
   assert.match(reactionHtml({ kind: 'snap', granted: 1, bond: 5, level: 1, next: null, line: 'A DOG.', labels: [], isNewPlace: false, wishDone: null, unlocks: [], moments: [], bondToday: 1, dailyCap: 10 }), /data-action="save"/)
+})
+
+test('the camera chip counts plainly once the egg is past the last tier', () => {
+  const maxed = { ...egg, egg: { snaps: 120, grids: [] }, eggOdds: { tier: 100, rareParts: 2, mysticChance: 0.15, nextTier: null } }
+  const chip = vfChipHtml(maxed)
+  assert.match(chip, /Egg · 120 snaps/)
+  assert.doesNotMatch(chip, /of 100/, 'there is no next tier to be "of"')
+  assert.match(chip, /width:100%/)
+})
+
+test('the earned fourth trait shows as a marked chip beside the three rolled ones', () => {
+  const plain = homeHtml(miso, null)
+  assert.doesNotMatch(plain, /bd-chip-earned/, 'nothing before bond level 10')
+  const idol = homeHtml({ ...miso, level: 10, earnedTrait: 'Night owl' }, null)
+  assert.match(idol, /bd-chip-earned/)
+  assert.match(idol, /Night owl/)
+  assert.match(idol, /bd-chip-mark">earned</)
+  assert.equal((idol.match(/class="bd-chip[" ]/g) || []).length, 4, 'three rolled traits plus the earned one')
+})
+
+test('the Mystic glow is on the Home hero box only at bond level 10', () => {
+  assert.doesNotMatch(homeHtml(miso, null), /bd-hero-3d bd-glow|bd-hero-3d[^"]*bd-glow/)
+  assert.match(homeHtml({ ...miso, level: 10 }, null), /class="bd-hero-3d bd-glow"/)
+})
+
+test('the wardrobe tray shows the glow as a badge with nothing to toggle, once unlocked', () => {
+  const locked = wardrobeTrayHtml(miso)
+  assert.doesNotMatch(locked, /is-badge/)
+  const unlocked = wardrobeTrayHtml({ ...miso, wardrobe: { unlocked: [...miso.wardrobe.unlocked, 'glow'], worn: 'hat' } })
+  assert.match(unlocked, /wardrobe-chip is-badge/)
+  assert.match(unlocked, /Glow/)
+  assert.doesNotMatch(unlocked, /data-wear="glow"/, 'the glow is never worn or taken off')
+  assert.deepEqual([...unlocked.matchAll(/data-wear="([^"]+)"/g)].map((m) => m[1]), ['hat', 'scarf', 'shades', 'cape', 'crown'])
+})
+
+test('the ladder says out loud which rewards are labels in R1', () => {
+  const ladder = [
+    { level: 3, bond: 16, reward: 'Shades', unlock: 'shades' },
+    { level: 4, bond: 24, reward: 'Signature pose', unlock: 'pose-1' },
+    { level: 6, bond: 46, reward: 'First trick', unlock: 'trick-1' },
+    { level: 8, bond: 76, reward: 'Second trick', unlock: 'trick-2' },
+    { level: 9, bond: 95, reward: 'Sparkle trail', unlock: 'trail' },
+    { level: 10, bond: 120, reward: 'Mystic glow and Idol card', unlock: 'glow' },
+  ]
+  const html = ladderHtml({ ...miso, ladder })
+  assert.equal((html.match(/coming in R2/g) || []).length, 4, 'exactly the pose, two tricks and the trail')
+  const shades = /<div class="bd-step[\s\S]*?Shades[\s\S]*?<\/div>\s*<b/.exec(html)[0]
+  assert.doesNotMatch(shades, /coming in R2/, 'a real worn item is not marked')
+  const glow = html.slice(html.indexOf('Mystic glow'))
+  assert.doesNotMatch(glow, /coming in R2/, 'the glow ships in R1')
+})
+
+test('the monthly ladder names the month instead of showing its storage key', () => {
+  assert.equal(monthLabel('2026-09'), 'September')
+  assert.equal(monthLabel('2026-01'), 'January')
+  assert.equal(monthLabel('nonsense'), 'nonsense')
+  const html = monthlyHtml({ month: '2026-09', endsAt: '2026-10-01T00:00:00Z', rows: [], you: null })
+  assert.match(html, /September Idols/)
+  assert.doesNotMatch(html, /2026-09/)
+})
+
+test('scrapbook counts every snap, not the capped photoIds list', () => {
+  const b = { ...miso, photoIds: ['p61', 'p62', 'p63', 'p64', 'p65'], snapCount: 240 }
+  const home = homeHtml(b, null)
+  assert.match(home, /Scrapbook · 240/)
+  assert.match(home, /<small>240<\/small>/, 'the newest tile is numbered by the true total')
+  const diary = diaryHtml({ week: 1, entries: [], anniversary: null, next: 'n' }, b)
+  assert.match(diary, /240 photos/)
+})
+
+test('the boot-failure card offers a retry instead of a blank document', () => {
+  const html = bootErrorHtml()
+  assert.match(html, /Couldn't reach the server/)
+  assert.match(html, /data-action="retry-boot"/)
+  assert.match(html, /Retry/)
 })
 
 test('suggestName picks a name for the class', () => {
