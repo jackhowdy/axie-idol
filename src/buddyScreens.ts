@@ -62,6 +62,15 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   }
 
   async function show(which: BuddyScreen): Promise<void> {
+    // The egg and Home screens are the record of what happened: always paint them from the
+    // server's latest state (a photo posted while the network was slow must never be "forgotten").
+    if (which === 'auto' || which === 'egg' || which === 'home') {
+      try {
+        await loadBuddy()
+      } catch (err) {
+        console.warn('[buddy] refresh before show failed, using cached state', err)
+      }
+    }
     const before = buddyState.active
     if (which === 'auto') which = !before ? 'egg' : before.hatchedAt ? 'home' : 'egg'
     // Never create a second egg behind an active Axie — only "fresh egg" retires one.

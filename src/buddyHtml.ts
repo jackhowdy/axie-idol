@@ -161,7 +161,7 @@ export function eggHtml(b: Buddy, opts: { buddies?: Buddy[] } = {}): string {
       <div class="bd-egg-tile">
         <div class="bd-egg stage-${stage}"></div>
         <span class="bd-badge">${icon('star', 11)} Wild egg</span>
-        <span class="bd-pill bd-pill-light">${snaps} snaps · ${places} places</span>
+        <span class="bd-pill bd-pill-light">${snaps} ${snaps === 1 ? 'snap' : 'snaps'} · ${places} ${places === 1 ? 'place' : 'places'}</span>
       </div>
       <div class="bd-card">
         <div class="bd-card-head"><span class="bd-label">Odds if you hatch</span><span class="bd-link">Every ten snaps counts</span></div>

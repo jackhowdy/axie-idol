@@ -5231,8 +5231,11 @@ async function handleBuddySnap(snap: SnapResult | null): Promise<void> {
     console.warn('[buddy] reload after snap failed', err)
   }
   syncQuestHud()
+  // After a photo the player lands back on the egg or Home screen, not another camera shot:
+  // the count is visible, and taking a break is the default rather than something to find.
   if (snap.kind === 'egg') {
-    showLiveToast(snap.canHatch ? `${snap.snaps} snaps. Hatch whenever you like.` : `${snap.snaps} of 5`, 2200)
+    await buddyUi?.show('auto')
+    showLiveToast(snap.canHatch ? `${snap.snaps} snaps. Hatch whenever you like.` : `${snap.snaps} of 5 to hatch`, 2600)
     return
   }
   const b = buddyState.active
@@ -5242,6 +5245,7 @@ async function handleBuddySnap(snap: SnapResult | null): Promise<void> {
       ...snap.unlocks.map((u) => unlockHtml(u, b)),
     ]
   }
+  await buddyUi?.show('home')
   buddyUi?.sheet(reactionHtml(snap))
 }
 
