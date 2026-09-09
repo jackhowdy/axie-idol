@@ -148,15 +148,19 @@ export function eggHtml(b: Buddy, opts: { buddies?: Buddy[] } = {}): string {
     return `<div class="bd-row bd-tier-row${isNext ? ' bd-row-next' : ''}"><b class="bd-tier${reached ? ' bd-ok' : ''}">${t.at}</b><span>${t.text}</span>${right}</div>`
   }).join('')
   const canHatch = snaps >= 5
+  const left = Math.max(0, 5 - snaps)
+  const leftWord = ['', 'One', 'Two', 'Three', 'Four', 'Five'][left] || String(left)
   const stage = snaps >= 20 ? 3 : snaps >= 5 ? 2 : 1
   return `
     <div class="bd-scroll">
       <header class="bd-head bd-center">
         <p class="bd-eyebrow">Day ${dayCount(b)} · your egg</p>
-        <h1>${canHatch ? 'Ready when you are' : 'You found an egg'}</h1>
+        <h1>${canHatch ? 'Ready when you are' : snaps === 0 ? 'You found an egg' : 'Keep taking it places'}</h1>
         <p class="bd-muted">${canHatch
           ? 'Hatch now, or keep taking it places. The longer it incubates, the rarer the Axie inside.'
-          : 'Take it places. After five photos together it hatches into an Axie nobody else has.'}</p>
+          : snaps === 0
+            ? 'Take it places. After five photos together it hatches into an Axie nobody else has.'
+            : `${leftWord} more ${left === 1 ? 'photo' : 'photos'} together and it hatches into an Axie nobody else has.`}</p>
       </header>
       <div class="bd-egg-tile">
         <div class="bd-egg stage-${stage}"></div>
@@ -172,7 +176,7 @@ export function eggHtml(b: Buddy, opts: { buddies?: Buddy[] } = {}): string {
     </div>
     <div class="bd-actions">
       ${canHatch ? '<button type="button" class="bd-btn bd-btn-outline" data-action="hatch-now">Hatch now</button>' : ''}
-      <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="snap">${icon('camera', 20)} ${canHatch ? 'Keep snapping' : 'Take the first photo'}</button>
+      <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="snap">${icon('camera', 20)} ${canHatch ? 'Keep snapping' : snaps === 0 ? 'Take the first photo' : 'Take another photo'}</button>
     </div>
     <p class="bd-small bd-center">Own an Axie on Ronin? <a class="bd-link" data-action="claim">Connect wallet and skip the egg</a></p>`
 }
