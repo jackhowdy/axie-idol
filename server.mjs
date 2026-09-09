@@ -39,7 +39,7 @@ const DATA_DIR = process.env.DATA_DIR ? resolve(process.env.DATA_DIR) : resolve(
 const UPLOADS_DIR = resolve(DATA_DIR, 'uploads')
 const PORT = Number(process.env.PORT || 5174)
 const HOST = process.env.HOST || '0.0.0.0'
-const STORE_NAMES = ['posts', 'castCrew', 'follows', 'notifications', 'owners', 'burns', 'axies']
+const STORE_NAMES = ['posts', 'castCrew', 'follows', 'notifications', 'owners', 'burns', 'axies', 'buddies']
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -177,7 +177,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(204, {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, X-Device-Key',
+        'Access-Control-Allow-Headers': 'Content-Type, X-Device-Key, X-Buddy-Session, X-Admin-Key',
       })
       res.end()
       return

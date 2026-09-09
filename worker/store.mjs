@@ -33,6 +33,10 @@ export class IdolStore extends DurableObject {
         SEED_POSTS: env.SEED_POSTS || '0',
         SKYMAVIS_API_KEY: env.SKYMAVIS_API_KEY || '',
         GOLDEN_ODDS: env.GOLDEN_ODDS || '',
+        // Buddy flags have to cross the Durable Object boundary too: without these the Worker
+        // build ran with BUDDY undefined (on by default) and no admin key at all.
+        BUDDY: env.BUDDY ?? '1',
+        ADMIN_KEY: env.ADMIN_KEY || '',
       },
       log: console,
     })

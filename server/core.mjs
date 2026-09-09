@@ -1283,6 +1283,8 @@ const MAX_POSTS_PER_HOUR = 10
  * snaps get a much higher ceiling; the ones past the daily cap simply earn no bond.
  */
 const MAX_BUDDY_POSTS_PER_HOUR = 40
+/** Fallback for the 'buddy' rate kind when the caller names no limit of its own. */
+const MAX_BUDDY_ROUTES_PER_HOUR = 20
 const MAX_LIKES_PER_HOUR = 60
 const MAX_COMMENTS_PER_HOUR = 30
 const MAX_FOLLOWS_PER_HOUR = 60
@@ -1864,13 +1866,14 @@ const rateBuckets = new Map()
 function getBucket(deviceKey) {
   let b = rateBuckets.get(deviceKey)
   if (!b) {
-    b = { posts: [], likes: [], comments: [], follows: [], sparks: [], boosts: [] }
+    b = { posts: [], likes: [], comments: [], follows: [], sparks: [], boosts: [], buddy: [] }
     rateBuckets.set(deviceKey, b)
   } else {
     if (!Array.isArray(b.comments)) b.comments = []
     if (!Array.isArray(b.follows)) b.follows = []
     if (!Array.isArray(b.sparks)) b.sparks = []
     if (!Array.isArray(b.boosts)) b.boosts = []
+    if (!Array.isArray(b.buddy)) b.buddy = []
   }
   return b
 }
@@ -1887,6 +1890,9 @@ function rateLimitFor(kind, opts = {}) {
   if (kind === 'follows') return MAX_FOLLOWS_PER_HOUR
   if (kind === 'sparks') return MAX_SPARKS_PER_HOUR
   if (kind === 'boosts') return MAX_FAN_BOOSTS_PER_HOUR
+  // The buddy module names its own ceiling per route (egg/retire 5, recovery 10, ronin 20) and
+  // they share one bucket, so a device cannot walk around one limit by spending another.
+  if (kind === 'buddy') return Number.isFinite(opts.limit) ? opts.limit : MAX_BUDDY_ROUTES_PER_HOUR
   return MAX_LIKES_PER_HOUR
 }
 
@@ -1896,6 +1902,7 @@ function rateArr(bucket, kind) {
   if (kind === 'follows') return bucket.follows
   if (kind === 'sparks') return bucket.sparks
   if (kind === 'boosts') return bucket.boosts
+  if (kind === 'buddy') return bucket.buddy
   return bucket.likes
 }
 
@@ -2998,7 +3005,12 @@ async function handleCreatePost(req, res) {
     return
   }
 
-  const rate = checkRate(deviceKey, 'posts', { buddy: body.buddy === true })
+  // `body.buddy` alone is a client claim: the 40/hour ceiling and the snap credit both belong to a
+  // caller that actually has an active buddy to credit, not to anyone who sets the flag.
+  const buddyOwnerKey = buddy.ownerKeyFrom(req, body)
+  const isBuddyPost = body.buddy === true && Boolean(buddy.getActive(buddyOwnerKey))
+
+  const rate = checkRate(deviceKey, 'posts', { buddy: isBuddyPost })
   if (!rate.ok) {
     sendJson(res, 429, {
       error: `Post rate limit: max ${rate.limit}/hour`,
@@ -3147,8 +3159,8 @@ async function handleCreatePost(req, res) {
   // Buddy: convert this snap into egg/bond progress before the post is persisted, so
   // any buddyId stamped on the post is saved with it. Never gates on the quest system.
   const buddyResult = buddy.recordSnap(post, {
-    buddy: body.buddy === true,
-    ownerKey: buddy.ownerKeyFrom(req, body),
+    buddy: isBuddyPost,
+    ownerKey: buddyOwnerKey,
     lat: typeof body.lat === 'number' ? body.lat : undefined,
     lng: typeof body.lng === 'number' ? body.lng : undefined,
     hour: typeof body.hour === 'number' ? body.hour : undefined,
@@ -3158,7 +3170,7 @@ async function handleCreatePost(req, res) {
     district: typeof body.district === 'string' ? body.district.slice(0, 40) : undefined,
     labels: Array.isArray(body.labels) ? body.labels.slice(0, 12).map(String) : [],
   })
-  if (buddyResult) post.buddyId = buddy.getActive(buddy.ownerKeyFrom(req, body))?.id || null
+  if (buddyResult) post.buddyId = buddy.getActive(buddyOwnerKey)?.id || null
 
   saveStore(store)
   recordRate(deviceKey, 'posts')
@@ -3723,7 +3735,7 @@ async function handleSettleDay(req, res) {
 
 const buddy = createBuddyModule({
   storage, env,
-  helpers: { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress },
+  helpers: { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress, checkRate, recordRate },
 })
 
 async function handleApi(req) {

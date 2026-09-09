@@ -15,7 +15,46 @@ let server = null
 before(async () => { if (!base) { server = await startNodeServer({ BUDDY: '1', BUDDY_TEST_SKIP_CHAIN: '1' }); base = server.baseUrl } })
 /** Started inside the ADMIN_KEY test below — the shared server deliberately has no admin key. */
 let adminServer = null
-after(async () => { if (server) await server.stop(); if (adminServer) await adminServer.stop() })
+/** Started inside the flag-off test below — the shared server runs with BUDDY=1. */
+let flagOffServer = null
+after(async () => {
+  if (server) await server.stop()
+  if (adminServer) await adminServer.stop()
+  if (flagOffServer) await flagOffServer.stop()
+})
+
+/**
+ * A buddy module wired to an in-memory store, with no rate limiter and no HTTP. Used by the tests
+ * that would otherwise trip an unrelated ceiling (the post rate limit, the buddy route limits)
+ * before reaching the behaviour under test.
+ */
+function directModule({ env = { BUDDY: '1' } } = {}) {
+  const storeState = {}
+  const storage = {
+    get: (name, makeEmpty) => (storeState[name] ??= makeEmpty()),
+    set: (name, val) => { storeState[name] = val },
+  }
+  const helpers = {
+    sendJson: (res, status, body) => { res.status = status; res.body = body },
+    readBody: async (req) => Buffer.from(JSON.stringify(req._body ?? {})),
+    deviceKeyFrom: (req) => req._device || '',
+    // Date-aware, like the real manilaDayKey(date?) in core.mjs: must vary with the date argument,
+    // or streakFor's backward-walking loop (called from publicBuddy) never terminates.
+    manilaDayKey: (d) => (d instanceof Date ? d : new Date()).toISOString().slice(0, 10),
+    fetchAxieGenes: async () => null,
+    fetchAllOwnerAxies: async () => [],
+    normalizeAddress: (a) => String(a || '').toLowerCase(),
+  }
+  const buddy = createBuddyModule({ storage, helpers, env })
+  const call = async (pathname, { method = 'GET', body, device = 'unit-dev', search = '' } = {}) => {
+    const req = { method, headers: { get: () => null }, _body: body, _device: device }
+    const res = {}
+    const handled = await buddy.handle(req, res, { pathname, searchParams: new URLSearchParams(search) })
+    assert.ok(handled, `${pathname} should be handled by buddy.handle`)
+    return res
+  }
+  return { buddy, call, storage }
+}
 
 async function api(path, { method = 'GET', body, device = 'dev-a' } = {}) {
   const r = await fetch(base + path, { method, headers: { 'content-type': 'application/json', 'X-Device-Key': device }, body: body ? JSON.stringify(body) : undefined })
@@ -393,6 +432,188 @@ test('recovery codes are guest-only: a signed-in wallet cannot mint one', async 
   assert.equal(r.status, 400)
   const j = await r.json()
   assert.equal(j.error, 'Recovery codes are for guest accounts; your wallet already keeps your Axies')
+})
+
+// --- rate limits, unauthenticated growth, record size -----------------------------------------
+
+test('egg is capped at five an hour per device', async () => {
+  const d = dev()
+  for (let i = 0; i < 5; i++) {
+    const r = await api('/api/buddy/egg', { method: 'POST', device: d })
+    assert.ok(r.status === 200 || r.status === 201, `egg ${i + 1}: ${r.text}`)
+  }
+  const sixth = await api('/api/buddy/egg', { method: 'POST', device: d })
+  assert.equal(sixth.status, 429, sixth.text)
+  assert.equal(sixth.json.limit, 5)
+})
+
+test('retire is capped at five an hour per device', async () => {
+  const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  for (let i = 0; i < 4; i++) {
+    assert.equal((await api('/api/buddy/retire', { method: 'POST', device: d })).status, 201, `retire ${i + 1}`)
+  }
+  // The egg above already spent one of the five slots this bucket holds.
+  const fifth = await api('/api/buddy/retire', { method: 'POST', device: d })
+  assert.equal(fifth.status, 429, fifth.text)
+  assert.equal(fifth.json.limit, 5)
+})
+
+// A nonce is a challenge anyone can ask for, for any address they like. If asking created the
+// account, an unauthenticated GET could grow the store one address at a time, for free.
+test('asking for a nonce creates no account', async () => {
+  const d = dev()
+  const w = wallet()
+  const n = await api(`/api/ronin/nonce?address=${w.address}`, { device: d })
+  assert.equal(n.status, 200, n.text)
+  const me = await api('/api/buddy', { device: d })
+  assert.equal(me.status, 200)
+  assert.equal(me.json.active, null, 'the nonce did not hand this device a buddy')
+  assert.deepEqual(me.json.buddies, [])
+})
+
+test('a nonce leaves no ronin: account in the store, and only verify creates one', async () => {
+  const { call, storage } = directModule()
+  const address = '0x1111111111111111111111111111111111111111'
+  const n = await call('/api/ronin/nonce', { search: `address=${address}` })
+  assert.equal(n.status, 200, JSON.stringify(n.body))
+  assert.ok(n.body.nonce, 'a nonce was issued')
+  const store = storage.get('buddies', () => ({}))
+  assert.deepEqual(
+    Object.keys(store.accounts).filter((k) => k.startsWith('ronin:')),
+    [],
+    'no ronin account was minted by an unsigned GET',
+  )
+  assert.deepEqual(Object.keys(store.pendingNonces[address]), [n.body.nonce], 'the nonce is held outside the accounts')
+
+  // A signature that does not recover to this address must not create one either.
+  const bad = await call('/api/ronin/verify', { method: 'POST', body: { address, signature: '0x' + '11'.repeat(65) } })
+  assert.equal(bad.status, 401)
+  assert.deepEqual(Object.keys(store.accounts).filter((k) => k.startsWith('ronin:')), [])
+})
+
+test('a nonce request never holds more than five nonces for one address', async () => {
+  const { call, storage } = directModule()
+  const address = '0x2222222222222222222222222222222222222222'
+  for (let i = 0; i < 9; i++) await call('/api/ronin/nonce', { search: `address=${address}` })
+  const store = storage.get('buddies', () => ({}))
+  assert.equal(Object.keys(store.pendingNonces[address]).length, 5)
+})
+
+test('one account holds at most twenty Axies', async () => {
+  const { buddy, call, storage } = directModule()
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 19; i++) {
+    const r = await call('/api/buddy/retire', { method: 'POST' })
+    assert.equal(r.status, 201, `retire ${i + 1}: ${JSON.stringify(r.body)}`)
+  }
+  const store = storage.get('buddies', () => ({}))
+  const acc = store.accounts['device:unit-dev']
+  assert.equal(acc.buddyIds.length, 20)
+
+  const twentyFirst = await call('/api/buddy/retire', { method: 'POST' })
+  assert.equal(twentyFirst.status, 409)
+  assert.deepEqual(twentyFirst.body, { error: 'Too many Axies in the scrapbook' })
+
+  // `egg` answers the same way once nothing is active to fall back on.
+  acc.activeBuddyId = null
+  const egg = await call('/api/buddy/egg', { method: 'POST' })
+  assert.equal(egg.status, 409)
+  assert.deepEqual(egg.body, { error: 'Too many Axies in the scrapbook' })
+  assert.equal(buddy.load().accounts['device:unit-dev'].buddyIds.length, 20, 'nothing was added')
+})
+
+test('photoIds keeps the first five and the last sixty; snapCount stays the true total', () => {
+  const { buddy, call } = directModule()
+  return call('/api/buddy/egg', { method: 'POST' }).then(() => {
+    for (let i = 0; i < 80; i++) buddy.recordSnap({ id: `p-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+    const b = buddy.getActive('device:unit-dev')
+    assert.equal(b.snapCount, 80)
+    assert.equal(b.photoIds.length, 65)
+    assert.deepEqual(b.photoIds.slice(0, 5), ['p-0', 'p-1', 'p-2', 'p-3', 'p-4'], 'the head the diary indexes into')
+    assert.equal(b.photoIds.at(-1), 'p-79', 'the tail the scrapbook shows')
+    assert.equal(b.photos.length, 60)
+  })
+})
+
+// --- the earned fourth trait ------------------------------------------------------------------
+
+async function hatchedBuddy() {
+  const { buddy, call } = directModule()
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  const h = await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  assert.equal(h.status, 200, JSON.stringify(h.body))
+  return { buddy, b: buddy.getActive('device:unit-dev') }
+}
+
+test('crossing to bond level 10 earns a fourth trait from how the Axie was played', async () => {
+  const plain = await hatchedBuddy()
+  assert.equal(plain.b.earnedTrait, null, 'not earned before level 10')
+  plain.b.bond = 119
+  plain.buddy.addBond(plain.b, 1)
+  assert.equal(plain.b.bond, 120)
+  assert.equal(plain.b.earnedTrait, 'Socialite', 'no night moments, few places')
+
+  const owl = await hatchedBuddy()
+  owl.b.moments.push({ id: 'night-owl', at: new Date().toISOString(), photoId: 'x' })
+  owl.b.bond = 119
+  owl.buddy.addBond(owl.b, 1)
+  assert.equal(owl.b.earnedTrait, 'Night owl')
+
+  const wanderer = await hatchedBuddy()
+  wanderer.b.places = Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`g${i}`, { first: 'x', count: 1, district: null }]))
+  wanderer.b.bond = 119
+  wanderer.buddy.addBond(wanderer.b, 1)
+  assert.equal(wanderer.b.earnedTrait, 'Wanderer')
+
+  // Earned once, and never re-decided by later bond.
+  wanderer.b.moments.push({ id: 'night-owl', at: new Date().toISOString(), photoId: 'x' })
+  wanderer.buddy.addBond(wanderer.b, 1)
+  assert.equal(wanderer.b.earnedTrait, 'Wanderer')
+})
+
+test('the wish bonus is not burned when the daily cap leaves no room for it', async () => {
+  const { buddy, b } = await hatchedBuddy()
+  const day = new Date().toISOString().slice(0, 10)
+  // 'crowd' matches any snap, so only the cap decides whether the bonus lands.
+  b.wish = { day, id: 'crowd', text: 'Take me where the people are', bonus: 1, done: false }
+  b.bondByDay[day] = 10 // the day is spent
+  const capped = buddy.recordSnap({ id: 'capped' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  assert.equal(capped.granted, 0)
+  assert.equal(capped.wishDone, null, 'nothing was granted, so nothing was spent')
+  assert.equal(b.wish.done, false, 'the wish is still there tomorrow')
+
+  b.bondByDay[day] = 0 // a new day's worth of room
+  const open = buddy.recordSnap({ id: 'open' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  assert.ok(open.wishDone, 'now the bonus lands and the wish is spent')
+  assert.equal(b.wish.done, true)
+})
+
+// --- the voice rule at the HTTP edge -----------------------------------------------------------
+
+// Two trait pools of one line each: by the third greeting both are in `recentLines` and pickLine
+// falls through to TEMPLATES, where `{count}`/`{days}` are filled from real numbers.
+test('the greeting never carries a digit, even once it falls through to the templates', async () => {
+  const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  for (let i = 0; i < 5; i++) await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
+  assert.equal((await api('/api/buddy/hatch', { method: 'POST', device: d, body: { name: 'Miso' } })).status, 200)
+  for (let i = 0; i < 3; i++) {
+    const g = await api('/api/buddy', { device: d })
+    assert.equal(g.status, 200)
+    assert.ok(typeof g.json.greeting === 'string' && g.json.greeting.length > 0, `greeting ${i + 1} present`)
+    assert.doesNotMatch(g.json.greeting, /\d/, `greeting ${i + 1}: ${g.json.greeting}`)
+  }
+})
+
+// --- the flag ----------------------------------------------------------------------------------
+
+test('with BUDDY=0 the buddy routes do not exist', async () => {
+  flagOffServer = await startNodeServer({ BUDDY: '0' })
+  const r = await fetch(flagOffServer.baseUrl + '/api/buddy', { headers: { 'X-Device-Key': dev() } })
+  assert.equal(r.status, 404)
+  assert.deepEqual(await r.json(), { error: 'Not found' })
 })
 
 test('a device redeeming its own recovery code is a no-op that does not burn the code', async () => {

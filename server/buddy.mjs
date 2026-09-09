@@ -2,7 +2,7 @@
 import catalogueJson from './partCatalogue.json' with { type: 'json' }
 import {
   LADDER, LEVEL_NAMES, levelFor, nextStep, eggOdds, rollWild, rollTraits, traitsForOwned,
-  wishForToday, detectMoments, MOMENTS, hashInt,
+  wishForToday, detectMoments, MOMENTS,
 } from './buddyRules.mjs'
 import { pickLine } from './voiceLines.mjs'
 import { signInMessage, recoverAddress } from './roninSig.mjs'
@@ -11,33 +11,85 @@ const NAME_RE = /^[\p{L}\p{N} '’-]{2,16}$/u
 const BAD_WORDS = ['shit', 'fuck', 'cunt', 'nigg', 'fag', 'bitch', 'dick', 'porn', 'nazi']
 const DAILY_CAP = 10
 const PLACE_GRID_DEG = 0.003 // ~300 m
-/** Scrapbook keeps the last N photo records (id + upload path); photoIds stays uncapped. */
+/** Scrapbook keeps the last N photo records (id + upload path). */
 const PHOTO_CAP = 60
-/** Spells small counts in words so a talk reply never carries a digit (voice rule). */
-const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
-const wordsFor = (n) => (n >= 0 && n < ONES.length ? ONES[n] : 'a lot of')
+/**
+ * `photoIds` is unbounded no longer: the head is what the diary indexes into (day one, hatch day),
+ * the tail is what the scrapbook shows, and the middle is never read by anything.
+ */
+const PHOTO_ID_HEAD = 5
+const PHOTO_ID_TAIL = 60
+/** Cap on how many Axies one account can pile into its scrapbook. */
+const BUDDY_CAP = 20
+/** Spells counts in words so a spoken line never carries a digit (voice rule). */
+const ONES = [
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen',
+  'nineteen', 'twenty', 'twenty-one', 'twenty-two', 'twenty-three', 'twenty-four', 'twenty-five',
+  'twenty-six', 'twenty-seven', 'twenty-eight', 'twenty-nine', 'thirty', 'thirty-one',
+]
+const wordsFor = (n) => (Number.isFinite(n) && n >= 0 && n < ONES.length ? ONES[Math.floor(n)] : 'many')
+/**
+ * Per-device hourly ceilings for the routes that create or move state. `handle` takes the
+ * limit from `"<METHOD> <path>"` so a mismatched method never spends a slot.
+ */
+const RATE_LIMITS = {
+  'POST /api/buddy/egg': 5,
+  'POST /api/buddy/retire': 5,
+  'POST /api/account/recover': 10,
+  'POST /api/account/recovery': 10,
+  'GET /api/ronin/nonce': 20,
+  'POST /api/ronin/verify': 20,
+}
+/** A signed-in nonce is only worth keeping for ten minutes; these bound the pending map. */
+const NONCE_TTL_MS = 10 * 60_000
+const NONCES_PER_ADDRESS = 5
+const NONCE_ADDRESS_CAP = 2000
 
 export function createBuddyModule({ storage, helpers, env = {}, catalogue = catalogueJson, now = () => Date.now(), rng = Math.random }) {
-  const { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress } = helpers
+  const { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress, checkRate, recordRate } = helpers
   const enabled = env.BUDDY !== '0'
 
-  const emptyStore = () => ({ accounts: {}, buddies: {}, usedRecoveryCodes: {} })
+  const emptyStore = () => ({ accounts: {}, buddies: {}, usedRecoveryCodes: {}, pendingNonces: {} })
   const load = () => storage.get('buddies', emptyStore)
   const save = (s) => storage.set('buddies', s)
   const monthKey = () => manilaDayKey().slice(0, 7)
   const uid = () => crypto.randomUUID()
 
   function accountFor(store, ownerKey) {
-    return (store.accounts[ownerKey] ||= { ownerKey, activeBuddyId: null, buddyIds: [], recoveryCode: null, nonces: {} })
+    return (store.accounts[ownerKey] ||= { ownerKey, activeBuddyId: null, buddyIds: [], recoveryCode: null })
   }
-  /** Session (Task 8) wins over device key. */
-  function ownerKeyFrom(req, body, url) {
-    const session = req.headers?.get?.('x-buddy-session') || url?.searchParams?.get('session')
+  /**
+   * Session (Task 8) wins over device key. Header only: a session in the query string would ride
+   * along in referrers, logs and shared links, so it is not accepted there.
+   */
+  function ownerKeyFrom(req, body) {
+    const session = req.headers?.get?.('x-buddy-session')
     const addr = session ? verifySession(load(), session) : null
     if (addr) return `ronin:${addr}`
     const dk = deviceKeyFrom(req, body || {})
     return dk ? `device:${dk}` : null
   }
+  /**
+   * Bounds the pending-nonce map: expired nonces go, then the oldest ones past five for this
+   * address, then the least recently used addresses past two thousand. Without this an unsigned
+   * GET could grow the store without limit.
+   */
+  function prunePendingNonces(pending, address) {
+    const bucket = pending[address]
+    if (bucket) {
+      for (const k of Object.keys(bucket)) if (now() - bucket[k] > NONCE_TTL_MS) delete bucket[k]
+      const keys = Object.keys(bucket).sort((a, b) => bucket[a] - bucket[b])
+      while (keys.length > NONCES_PER_ADDRESS) delete bucket[keys.shift()]
+      if (!Object.keys(bucket).length) delete pending[address]
+    }
+    const addrs = Object.keys(pending)
+    if (addrs.length <= NONCE_ADDRESS_CAP) return
+    const newestOf = (a) => Math.max(0, ...Object.values(pending[a]))
+    addrs.sort((a, b) => newestOf(a) - newestOf(b))
+    while (addrs.length > NONCE_ADDRESS_CAP) delete pending[addrs.shift()]
+  }
+
   function verifySession(store, token) {
     for (const acc of Object.values(store.accounts)) if (acc.session === token && acc.ownerKey.startsWith('ronin:')) return acc.ownerKey.slice(6)
     return null
@@ -51,6 +103,19 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     for (const id of from.buddyIds) { const b = store.buddies[id]; if (!b) continue; b.ownerKey = toKey; if (!to.buddyIds.includes(id)) to.buddyIds.push(id) }
     if (!to.activeBuddyId || !store.buddies[to.activeBuddyId]?.hatchedAt) to.activeBuddyId = from.activeBuddyId || to.activeBuddyId
     from.buddyIds = []; from.activeBuddyId = null
+  }
+
+  /**
+   * A recovery code moves a whole account to another phone, so it is a credential and never comes
+   * from the injectable `rng` (seeded in tests, Math.random in production). The 32-letter alphabet
+   * divides 256 exactly, so a plain byte -> letter map is unbiased.
+   */
+  const RECOVERY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  function recoveryCode() {
+    const bytes = new Uint8Array(12)
+    crypto.getRandomValues(bytes)
+    const letters = Array.from(bytes, (n) => RECOVERY_ALPHABET[n % RECOVERY_ALPHABET.length])
+    return [letters.slice(0, 4), letters.slice(4, 8), letters.slice(8, 12)].map((c) => c.join('')).join('-')
   }
 
   function newEgg(ownerKey) {
@@ -101,9 +166,13 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const buddies = acc.buddyIds.map((id) => publicBuddy(store.buddies[id])).filter(Boolean)
     return { active: publicBuddy(store.buddies[acc.activeBuddyId]), buddies, ...extra }
   }
-  function getActive(ownerKey) {
-    const store = load(); const acc = store.accounts[ownerKey]
+  /** Active buddy inside an already-loaded store, so a caller that has one never loads it twice. */
+  function getActiveIn(store, ownerKey) {
+    const acc = store.accounts[ownerKey]
     return acc ? store.buddies[acc.activeBuddyId] || null : null
+  }
+  function getActive(ownerKey) {
+    return getActiveIn(load(), ownerKey)
   }
 
   function say(b, situation, slots = {}) {
@@ -129,12 +198,29 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     return placesLine()
   }
 
+  /** The weather slot is client-supplied and lands inside a spoken line: letters only, never a digit. */
+  function weatherWord(raw) {
+    const w = String(raw || '').toLowerCase().replace(/[^a-z ]/g, '').trim().slice(0, 16)
+    return w || 'fine'
+  }
+
   function validName(raw) {
     const name = String(raw || '').trim().replace(/\s+/g, ' ')
     if (!NAME_RE.test(name)) return null
     const low = name.toLowerCase().replace(/[^a-z]/g, '')
     if (BAD_WORDS.some((w) => low.includes(w))) return null
     return name
+  }
+
+  /**
+   * The fourth trait is not rolled, it is earned: at bond level 10 the Axie takes a name for how it
+   * was actually played. Night owl beats Wanderer beats Socialite, and it is set once, for good.
+   */
+  function earnTrait(b, before, after) {
+    if (!(before < 10 && after >= 10) || b.earnedTrait) return
+    if (b.moments.some((m) => m.id === 'night-owl')) b.earnedTrait = 'Night owl'
+    else if (Object.keys(b.places || {}).length >= 8) b.earnedTrait = 'Wanderer'
+    else b.earnedTrait = 'Socialite'
   }
 
   function addBond(b, amount) {
@@ -151,6 +237,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const after = levelFor(b.bond)
     const unlocks = []
     for (const row of LADDER) if (row.level > before && row.level <= after) { unlocks.push(row); if (row.unlock && !b.wardrobe.unlocked.includes(row.unlock)) b.wardrobe.unlocked.push(row.unlock) }
+    earnTrait(b, before, after)
     return { granted, unlocks }
   }
 
@@ -158,12 +245,17 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
   function recordSnap(post, ctx) {
     if (!enabled || !ctx.buddy) return null
     const store = load()
-    const b = getActive(ctx.ownerKey)
+    const b = getActiveIn(store, ctx.ownerKey)
     if (!b || b.retiredAt) return null
     const grid = gridOf(ctx.lat, ctx.lng)
     const hour = Number(ctx.hour ?? new Date(now()).getUTCHours() + 8) % 24
     const labels = Array.isArray(ctx.labels) ? ctx.labels.slice(0, 12).map(String) : []
     b.photoIds.push(post.id); b.snapCount += 1; b.lastSnapAt = new Date(now()).toISOString()
+    // Keep the head the diary indexes into and the tail the scrapbook shows; drop the middle,
+    // which nothing reads. `snapCount` stays the true total.
+    if (b.photoIds.length > PHOTO_ID_HEAD + PHOTO_ID_TAIL) {
+      b.photoIds = [...b.photoIds.slice(0, PHOTO_ID_HEAD), ...b.photoIds.slice(-PHOTO_ID_TAIL)]
+    }
     // `photoIds` are post ids; /api/image/<id> serves marketplace art, so the scrapbook needs the
     // stored upload path too. Kept alongside photoIds (never instead of it) and capped at the last 60.
     b.photos = [...(b.photos || []), { id: post.id, imagePath: post.imagePath || '', at: b.lastSnapAt }].slice(-PHOTO_CAP)
@@ -187,8 +279,13 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const { granted, unlocks } = addBond(b, 1)
     let wishDone = null
     if (b.wish.day === manilaDayKey() && !b.wish.done && wishMatches(b.wish.id, { hour, weather: ctx.weather, placeType: ctx.placeType, labels, isNewPlace })) {
-      b.wish.done = true; b.firstsDone.push(b.wish.id); wishDone = b.wish
-      const w = addBond(b, b.wish.bonus); unlocks.push(...w.unlocks)
+      // Only spend the wish if the bonus actually landed: with the daily cap already full the
+      // bonus would be worth nothing, so the wish stays open for tomorrow instead of burning.
+      const w = addBond(b, b.wish.bonus)
+      if (w.granted >= 1) {
+        b.wish.done = true; b.firstsDone.push(b.wish.id); wishDone = b.wish
+        unlocks.push(...w.unlocks)
+      }
     }
     const districtsToday = new Set(Object.values(b.places).filter((p) => p.district && p.count).map((p) => p.district)).size
     const found = detectMoments({ hour, weather: ctx.weather, placeType: ctx.placeType, labels, isNewPlace, isNewDistrict: Boolean(ctx.district), districtsToday, snapCount: b.snapCount, hatchGrid: b.hatchGrid, grid }, b.moments.map((m) => m.id))
@@ -268,8 +365,17 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     if (url.pathname.startsWith('/api/admin/')) return handleAdmin(req, res, url)
     let body = {}
     if (req.method === 'POST') { try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}') } catch { sendJson(res, 400, { error: 'Invalid JSON' }); return true } }
-    const ownerKey = ownerKeyFrom(req, body, url)
+    const ownerKey = ownerKeyFrom(req, body)
     if (!ownerKey) { sendJson(res, 400, { error: 'Missing X-Device-Key' }); return true }
+    // Per-device hourly ceilings on the state-creating routes. Answered like a post 429 so the
+    // client can read `limit` the same way. Host without a rate limiter (unit tests): no ceiling.
+    const rateLimit = RATE_LIMITS[`${req.method} ${url.pathname}`]
+    if (rateLimit && typeof checkRate === 'function' && typeof recordRate === 'function') {
+      const rateKey = deviceKeyFrom(req, body) || ownerKey
+      const r = checkRate(rateKey, 'buddy', { limit: rateLimit })
+      if (!r.ok) { sendJson(res, 429, { error: `Rate limit: max ${rateLimit}/hour`, limit: rateLimit }); return true }
+      recordRate(rateKey, 'buddy')
+    }
     const store = load()
     const acc = accountFor(store, ownerKey)
     const active = store.buddies[acc.activeBuddyId] || null
@@ -277,12 +383,15 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
 
     if (p === '/api/buddy' && req.method === 'GET') {
       if (active?.hatchedAt) { ensureWish(active, { weather: url.searchParams.get('weather'), hour: url.searchParams.get('hour') }); save(store) }
-      const greeting = active?.hatchedAt ? say(active, hoursSince(active.lastSnapAt) >= 48 ? 'return' : 'morning', { count: daysSince(active.hatchedAt), days: Math.floor(hoursSince(active.lastSnapAt) / 24), weather: url.searchParams.get('weather') || 'fine' }) : null
+      // Numeric slots are spelled: a template line that reached a digit would break the voice rule
+      // ("no numbers") the moment the trait pools ran dry and `{count}`/`{days}` were filled.
+      const greeting = active?.hatchedAt ? say(active, hoursSince(active.lastSnapAt) >= 48 ? 'return' : 'morning', { count: wordsFor(daysSince(active.hatchedAt)), days: wordsFor(Math.floor(hoursSince(active.lastSnapAt) / 24)), weather: weatherWord(url.searchParams.get('weather')) }) : null
       if (greeting) save(store)
       sendJson(res, 200, payload(store, ownerKey, { greeting })); return true
     }
     if (p === '/api/buddy/egg' && req.method === 'POST') {
       if (active && !active.retiredAt && !active.hatchedAt) { sendJson(res, 200, payload(store, ownerKey)); return true }
+      if (acc.buddyIds.length >= BUDDY_CAP) { sendJson(res, 409, { error: 'Too many Axies in the scrapbook' }); return true }
       const egg = newEgg(ownerKey)
       store.buddies[egg.id] = egg; acc.buddyIds.push(egg.id); acc.activeBuddyId = egg.id
       save(store); sendJson(res, 201, payload(store, ownerKey)); return true
@@ -303,6 +412,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       save(store); sendJson(res, 200, payload(store, ownerKey, { lines, unlocks: conv.unlocks })); return true
     }
     if (p === '/api/buddy/retire' && req.method === 'POST') {
+      if (acc.buddyIds.length >= BUDDY_CAP) { sendJson(res, 409, { error: 'Too many Axies in the scrapbook' }); return true }
       if (active && active.hatchedAt) active.retiredAt = new Date(now()).toISOString()
       const egg = newEgg(ownerKey)
       store.buddies[egg.id] = egg; acc.buddyIds.push(egg.id); acc.activeBuddyId = egg.id
@@ -346,17 +456,25 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     if (p === '/api/ronin/nonce' && req.method === 'GET') {
       const address = normalizeAddress(url.searchParams.get('address') || '')
       if (!address) { sendJson(res, 400, { error: 'address required' }); return true }
+      // A nonce is a challenge, not an account: anyone can ask for one for any address, so this
+      // route must never mint `ronin:<addr>`. The pending map is bounded on both axes.
       const nonce = crypto.randomUUID().replace(/-/g, '').slice(0, 16)
-      const nonceAcc = accountFor(store, `ronin:${address}`)
-      nonceAcc.nonces[nonce] = now(); for (const k of Object.keys(nonceAcc.nonces)) if (now() - nonceAcc.nonces[k] > 10 * 60_000) delete nonceAcc.nonces[k]
+      const pending = (store.pendingNonces ||= {})
+      const bucket = (pending[address] ||= {})
+      bucket[nonce] = now()
+      prunePendingNonces(pending, address)
       save(store); sendJson(res, 200, { nonce, message: signInMessage(address, nonce) }); return true
     }
     if (p === '/api/ronin/verify' && req.method === 'POST') {
       const address = normalizeAddress(String(body.address || ''))
-      const verifyAcc = address ? store.accounts[`ronin:${address}`] : null
-      const nonce = verifyAcc && Object.keys(verifyAcc.nonces).find((n) => now() - verifyAcc.nonces[n] <= 10 * 60_000 && recoverAddress(signInMessage(address, n), String(body.signature || '')) === address)
-      if (!address || !verifyAcc || !nonce) { sendJson(res, 401, { error: 'Signature does not match' }); return true }
-      delete verifyAcc.nonces[nonce]
+      const pending = (store.pendingNonces ||= {})
+      const bucket = address ? pending[address] : null
+      const nonce = bucket && Object.keys(bucket).find((n) => now() - bucket[n] <= NONCE_TTL_MS && recoverAddress(signInMessage(address, n), String(body.signature || '')) === address)
+      if (!address || !bucket || !nonce) { sendJson(res, 401, { error: 'Signature does not match' }); return true }
+      delete bucket[nonce]
+      if (!Object.keys(bucket).length) delete pending[address]
+      // Only now, with a signature that actually recovers to this address, does the account exist.
+      const verifyAcc = accountFor(store, `ronin:${address}`)
       verifyAcc.session = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, '')
       const dk = deviceKeyFrom(req, body)
       if (dk) mergeAccounts(store, `device:${dk}`, verifyAcc.ownerKey)
@@ -392,9 +510,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     }
     if (p === '/api/account/recovery' && req.method === 'POST') {
       if (!ownerKey.startsWith('device:')) { sendJson(res, 400, { error: 'Recovery codes are for guest accounts; your wallet already keeps your Axies' }); return true }
-      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-      const chunk = () => Array.from({ length: 4 }, () => alphabet[Math.floor(rng() * alphabet.length)]).join('')
-      acc.recoveryCode = `${chunk()}-${chunk()}-${chunk()}`
+      acc.recoveryCode = recoveryCode()
       save(store); sendJson(res, 200, { code: acc.recoveryCode }); return true
     }
     if (p === '/api/account/recover' && req.method === 'POST') {
@@ -450,6 +566,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const before = levelFor(b.bond); b.bond += amount; b.monthly = { key: monthKey(), bond: (b.monthly.key === monthKey() ? b.monthly.bond : 0) + amount }
     const after = levelFor(b.bond); const unlocks = []
     for (const row of LADDER) if (row.level > before && row.level <= after) { unlocks.push(row); if (row.unlock) b.wardrobe.unlocked.push(row.unlock) }
+    earnTrait(b, before, after)
     return { unlocks }
   }
   const hoursSince = (iso) => (iso ? (now() - Date.parse(iso)) / 36e5 : 0)
