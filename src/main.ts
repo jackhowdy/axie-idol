@@ -773,6 +773,8 @@ function warmAxieMixer(): void {
 /** R1 keeps the frame choice on the device — the buddy record has no frame field yet. */
 const FRAME_LS = 'axieIdol.frame'
 let wardrobeCtx: CanvasRenderingContext2D | null = null
+/** Mirrors `#wardrobe-overlay`'s `hidden` (it starts hidden in index.html) — never read back off it. */
+let wardrobeOverlayShown = false
 
 function activeFrame(): FrameId {
   const saved = lsGet(FRAME_LS)
@@ -819,10 +821,27 @@ function syncOverlaySize(
 
 /** The overlay tracks the sticker's own left/top/transform so the two boxes stay concentric. */
 function positionWardrobeOverlay(): void {
-  if (!wardrobeOverlay || wardrobeOverlay.hidden) return
+  if (!wardrobeOverlay || !wardrobeOverlayShown) return
   wardrobeOverlay.style.left = `${state.x + state.gyroX}px`
   wardrobeOverlay.style.top = `${state.y + state.gyroY}px`
   wardrobeOverlay.style.transform = `translate(-50%, -50%) rotate(${state.rotation}deg) scale(${state.scale})`
+}
+
+/**
+ * Show or hide the overlay, writing the attribute only on a transition (tracked here, never read
+ * back off the element). Returns true when this call made it visible.
+ *
+ * Visibility MUST be set before any measurement: `hidden` is `display: none`, and a `display: none`
+ * element reports `clientWidth`/`clientHeight` of 0 — so measuring first and unhiding afterwards
+ * leaves the overlay hidden for ever. Hiding also clears the canvas, so a later unhide on a frame
+ * that cannot measure yet can never flash stale pixels.
+ */
+function setWardrobeOverlayShown(show: boolean): boolean {
+  if (!wardrobeOverlay || show === wardrobeOverlayShown) return false
+  wardrobeOverlayShown = show
+  wardrobeOverlay.hidden = !show
+  if (!show && wardrobeCtx) wardrobeCtx.clearRect(0, 0, wardrobeCtx.canvas.width, wardrobeCtx.canvas.height)
+  return show
 }
 
 /** Runs on every 3D frame: clear the overlay and stamp the worn sprite on its joint. */
@@ -830,22 +849,22 @@ function drawWardrobeOverlay(): void {
   if (!wardrobeOverlay) return
   const worn = wornItem()
   if (!worn || !axie3d?.ready) {
-    if (!wardrobeOverlay.hidden) wardrobeOverlay.hidden = true
+    setWardrobeOverlayShown(false)
     return
   }
+  // visible first, then measured — see setWardrobeOverlayShown
+  if (setWardrobeOverlayShown(true)) positionWardrobeOverlay()
   const pad = syncOverlaySize(wardrobeOverlay, axie3d.canvas)
+  // not laid out yet (the camera pane is still opening): stay visible but empty, retry next frame
   if (!pad) return
   if (!wardrobeCtx || wardrobeCtx.canvas !== wardrobeOverlay) wardrobeCtx = wardrobeOverlay.getContext('2d')
   if (!wardrobeCtx) return
-  const wasHidden = wardrobeOverlay.hidden
-  if (wasHidden) wardrobeOverlay.hidden = false
   drawWardrobe(wardrobeCtx, worn, offsetJoints(axie3d.jointScreenPositions(), pad.dx, pad.dy))
-  if (wasHidden) positionWardrobeOverlay()
 }
 
 function disposeAxie3D(): void {
   if (!axie3d) return
-  if (wardrobeOverlay) wardrobeOverlay.hidden = true
+  setWardrobeOverlayShown(false)
   axie3d.onFrame(null)
   axie3d.dispose()
   axie3d = null
@@ -2137,7 +2156,7 @@ async function captureComposite(): Promise<void> {
     ctx.restore()
     // The worn wardrobe item: its own, larger overlay box, concentric with the 3D canvas, so the
     // same transform lands it on the same joints as the live view. renderNow() above refreshed it.
-    if (wardrobeOverlay && !wardrobeOverlay.hidden && wardrobeOverlay.clientWidth > 0) {
+    if (wardrobeOverlay && wardrobeOverlayShown && wardrobeOverlay.clientWidth > 0) {
       const ow = wardrobeOverlay.clientWidth * scaleX
       const oh = wardrobeOverlay.clientHeight * scaleX
       ctx.save()
@@ -2987,6 +3006,18 @@ let buddyHeroRequest = 0
 /** The hero's own wardrobe overlay — same approach as the camera, on a second 2x canvas. */
 let buddyHeroOverlay: HTMLCanvasElement | null = null
 let buddyHeroCtx: CanvasRenderingContext2D | null = null
+/** Mirrors the hero overlay's `hidden` (it is created hidden) — never read back off the element. */
+let buddyHeroOverlayShown = false
+
+/** Same contract as setWardrobeOverlayShown: visibility is set before anything measures the box. */
+function setBuddyHeroOverlayShown(show: boolean): boolean {
+  const overlay = buddyHeroOverlay
+  if (!overlay || show === buddyHeroOverlayShown) return false
+  buddyHeroOverlayShown = show
+  overlay.hidden = !show
+  if (!show && buddyHeroCtx) buddyHeroCtx.clearRect(0, 0, buddyHeroCtx.canvas.width, buddyHeroCtx.canvas.height)
+  return show
+}
 
 function drawBuddyHeroWardrobe(): void {
   const hero = buddyHero
@@ -2994,14 +3025,15 @@ function drawBuddyHeroWardrobe(): void {
   if (!hero || !overlay) return
   const worn = buddyState.active?.wardrobe.worn ?? null
   if (!worn || !hero.ready || !overlay.isConnected) {
-    if (!overlay.hidden) overlay.hidden = true
+    setBuddyHeroOverlayShown(false)
     return
   }
+  // visible first, then measured — a display:none element measures 0x0
+  setBuddyHeroOverlayShown(true)
   const pad = syncOverlaySize(overlay, hero.canvas)
-  if (!pad) return
+  if (!pad) return // hero box not laid out yet; retry on the next frame
   if (!buddyHeroCtx) buddyHeroCtx = overlay.getContext('2d')
   if (!buddyHeroCtx) return
-  if (overlay.hidden) overlay.hidden = false
   drawWardrobe(buddyHeroCtx, worn, offsetJoints(hero.jointScreenPositions(), pad.dx, pad.dy))
 }
 
@@ -3012,7 +3044,7 @@ async function showBuddyFaceIn(host: HTMLElement): Promise<void> {
   if (req !== buddyHeroRequest) return
   if (!spec) {
     buddyHero?.pause()
-    if (buddyHeroOverlay) buddyHeroOverlay.hidden = true
+    setBuddyHeroOverlayShown(false)
     const img = document.createElement('img')
     img.src = eggSpriteUrl()
     img.alt = ''
@@ -3045,7 +3077,7 @@ async function showBuddyFaceIn(host: HTMLElement): Promise<void> {
 function pauseBuddyFace(): void {
   buddyHeroRequest++
   buddyHero?.pause()
-  if (buddyHeroOverlay) buddyHeroOverlay.hidden = true
+  setBuddyHeroOverlayShown(false)
 }
 
 function showViewfinderFromFeed(): void {

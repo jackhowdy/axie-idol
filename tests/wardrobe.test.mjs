@@ -9,7 +9,22 @@ import {
   placeItem,
   offsetJoints,
   unitFor,
+  drawWardrobe,
+  drawFrame,
 } from '../src/wardrobe.ts'
+
+/** Enough of a 2D context to record what drawWardrobe/drawFrame did. */
+const stubCtx = (w = 720, h = 720) => {
+  const calls = { clear: 0, draws: [] }
+  return {
+    calls,
+    canvas: { width: w, height: h },
+    clearRect: () => { calls.clear++ },
+    drawImage: (img, x, y, dw, dh) => { calls.draws.push({ img, x, y, w: dw, h: dh }) },
+  }
+}
+/** A loaded sprite; `complete: false` or a 0 width is what an unloaded/missing image looks like. */
+const stubImg = (w = 256, h = 256, complete = true) => ({ complete, naturalWidth: w, naturalHeight: h })
 
 /**
  * A plausible projected joint set for a 240x240 canvas: the character fills the frame, the ear
@@ -105,6 +120,48 @@ test('offsetJoints shifts every joint and keeps the scale', () => {
 
 test('offsetJoints passes null through', () => {
   assert.equal(offsetJoints(null, 10, 10), null)
+})
+
+test('drawWardrobe clears the overlay and stamps the sprite exactly once', () => {
+  const ctx = stubCtx()
+  const img = stubImg()
+  const j = offsetJoints(joints(), 240, 240)
+  assert.equal(drawWardrobe(ctx, 'hat', j, () => img), true)
+  assert.equal(ctx.calls.clear, 1)
+  assert.equal(ctx.calls.draws.length, 1, 'one drawImage per frame')
+  const expected = placeItem(ITEM_ANCHORS.hat, j.head, 256, 256)
+  assert.deepEqual(
+    { x: ctx.calls.draws[0].x, y: ctx.calls.draws[0].y, w: ctx.calls.draws[0].w, h: ctx.calls.draws[0].h },
+    expected,
+  )
+})
+
+test('drawWardrobe clears and draws nothing when there is nothing to draw', () => {
+  for (const [worn, jointSet, resolve] of [
+    [null, offsetJoints(joints(), 240, 240), () => stubImg()], // nothing worn
+    ['hat', null, () => stubImg()], // model not loaded (jointScreenPositions returned null)
+    ['sparkles', offsetJoints(joints(), 240, 240), () => stubImg()], // unknown item id
+    ['hat', offsetJoints(joints(), 240, 240), () => null], // no sprite for it
+    ['hat', offsetJoints(joints(), 240, 240), () => stubImg(256, 256, false)], // still loading
+    ['hat', offsetJoints(joints(), 240, 240), () => stubImg(0, 0)], // SVG with no intrinsic size
+  ]) {
+    const ctx = stubCtx()
+    assert.equal(drawWardrobe(ctx, worn, jointSet, resolve), false, `worn=${worn}`)
+    assert.equal(ctx.calls.clear, 1, 'the overlay is always cleared')
+    assert.equal(ctx.calls.draws.length, 0)
+  }
+})
+
+test('drawFrame stretches the frame over the whole canvas, and skips "none"', () => {
+  const ctx = stubCtx(1440, 2560)
+  assert.equal(drawFrame(ctx, 'film', () => stubImg(1080, 1440)), true)
+  assert.deepEqual(ctx.calls.draws, [{ img: ctx.calls.draws[0].img, x: 0, y: 0, w: 1440, h: 2560 }])
+  assert.equal(ctx.calls.clear, 0, 'the frame never clears the capture underneath it')
+  for (const id of [null, 'none']) {
+    const c = stubCtx(1440, 2560)
+    assert.equal(drawFrame(c, id, () => stubImg(1080, 1440)), false)
+    assert.equal(c.calls.draws.length, 0)
+  }
 })
 
 test('frame ids are the four R1 choices and are validated', () => {
