@@ -18,14 +18,14 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
 
     if (url.pathname.startsWith('/api/')) {
-      const stub = env.STORE.get(env.STORE.idFromName('main'))
+      const stub = env.STORE.get(env.STORE.idFromName('r1-2026-09'))
       return stub.fetch(request)
     }
 
     if (url.pathname.startsWith('/uploads/')) {
       if (!env.UPLOADS) {
         // No R2 bucket bound: photos live in the Durable Object
-        const stub = env.STORE.get(env.STORE.idFromName('main'))
+        const stub = env.STORE.get(env.STORE.idFromName('r1-2026-09'))
         return stub.fetch(request)
       }
       const name = url.pathname.slice('/uploads/'.length)
