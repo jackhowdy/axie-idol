@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -52,6 +52,36 @@ test('home locks wardrobe items that are not unlocked yet and names the bond tha
   assert.match(html, /data-item="cape"[^>]*disabled/)
   assert.match(html, /Bond 5/)
   assert.match(html, /data-item="hat"/)
+})
+
+test('camera wardrobe tray: unlocked items tap to wear, locked ones name the bond and are disabled', () => {
+  const ladder = [
+    { level: 2, bond: 12, reward: 'Scarf', unlock: 'scarf' },
+    { level: 5, bond: 34, reward: 'Cape and frames', unlock: 'cape' },
+    { level: 10, bond: 120, reward: 'Crown', unlock: 'crown' },
+  ]
+  const html = wardrobeTrayHtml({ ...miso, ladder })
+  assert.match(html, /data-wear="hat"[^>]*aria-pressed="true"/, 'the worn item reads as pressed')
+  assert.doesNotMatch(/<button[^>]*data-wear="hat"[^>]*>/.exec(html)[0], /disabled/)
+  assert.match(html, /data-wear="cape"[^>]*disabled/)
+  assert.match(html, /Bond 5/)
+  assert.match(html, /Bond 10/)
+  // unlocked-but-not-worn stays tappable and names the item, never a bond level
+  const scarf = /<button[^>]*data-wear="scarf"[\s\S]*?<\/button>/.exec(html)[0]
+  assert.doesNotMatch(scarf, /disabled/)
+  assert.match(scarf, /Scarf/)
+  assert.match(scarf, /aria-pressed="false"/)
+})
+
+test('camera wardrobe tray renders the five wearables only, and nothing at all without a hatched buddy', () => {
+  assert.equal(wardrobeTrayHtml(null), '')
+  assert.equal(wardrobeTrayHtml(egg), '', 'an egg wears nothing')
+  // A wardrobe the server has not granted is still drawn locked — the tray never invents unlocks,
+  // and an unknown item in `unlocked` cannot add a chip of its own.
+  const html = wardrobeTrayHtml({ ...miso, wardrobe: { unlocked: ['hat', '<img src=x>'], worn: null } })
+  assert.deepEqual([...html.matchAll(/data-wear="([^"]+)"/g)].map((m) => m[1]), ['hat', 'scarf', 'shades', 'cape', 'crown'])
+  assert.doesNotMatch(html, /<img src=x>/)
+  assert.doesNotMatch(html, /aria-pressed="true"/, 'nothing worn')
 })
 
 test('home always offers a way to talk, greeting or not', () => {

@@ -3329,6 +3329,17 @@ button.id-chip {
   display: none !important;
 }
 
+/* One-Axie loop: the wardrobe chips that take the crew tray's slot on the camera. Locked ones
+   are greyed and inert; the worn one lights up through the shared .prop-chip[aria-pressed] rule. */
+.wardrobe-chip.is-locked {
+  opacity: 0.42;
+  filter: grayscale(1);
+  cursor: default;
+}
+.wardrobe-chip.is-locked .prop-name {
+  color: var(--muted);
+}
+
 /* --- Narrow phones: feed header wraps into two rows (title row + actions row) --- */
 @media (max-width: 480px) {
   .feed-header {

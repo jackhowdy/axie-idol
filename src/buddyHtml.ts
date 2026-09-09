@@ -186,6 +186,33 @@ const FRAME_LABELS: Record<string, string> = {
 }
 
 /**
+ * Wardrobe picker for the camera tray, in place of the legacy "Your crew" cast tray.
+ *
+ * Unlocked items are tappable (`data-wear`; tapping the worn one takes it off), locked ones are
+ * disabled and named with the bond level from the buddy's own ladder. Purely a view: it never
+ * decides what is unlocked — `b.wardrobe.unlocked` comes from the server. Nothing before the
+ * hatch (an egg wears nothing), which is also why the tray is empty with no active buddy.
+ */
+export function wardrobeTrayHtml(b: Buddy | null): string {
+  if (!b || !b.hatchedAt) return ''
+  const levelByUnlock = new Map(b.ladder.map((r) => [r.unlock, r.level]))
+  return WEARABLES.map((it) => {
+    const unlocked = b.wardrobe.unlocked.includes(it)
+    const worn = b.wardrobe.worn === it
+    const level = levelByUnlock.get(it)
+    const name = it[0].toUpperCase() + it.slice(1)
+    const label = unlocked ? name : `Bond ${level ?? '?'}`
+    const title = unlocked
+      ? worn ? `Take off the ${it}` : `Wear the ${it}`
+      : `${name} unlocks at bond ${level ?? '?'}`
+    return `<button type="button" class="prop-chip wardrobe-chip${unlocked ? '' : ' is-locked'}${worn ? ' is-worn' : ''}" data-wear="${esc(it)}" aria-pressed="${worn ? 'true' : 'false'}"${unlocked ? '' : ' disabled'} title="${esc(title)}">
+  <span class="prop-ico" aria-hidden="true">${icon(it, 16)}</span>
+  <span class="prop-name">${esc(label)}</span>
+</button>`
+  }).join('')
+}
+
+/**
  * Photo-frame picker for the camera tray. Frames arrive with the cape at bond level 5, and the
  * choice is a client-side preference (localStorage) in R1 — the buddy record has no frame field.
  */

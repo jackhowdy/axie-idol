@@ -47,8 +47,16 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   let exchanges: TalkExchange[] = []
   let busy = false
 
+  /**
+   * `hidden` alone is not enough for the legacy screens: `.screen.active { display: block }` is an
+   * author rule, so it beats the UA sheet's `[hidden]` and the screen keeps rendering underneath.
+   * The class has to come off too, or the legacy feed stays painted below the buddy screens.
+   */
   function hideAll(): void {
-    for (const s of document.querySelectorAll<HTMLElement>('.screen')) s.hidden = true
+    for (const s of document.querySelectorAll<HTMLElement>('.screen')) {
+      s.hidden = true
+      s.classList.remove('active')
+    }
   }
 
   async function show(which: BuddyScreen): Promise<void> {

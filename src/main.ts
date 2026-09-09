@@ -14,11 +14,11 @@ import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
 import {
   buddyEnabled, bindDeviceKey, loadBuddy, buddyState, faceIdForBuddy, snapContext, beforeLine,
-  lsGet, lsSet,
+  wear, lsGet, lsSet,
   type SnapResult,
 } from './buddy'
 import { mountBuddyScreens } from './buddyScreens'
-import { reactionHtml, momentHtml, unlockHtml, vfChipHtml, wishPillHtml, frameTrayHtml } from './buddyHtml.ts'
+import { reactionHtml, momentHtml, unlockHtml, vfChipHtml, wishPillHtml, frameTrayHtml, wardrobeTrayHtml } from './buddyHtml.ts'
 import {
   FRAME_IDS, drawFrame, drawWardrobe, isFrameId, offsetJoints, preloadWardrobe,
   type FrameId,
@@ -632,6 +632,9 @@ const propTray = document.querySelector<HTMLElement>('#prop-tray')!
 /** One-Axie loop: worn-item overlay over the live 3D canvas, and the photo-frame picker. */
 const wardrobeOverlay = document.querySelector<HTMLCanvasElement>('#wardrobe-overlay')
 const frameTray = document.querySelector<HTMLElement>('#frame-tray')
+/** One-Axie loop: the wardrobe chips that replace the legacy crew tray under the flag. */
+const wardrobeTray = document.querySelector<HTMLElement>('#wardrobe-tray')
+const trayHead = document.querySelector<HTMLElement>('#tray-head')
 const castTray = document.querySelector<HTMLElement>('#cast-tray')!
 const mascotLoading = document.querySelector<HTMLElement>('#mascot-loading')!
 const mascotLoadingText = document.querySelector<HTMLElement>('#mascot-loading-text')!
@@ -792,6 +795,47 @@ function syncFrameTray(): void {
   frameTray.innerHTML = on ? frameTrayHtml(FRAME_IDS, activeFrame()) : ''
   frameTray.hidden = !on
 }
+
+/** The buddy's wardrobe chips. Empty (and hidden) with no active hatched Axie. */
+function syncWardrobeTray(): void {
+  if (!wardrobeTray) return
+  const html = buddyEnabled ? wardrobeTrayHtml(buddyState.active) : ''
+  wardrobeTray.innerHTML = html
+  wardrobeTray.hidden = !html
+}
+
+/**
+ * R1 camera tray: the one-Axie loop owns it. The legacy "Your crew" head, the cast tray, the prop
+ * tray and the owned-inventory tray are all hidden, and the buddy wardrobe takes their slot.
+ *
+ * Called from every place that un-hides one of those (`renderCreateTrays`, `refreshIdentityChrome`,
+ * `syncQuestHud`) rather than once at boot, because those run again later.
+ */
+function syncCameraTrays(): void {
+  if (!buddyEnabled) return
+  if (trayHead) trayHead.hidden = true
+  castTray.hidden = true
+  propTray.hidden = true
+  inventoryTray.hidden = true
+  // Top-chrome nav chips into the legacy screens: R1 has no feed and no profile.
+  if (btnToFeed) btnToFeed.hidden = true
+  if (btnToProfile) btnToProfile.hidden = true
+  syncWardrobeTray()
+}
+
+wardrobeTray?.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement | null)?.closest?.('.wardrobe-chip') as HTMLButtonElement | null
+  if (!btn || btn.disabled) return
+  e.preventDefault()
+  const item = btn.dataset.wear
+  if (!item) return
+  // Tapping the worn item takes it off. The 3D overlay reads `buddyState` on every frame, so the
+  // sprite follows on its own once the server has answered.
+  const next = buddyState.active?.wardrobe.worn === item ? null : item
+  void wear(next)
+    .then(() => syncWardrobeTray())
+    .catch((err: unknown) => showLiveToast((err as Error).message || 'Could not change that', 2000))
+})
 
 /** The worn item, or null when nothing is worn or the live face is not the buddy character. */
 function wornItem(): string | null {
@@ -3220,6 +3264,7 @@ function clearAxieTimeline(): void {
 }
 
 async function openAxieTimeline(axieId: string): Promise<void> {
+  if (legacyScreensBlocked()) return
   const id = axieId.trim()
   if (!isCostumeIdClient(id)) return
   feedMode = 'axie'
@@ -3236,7 +3281,21 @@ async function openAxieTimeline(axieId: string): Promise<void> {
   await refreshFeed()
 }
 
+/**
+ * R1 legacy-screen guard. Under `VITE_BUDDY=1` the one-Axie loop is the whole app: the feed,
+ * the quest ladder, the crew profile and the first-run onboarding have no way in. Boot and every
+ * buddy screen are already routed away from them; this is the backstop for the legacy handlers
+ * that survive on chrome the camera still shares, so a stray click lands on the buddy screens
+ * instead of a screen R1 has no navigation out of.
+ */
+function legacyScreensBlocked(): boolean {
+  if (!buddyEnabled) return false
+  void buddyUi?.show('auto')
+  return true
+}
+
 async function showFeed(mode: 'global' | 'following' = 'global'): Promise<void> {
+  if (legacyScreensBlocked()) return
   feedMode = mode
   timelineAxieId = null
   timelineFollowerCount = 0
@@ -4012,6 +4071,7 @@ function renderCreateTrays(): void {
   propTray.hidden = unlockedProps.size === 0
   syncCastTrayUI()
   syncPropTrayUI()
+  syncCameraTrays()
 }
 
 async function refreshMyCastCrew(): Promise<void> {
@@ -4620,6 +4680,7 @@ async function refreshBoard(): Promise<void> {
 }
 
 async function showBoard(): Promise<void> {
+  if (legacyScreensBlocked()) return
   hideAllScreens()
   setActiveTab('ladder')
   boardScreen.hidden = false
@@ -5231,6 +5292,8 @@ function refreshIdentityChrome(): void {
     notifUnread = 0
     syncBellBadge()
   }
+  // R1: connecting a wallet must not bring the legacy inventory tray or the Profile chip back.
+  syncCameraTrays()
 }
 
 function openRoninModal(): void {
@@ -5425,7 +5488,8 @@ async function loadInventory(): Promise<void> {
   }
   if (inventoryLoadingFlag) return
   inventoryLoadingFlag = true
-  inventoryTray.hidden = false
+  // R1: the wardrobe owns the camera tray — the owned-Axie inventory tray stays out of it.
+  inventoryTray.hidden = buddyEnabled
   inventoryEmpty.hidden = true
   inventoryLoading.hidden = false
   inventoryScroll.innerHTML = ''
@@ -5904,6 +5968,7 @@ function setOwnerTab(tab: 'axies' | 'posts' | 'board'): void {
 }
 
 async function openOwnerHouse(address: string): Promise<void> {
+  if (legacyScreensBlocked()) return
   setActiveTab('feed')
   const addr = normalizeAddressClient(address)
   if (!addr) return
@@ -6078,6 +6143,7 @@ async function loadOwnerPosts(): Promise<void> {
 }
 
 async function showProfile(): Promise<void> {
+  if (legacyScreensBlocked()) return
   hideAllScreens()
   setActiveTab('crew')
   profileScreen.hidden = false
@@ -6211,6 +6277,7 @@ function markOnboarded(): void {
 }
 
 function showOnboard(): void {
+  if (legacyScreensBlocked()) return
   hideAllScreens()
   setActiveTab(null)
   onboardScreen.hidden = false
@@ -6262,6 +6329,8 @@ function syncQuestHud(): void {
       bdWishPill.hidden = !html
     }
     syncFrameTray()
+    // The wardrobe tray follows `buddyState`, and syncQuestHud() runs after every load and snap.
+    syncCameraTrays()
     return
   }
   // Flag off (or no buddy yet): the legacy quest chip owns the HUD again.
@@ -6311,6 +6380,10 @@ async function boot(): Promise<void> {
       console.warn('[buddy] load failed', err)
     }
     setActiveTab(null) // no tab bar in R1
+    // index.html ships #feed as `class="screen active"` for the flag-off boot; under the flag it
+    // must never paint, not even for the rest of boot before the first buddy screen mounts.
+    hideAllScreens()
+    syncCameraTrays() // legacy trays out, wardrobe in — before anything can paint the camera
   }
 
   likedPosts = loadLikedSet()

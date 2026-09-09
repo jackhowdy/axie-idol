@@ -141,7 +141,8 @@
         <div id="live-toast" class="toast live-toast" hidden></div>
 
         <div class="chrome bottom">
-          <div class="tray-head">
+          <!-- Legacy crew tray head: hidden under the one-Axie flag (see syncCameraTrays) -->
+          <div id="tray-head" class="tray-head">
             <span class="tray-label">Your crew <span id="tray-photo-count" class="tray-photo-count"></span></span>
             <span class="tray-head-actions">
               <button type="button" id="btn-tray-clear" class="tray-link" hidden>Clear photo</button>
@@ -162,7 +163,8 @@
           </div>
           <div id="prop-tray" class="prop-tray" role="toolbar" aria-label="Vibeathon equipment props">
           </div>
-          <!-- One-Axie loop: photo frames, unlocked with the cape at bond level 5 -->
+          <!-- One-Axie loop: the wardrobe replaces the crew tray; frames unlock with the cape at bond 5 -->
+          <div id="wardrobe-tray" class="prop-tray wardrobe-tray" role="toolbar" aria-label="Wardrobe" hidden></div>
           <div id="frame-tray" class="prop-tray frame-tray" role="toolbar" aria-label="Photo frames" hidden></div>
           <div class="toolbar vf-toolbar">
             <button type="button" id="btn-upload" class="btn icon vf-round" title="Upload from gallery" aria-label="Upload from gallery"><span data-icon="gallery"></span></button>
