@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <!-- Scarf: blue loop around the neck with a tail hanging to one side. -->
+  <g stroke="#1A2B3C" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M30 96 Q128 46 226 96 Q226 148 128 156 Q30 148 30 96 Z" fill="#2B8CEE"/>
+    <path d="M150 148 Q168 196 148 232 L96 220 Q120 186 112 150 Z" fill="#1F73C9"/>
+    <path d="M40 118 Q128 152 216 118" stroke="#7FC0FF" stroke-width="8"/>
+  </g>
+</svg>

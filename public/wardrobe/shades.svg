@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <!-- Shades: two dark lenses with a light glint, bridge and arms. Art centred on the eye joint. -->
+  <g stroke="#1A2B3C" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M22 108 L60 96 M234 108 L196 96"/>
+    <rect x="26" y="100" width="88" height="60" rx="18" fill="#1A2B3C"/>
+    <rect x="142" y="100" width="88" height="60" rx="18" fill="#1A2B3C"/>
+    <path d="M114 122 L142 122" stroke-width="10"/>
+    <path d="M40 148 L64 112" stroke="#EAF6FF" stroke-width="10" stroke-linecap="round"/>
+    <path d="M156 148 L180 112" stroke="#EAF6FF" stroke-width="10" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -177,6 +177,30 @@ export function hatchHtml(b: Buddy, lines: string[]): string {
 
 const WEARABLES = ['hat', 'scarf', 'shades', 'cape', 'crown']
 
+const FRAME_LABELS: Record<string, string> = {
+  none: 'No frame',
+  polaroid: 'Polaroid',
+  film: 'Film',
+  postcard: 'Postcard',
+}
+
+/**
+ * Photo-frame picker for the camera tray. Frames arrive with the cape at bond level 5, and the
+ * choice is a client-side preference (localStorage) in R1 — the buddy record has no frame field.
+ */
+export function frameTrayHtml(ids: readonly string[], active: string): string {
+  return ids
+    .map((id) => {
+      const on = id === active
+      const label = FRAME_LABELS[id] || id
+      return `<button type="button" class="prop-chip" data-frame="${esc(id)}" aria-pressed="${on ? 'true' : 'false'}" title="${esc(label)}">
+  <span class="prop-ico" aria-hidden="true">${icon(id === 'none' ? 'close' : 'gallery', 16)}</span>
+  <span class="prop-name">${esc(label)}</span>
+</button>`
+    })
+    .join('')
+}
+
 /**
  * `photoIds` are post ids, and `/api/image/<id>` serves marketplace art — the stored
  * upload path is the only thing that renders the real photo. Older buddy records have

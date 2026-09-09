@@ -56,6 +56,10 @@
             alt="Axie mascot sticker"
             draggable="false"
           />
+          <!-- One-Axie loop: the worn wardrobe item, pinned to the 3D rig's joints every frame.
+               Twice the 3D canvas box (headwear needs room above a character that fills its own
+               frame), centred on the same point, and never a pointer target. -->
+          <canvas id="wardrobe-overlay" class="wardrobe-overlay" aria-hidden="true" hidden></canvas>
           <div id="mascot-loading" class="mascot-loading" hidden>
             <span class="mascot-loading-spin" aria-hidden="true"></span>
             <span id="mascot-loading-text">Loading…</span>
@@ -158,6 +162,8 @@
           </div>
           <div id="prop-tray" class="prop-tray" role="toolbar" aria-label="Vibeathon equipment props">
           </div>
+          <!-- One-Axie loop: photo frames, unlocked with the cape at bond level 5 -->
+          <div id="frame-tray" class="prop-tray frame-tray" role="toolbar" aria-label="Photo frames" hidden></div>
           <div class="toolbar vf-toolbar">
             <button type="button" id="btn-upload" class="btn icon vf-round" title="Upload from gallery" aria-label="Upload from gallery"><span data-icon="gallery"></span></button>
             <div class="vf-adjust">

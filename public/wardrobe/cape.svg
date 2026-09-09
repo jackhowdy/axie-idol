@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <!-- Cape: purple sheet with a scalloped hem and a gold clasp. -->
+  <g stroke="#1A2B3C" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M76 36 Q128 62 180 36 L222 214 Q196 196 170 214 Q144 232 128 214 Q112 232 86 214 Q60 196 34 214 Z" fill="#8B5CF6"/>
+    <path d="M128 62 L128 210" stroke="#6D3EE0" stroke-width="8"/>
+    <path d="M76 36 Q128 62 180 36" fill="#A47CFF"/>
+    <circle cx="128" cy="52" r="15" fill="#FFD166"/>
+  </g>
+</svg>

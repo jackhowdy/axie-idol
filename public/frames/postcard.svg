@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440" fill="none" preserveAspectRatio="none">
+  <!-- Postcard: cream mount with a double keyline and a stamp corner. Transparent window. -->
+  <path fill-rule="evenodd" fill="#FBF3E2"
+        d="M0 0 H1080 V1440 H0 Z M70 70 H1010 V1370 H70 Z"/>
+  <path fill-rule="evenodd" fill="#1A2B3C" fill-opacity="0.55"
+        d="M40 40 H1040 V1400 H40 Z M52 52 H1028 V1388 H52 Z"/>
+  <path fill-rule="evenodd" fill="#1A2B3C" fill-opacity="0.35"
+        d="M62 62 H1018 V1378 H62 Z M70 70 H1010 V1370 H70 Z"/>
+  <g fill="#FF6B2C" fill-opacity="0.9">
+    <rect x="0" y="0" width="220" height="16"/>
+    <rect x="0" y="0" width="16" height="220"/>
+    <rect x="860" y="1424" width="220" height="16"/>
+    <rect x="1064" y="1220" width="16" height="220"/>
+  </g>
+</svg>

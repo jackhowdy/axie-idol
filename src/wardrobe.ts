@@ -1,0 +1,166 @@
+/**
+ * Wardrobe: the worn item drawn as a flat 2D sprite pinned to the 3D character's joints, and the
+ * optional photo frame drawn over a finished capture.
+ *
+ * The pure geometry lives here (ITEM_ANCHORS, placeItem, offsetJoints, unitFor) with no DOM and no
+ * three.js import, so `tests/wardrobe.test.mjs` can load this module under
+ * `node --experimental-strip-types`. Everything that needs a document or a canvas takes its
+ * dependencies as arguments and is only called from the browser.
+ *
+ * Units: every anchor offset and width is measured in *ear spans* — the projected distance between
+ * the two ear joints. `Joint.scale` is that distance / 100 (see `jointScreenPositions` in
+ * axie3d.ts), so one unit = `scale * 100` px. That keeps items the right size whatever the canvas
+ * size, device pixel ratio or camera framing.
+ */
+
+export const WEARABLE_IDS = ['hat', 'scarf', 'shades', 'cape', 'crown'] as const
+export type WearableId = (typeof WEARABLE_IDS)[number]
+
+export const FRAME_IDS = ['none', 'polaroid', 'film', 'postcard'] as const
+export type FrameId = (typeof FRAME_IDS)[number]
+
+export const JOINT_NAMES = ['head', 'eyeL', 'eyeR', 'neck', 'back'] as const
+export type JointName = (typeof JOINT_NAMES)[number]
+
+/** One projected joint in canvas pixels. `scale` is the ear span / 100. */
+export type Joint = { x: number; y: number; scale: number }
+export type JointScreen = Record<JointName, Joint>
+
+export type ItemAnchor = {
+  joint: JointName
+  /** Offset from the joint, in ear spans (+x right, +y down on screen). */
+  dx: number
+  dy: number
+  /** Sprite width in ear spans; the height follows the sprite's aspect ratio. */
+  w: number
+}
+
+export type Box = { x: number; y: number; w: number; h: number }
+
+/**
+ * Where each item sits. Tuned so headwear clears the top of the body (the horn joint is the top of
+ * the silhouette, and the camera frames the character to fill its canvas, so a hat needs the whole
+ * of its own height above that joint) and so nothing lands outside the 2x overlay canvas the live
+ * view draws into. Sprites are square (256x256) with the art filling the box, so the vertical
+ * offsets below are half the item's own height plus a small gap.
+ */
+export const ITEM_ANCHORS: Record<WearableId, ItemAnchor> = {
+  hat: { joint: 'head', dx: 0, dy: -0.6, w: 1.1 },
+  crown: { joint: 'head', dx: 0, dy: -0.5, w: 0.95 },
+  // the rig has one mid eye joint (Root_Eye_M_JNT) covering both eyes, so the lenses centre on it
+  shades: { joint: 'eyeL', dx: 0, dy: 0, w: 0.72 },
+  scarf: { joint: 'neck', dx: 0, dy: 0.1, w: 0.95 },
+  // the 3/4 camera puts the character's rear toward screen-right, so the cape shifts that way
+  cape: { joint: 'back', dx: 0.15, dy: 0.12, w: 1.25 },
+}
+
+/** Pixels per anchor unit. Falls back to 100 px for a missing or degenerate ear span. */
+export function unitFor(joint: Joint): number {
+  const s = joint.scale
+  return Number.isFinite(s) && s > 0 ? s * 100 : 100
+}
+
+/** Where to draw a sprite, in the same pixel space as the joints. */
+export function placeItem(anchor: ItemAnchor, joint: Joint, spriteW: number, spriteH: number): Box {
+  const unit = unitFor(joint)
+  const w = anchor.w * unit
+  const aspect = spriteW > 0 && spriteH > 0 ? spriteH / spriteW : 1
+  const h = w * aspect
+  return {
+    x: joint.x + anchor.dx * unit - w / 2,
+    y: joint.y + anchor.dy * unit - h / 2,
+    w,
+    h,
+  }
+}
+
+/**
+ * Move a projected joint set into the overlay canvas's pixel space. The overlay is larger than the
+ * 3D canvas (headwear needs room above a character that fills its own frame), centred on the same
+ * point, so the joints shift by half the difference.
+ */
+export function offsetJoints(joints: JointScreen | null, dx: number, dy: number): JointScreen | null {
+  if (!joints) return null
+  const out = {} as JointScreen
+  for (const name of JOINT_NAMES) {
+    const j = joints[name]
+    out[name] = { x: j.x + dx, y: j.y + dy, scale: j.scale }
+  }
+  return out
+}
+
+export function isWearableId(id: string | null | undefined): id is WearableId {
+  return typeof id === 'string' && (WEARABLE_IDS as readonly string[]).includes(id)
+}
+
+export function isFrameId(id: string | null | undefined): id is FrameId {
+  return typeof id === 'string' && (FRAME_IDS as readonly string[]).includes(id)
+}
+
+/* ---------------------------------------------------------------- sprites (browser only) */
+
+/** One HTMLImageElement per URL for the life of the page; SVGs are a few hundred bytes each. */
+const images = new Map<string, HTMLImageElement>()
+
+function sprite(url: string): HTMLImageElement {
+  let img = images.get(url)
+  if (!img) {
+    img = new Image()
+    img.decoding = 'async'
+    img.src = url
+    images.set(url, img)
+  }
+  return img
+}
+
+/** Usable = loaded with an intrinsic size (an SVG with no width/height attribute reports 0). */
+function usable(img: HTMLImageElement | null): img is HTMLImageElement {
+  return Boolean(img && img.complete && img.naturalWidth > 0)
+}
+
+export function wardrobeSprite(item: string): HTMLImageElement | null {
+  return isWearableId(item) ? sprite(`/wardrobe/${item}.svg`) : null
+}
+
+export function frameSprite(id: string): HTMLImageElement | null {
+  return isFrameId(id) && id !== 'none' ? sprite(`/frames/${id}.svg`) : null
+}
+
+/** Start the downloads before the first frame that needs them (called once the camera opens). */
+export function preloadWardrobe(): void {
+  for (const item of WEARABLE_IDS) wardrobeSprite(item)
+  for (const id of FRAME_IDS) frameSprite(id)
+}
+
+/**
+ * Clear the overlay and draw the worn item, one drawImage per frame. `joints` must already be in
+ * `ctx.canvas`'s pixel space (see offsetJoints). Returns true when something was drawn.
+ */
+export function drawWardrobe(
+  ctx: CanvasRenderingContext2D,
+  worn: string | null,
+  joints: JointScreen | null,
+  resolve: (item: string) => HTMLImageElement | null = wardrobeSprite,
+): boolean {
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  if (!worn || !joints || !isWearableId(worn)) return false
+  const img = resolve(worn)
+  if (!usable(img)) return false
+  const anchor = ITEM_ANCHORS[worn]
+  const box = placeItem(anchor, joints[anchor.joint], img.naturalWidth, img.naturalHeight)
+  ctx.drawImage(img, box.x, box.y, box.w, box.h)
+  return true
+}
+
+/** Draw the chosen frame over the whole capture, stretched to the canvas. */
+export function drawFrame(
+  ctx: CanvasRenderingContext2D,
+  frameId: string | null,
+  resolve: (id: string) => HTMLImageElement | null = frameSprite,
+): boolean {
+  if (!frameId || frameId === 'none') return false
+  const img = resolve(frameId)
+  if (!usable(img)) return false
+  ctx.drawImage(img, 0, 0, ctx.canvas.width, ctx.canvas.height)
+  return true
+}

@@ -41,6 +41,7 @@ import {
   type AxiePartDescriptor,
 } from '@jaatster/threejs-axie-mixer3d-public'
 import type { ThreeAxieMixer3D, AxieMixerManifest } from '@jaatster/threejs-axie-mixer3d-public'
+import type { JointScreen } from './wardrobe'
 
 const MAX_PIXEL_RATIO = 2
 const ASSET_BASE = '/assets/axie/'
@@ -77,6 +78,13 @@ export type Axie3D = {
   renderNow: () => void
   /** Render the live character to a transparent PNG data URL (for group-photo extras). */
   snapshot: (size?: number) => string | null
+  /**
+   * Wardrobe anchors projected into this handle's canvas pixels (`canvas.width/height`), or null
+   * before the model is loaded. Consumers scale to CSS pixels with clientWidth/clientHeight.
+   */
+  jointScreenPositions: () => JointScreen | null
+  /** Run a callback right after every rendered frame (one slot; pass null to clear). */
+  onFrame: (cb: (() => void) | null) => void
   dispose: () => void
 }
 
@@ -955,6 +963,10 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
 
   const clock = new Clock()
   let character: Character | null = null
+  /** Wardrobe joints, resolved once per loaded character — traversing the rig every frame is waste. */
+  let jointCache = new Map<string, Object3D | null>()
+  const projectVec = new Vector3()
+  let frameCb: (() => void) | null = null
   let raf = 0
   let hiddenTimer = 0
   let lastFrame = 0
@@ -993,6 +1005,7 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
           character.dispose()
         }
         character = next
+        jointCache = new Map()
         if (location.search.includes('dev=1')) {
           const rows: string[] = []
           next.wrapper.traverse((o) => {
@@ -1066,7 +1079,13 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
       frameCamera(camera, character.wrapper)
       return url
     },
+    jointScreenPositions,
+    onFrame(cb) {
+      frameCb = cb
+    },
     dispose() {
+      frameCb = null
+      jointCache = new Map()
       cancelAnimationFrame(raf)
       raf = 0
       if (hiddenTimer) window.clearInterval(hiddenTimer)
@@ -1084,6 +1103,51 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
       if (renderer !== firstRenderer) renderer.dispose()
       canvas.remove()
     },
+  }
+
+  /** The named rig joint, cached per loaded character (misses are cached too). */
+  function jointObject(name: string): Object3D | null {
+    const hit = jointCache.get(name)
+    if (hit !== undefined) return hit
+    let found: Object3D | null = null
+    character?.wrapper.traverse((o) => {
+      if (!found && o.name === name) found = o
+    })
+    jointCache.set(name, found)
+    return found
+  }
+
+  /** World position of a joint in this canvas's pixels (top-left origin), or null. */
+  function projectJoint(o: Object3D | null): { x: number; y: number } | null {
+    if (!o) return null
+    const v = o.getWorldPosition(projectVec).project(camera)
+    if (!Number.isFinite(v.x) || !Number.isFinite(v.y)) return null
+    return { x: ((v.x + 1) / 2) * canvas.width, y: ((1 - v.y) / 2) * canvas.height }
+  }
+
+  /**
+   * Wardrobe anchors in canvas pixels. `scale` is the projected ear span / 100 — the unit every
+   * anchor in wardrobe.ts is measured in, so items track the camera framing and the pixel ratio.
+   */
+  function jointScreenPositions(): JointScreen | null {
+    if (!character) return null
+    const head = projectJoint(jointObject('Root_Horn_T_JNT') || jointObject('Root_Horn_M_JNT'))
+    const eye = projectJoint(jointObject('Root_Eye_M_JNT'))
+    const spine = projectJoint(jointObject('Spine01_JNT'))
+    if (!head || !eye || !spine) return null
+    const earL = projectJoint(jointObject('Root_Ear_L_JNT'))
+    const earR = projectJoint(jointObject('Root_Ear_R_JNT'))
+    const span = earL && earR ? Math.hypot(earL.x - earR.x, earL.y - earR.y) : 0
+    // no ear joints (never seen on the pack's rigs): the camera frames the body to fill the canvas,
+    // where the ear span measures a little over half the width
+    const scale = span > 1 ? span / 100 : (canvas.width * 0.55) / 100
+    return {
+      head: { ...head, scale },
+      eyeL: { ...eye, scale },
+      eyeR: { ...eye, scale },
+      neck: { x: (eye.x + spine.x) / 2, y: (eye.y + spine.y) / 2, scale },
+      back: { ...spine, scale },
+    }
   }
 
   function resize(): void {
@@ -1104,6 +1168,15 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
       character.wrapper.rotation.y = lean.x * 0.004
       character.wrapper.rotation.x = lean.y * 0.002
       draw()
+      // Overlays pinned to the rig (the wardrobe sprite) redraw here, after the joints have moved.
+      if (frameCb) {
+        try {
+          frameCb()
+        } catch (err) {
+          console.warn('[axie3d] frame callback failed', err)
+          frameCb = null
+        }
+      }
     }
   }
 

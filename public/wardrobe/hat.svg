@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <!-- Party hat: orange cone, yellow pompom, one stripe. Flat fills, dark outline. -->
+  <g stroke="#1A2B3C" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M128 34 L206 202 L50 202 Z" fill="#FF6B2C"/>
+    <path d="M94 132 L162 132" stroke-width="20" stroke-linecap="butt"/>
+    <path d="M94 132 L162 132" stroke="#FFD166" stroke-width="12" stroke-linecap="butt"/>
+    <ellipse cx="128" cy="202" rx="82" ry="18" fill="#FF8A55"/>
+    <circle cx="128" cy="30" r="22" fill="#FFD166"/>
+  </g>
+</svg>

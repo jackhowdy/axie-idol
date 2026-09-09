@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <!-- Crown: five points, gold, with a jewelled band. -->
+  <g stroke="#1A2B3C" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M26 194 L18 62 L72 106 L128 40 L184 106 L238 62 L230 194 Z" fill="#FFD166"/>
+    <rect x="26" y="168" width="204" height="26" fill="#F2B33D"/>
+    <circle cx="128" cy="181" r="9" fill="#FF6B2C"/>
+    <circle cx="76" cy="181" r="7" fill="#2B8CEE"/>
+    <circle cx="180" cy="181" r="7" fill="#2B8CEE"/>
+  </g>
+</svg>

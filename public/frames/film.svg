@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440" fill="none" preserveAspectRatio="none">
+  <!-- Film strip: black bars top and bottom with sprocket holes, transparent window. -->
+  <rect x="0" y="0" width="1080" height="150" fill="#14181F"/>
+  <rect x="0" y="1290" width="1080" height="150" fill="#14181F"/>
+  <rect x="0" y="150" width="26" height="1140" fill="#14181F"/>
+  <rect x="1054" y="150" width="26" height="1140" fill="#14181F"/>
+  <g fill="#F4F7FA">
+    <rect x="52" y="46" width="86" height="58" rx="12"/>
+    <rect x="190" y="46" width="86" height="58" rx="12"/>
+    <rect x="328" y="46" width="86" height="58" rx="12"/>
+    <rect x="466" y="46" width="86" height="58" rx="12"/>
+    <rect x="604" y="46" width="86" height="58" rx="12"/>
+    <rect x="742" y="46" width="86" height="58" rx="12"/>
+    <rect x="880" y="46" width="86" height="58" rx="12"/>
+    <rect x="52" y="1336" width="86" height="58" rx="12"/>
+    <rect x="190" y="1336" width="86" height="58" rx="12"/>
+    <rect x="328" y="1336" width="86" height="58" rx="12"/>
+    <rect x="466" y="1336" width="86" height="58" rx="12"/>
+    <rect x="604" y="1336" width="86" height="58" rx="12"/>
+    <rect x="742" y="1336" width="86" height="58" rx="12"/>
+    <rect x="880" y="1336" width="86" height="58" rx="12"/>
+  </g>
+</svg>

@@ -14,10 +14,15 @@ import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
 import {
   buddyEnabled, bindDeviceKey, loadBuddy, buddyState, faceIdForBuddy, snapContext, beforeLine,
+  lsGet, lsSet,
   type SnapResult,
 } from './buddy'
 import { mountBuddyScreens } from './buddyScreens'
-import { reactionHtml, momentHtml, unlockHtml, vfChipHtml, wishPillHtml } from './buddyHtml.ts'
+import { reactionHtml, momentHtml, unlockHtml, vfChipHtml, wishPillHtml, frameTrayHtml } from './buddyHtml.ts'
+import {
+  FRAME_IDS, drawFrame, drawWardrobe, isFrameId, offsetJoints, preloadWardrobe,
+  type FrameId,
+} from './wardrobe'
 import {
   clearWaypointToken,
   connectWithWaypoint,
@@ -624,6 +629,9 @@ const inventoryScroll = document.querySelector<HTMLElement>('#inventory-scroll')
 const inventoryEmpty = document.querySelector<HTMLElement>('#inventory-empty')!
 const inventoryLoading = document.querySelector<HTMLElement>('#inventory-loading')!
 const propTray = document.querySelector<HTMLElement>('#prop-tray')!
+/** One-Axie loop: worn-item overlay over the live 3D canvas, and the photo-frame picker. */
+const wardrobeOverlay = document.querySelector<HTMLCanvasElement>('#wardrobe-overlay')
+const frameTray = document.querySelector<HTMLElement>('#frame-tray')
 const castTray = document.querySelector<HTMLElement>('#cast-tray')!
 const mascotLoading = document.querySelector<HTMLElement>('#mascot-loading')!
 const mascotLoadingText = document.querySelector<HTMLElement>('#mascot-loading-text')!
@@ -760,8 +768,85 @@ function warmAxieMixer(): void {
   else window.setTimeout(go, 3000)
 }
 
+/* ---- One-Axie loop: the worn item pinned to the 3D rig's joints, and the photo frame ---- */
+
+/** R1 keeps the frame choice on the device — the buddy record has no frame field yet. */
+const FRAME_LS = 'axieIdol.frame'
+let wardrobeCtx: CanvasRenderingContext2D | null = null
+
+function activeFrame(): FrameId {
+  const saved = lsGet(FRAME_LS)
+  return isFrameId(saved) ? saved : 'none'
+}
+
+/** Frames arrive with the cape, at bond level 5. */
+function framesUnlocked(): boolean {
+  return buddyEnabled && Boolean(buddyState.active?.wardrobe.unlocked.includes('cape'))
+}
+
+function syncFrameTray(): void {
+  if (!frameTray) return
+  const on = framesUnlocked()
+  frameTray.innerHTML = on ? frameTrayHtml(FRAME_IDS, activeFrame()) : ''
+  frameTray.hidden = !on
+}
+
+/** The worn item, or null when nothing is worn or the live face is not the buddy character. */
+function wornItem(): string | null {
+  if (!buddyEnabled || activeCast !== 'buddy') return null
+  return buddyState.active?.wardrobe.worn ?? null
+}
+
+/**
+ * Match an overlay's backing store to the 3D canvas's pixel density across the overlay's own
+ * (larger) CSS box, and return the offset from 3D-canvas pixels into overlay pixels. Both boxes are
+ * centred on the same point, so the offset is half the difference. Null until both are laid out.
+ */
+function syncOverlaySize(
+  overlay: HTMLCanvasElement,
+  src: HTMLCanvasElement,
+): { dx: number; dy: number } | null {
+  const cw = overlay.clientWidth
+  const ch = overlay.clientHeight
+  if (cw < 8 || ch < 8 || src.clientWidth < 8 || src.width < 8) return null
+  const density = src.width / src.clientWidth
+  const w = Math.max(8, Math.round(cw * density))
+  const h = Math.max(8, Math.round(ch * density))
+  if (overlay.width !== w) overlay.width = w
+  if (overlay.height !== h) overlay.height = h
+  return { dx: (w - src.width) / 2, dy: (h - src.height) / 2 }
+}
+
+/** The overlay tracks the sticker's own left/top/transform so the two boxes stay concentric. */
+function positionWardrobeOverlay(): void {
+  if (!wardrobeOverlay || wardrobeOverlay.hidden) return
+  wardrobeOverlay.style.left = `${state.x + state.gyroX}px`
+  wardrobeOverlay.style.top = `${state.y + state.gyroY}px`
+  wardrobeOverlay.style.transform = `translate(-50%, -50%) rotate(${state.rotation}deg) scale(${state.scale})`
+}
+
+/** Runs on every 3D frame: clear the overlay and stamp the worn sprite on its joint. */
+function drawWardrobeOverlay(): void {
+  if (!wardrobeOverlay) return
+  const worn = wornItem()
+  if (!worn || !axie3d?.ready) {
+    if (!wardrobeOverlay.hidden) wardrobeOverlay.hidden = true
+    return
+  }
+  const pad = syncOverlaySize(wardrobeOverlay, axie3d.canvas)
+  if (!pad) return
+  if (!wardrobeCtx || wardrobeCtx.canvas !== wardrobeOverlay) wardrobeCtx = wardrobeOverlay.getContext('2d')
+  if (!wardrobeCtx) return
+  const wasHidden = wardrobeOverlay.hidden
+  if (wasHidden) wardrobeOverlay.hidden = false
+  drawWardrobe(wardrobeCtx, worn, offsetJoints(axie3d.jointScreenPositions(), pad.dx, pad.dy))
+  if (wasHidden) positionWardrobeOverlay()
+}
+
 function disposeAxie3D(): void {
   if (!axie3d) return
+  if (wardrobeOverlay) wardrobeOverlay.hidden = true
+  axie3d.onFrame(null)
   axie3d.dispose()
   axie3d = null
   stickerImg.hidden = false
@@ -782,6 +867,8 @@ async function showAxie3D(id: string, req: number): Promise<boolean> {
       axie3d = createAxie3D('axie3d')
       axie3d.canvas.className = 'axie3d-canvas'
       stickerLayer.appendChild(axie3d.canvas)
+      // the worn wardrobe item redraws with the rig, on the overlay above this canvas
+      axie3d.onFrame(drawWardrobeOverlay)
     }
     const ok = await axie3d.load(spec)
     if (req !== castRequest) return false
@@ -961,6 +1048,7 @@ function applyStickerTransform(): void {
   sticker3d?.setLean(gx, gy)
   spineSticker?.setLean?.(gx, gy)
   syncLeadShinyClass()
+  positionWardrobeOverlay()
 
   // Equipped prop is a separate canvas hit-target; tracks sticker + user offset.
   if (propOverlay?.canvas && !propOverlay.canvas.hidden) {
@@ -1318,7 +1406,9 @@ function beginVfPinch(): void {
 function isStickerPointerTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
   if (target === stickerTarget) return true
-  return Boolean(target.closest('#sticker, #sticker3d, #axie3d, #sticker-layer canvas'))
+  // the wardrobe overlay is pointer-events: none, so it is never a target — excluded anyway so a
+  // future CSS change cannot silently steal the drag from the character underneath it
+  return Boolean(target.closest('#sticker, #sticker3d, #axie3d, #sticker-layer canvas:not(.wardrobe-overlay)'))
 }
 
 function onVfPointerDown(e: PointerEvent): void {
@@ -2045,6 +2135,18 @@ async function captureComposite(): Promise<void> {
     ctx.scale(state.scale, state.scale)
     ctx.drawImage(mc, -baseW / 2, -baseH / 2, baseW, baseH)
     ctx.restore()
+    // The worn wardrobe item: its own, larger overlay box, concentric with the 3D canvas, so the
+    // same transform lands it on the same joints as the live view. renderNow() above refreshed it.
+    if (wardrobeOverlay && !wardrobeOverlay.hidden && wardrobeOverlay.clientWidth > 0) {
+      const ow = wardrobeOverlay.clientWidth * scaleX
+      const oh = wardrobeOverlay.clientHeight * scaleX
+      ctx.save()
+      ctx.translate(cx, cy)
+      ctx.rotate((state.rotation * Math.PI) / 180)
+      ctx.scale(state.scale, state.scale)
+      ctx.drawImage(wardrobeOverlay, -ow / 2, -oh / 2, ow, oh)
+      ctx.restore()
+    }
   } else if (useSpine && spineSticker) {
     spineSticker.renderNow()
     const spCanvas = spineSticker.canvas
@@ -2109,6 +2211,9 @@ async function captureComposite(): Promise<void> {
     ctx.drawImage(pc, -pw / 2, -ph / 2, pw, ph)
     ctx.restore()
   }
+
+  // Photo frame last, over the whole capture (same-origin SVG, so the canvas stays untainted).
+  if (framesUnlocked()) drawFrame(ctx, activeFrame())
 
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, 'image/png', 0.95),
@@ -2493,6 +2598,16 @@ propTray.addEventListener('click', (e) => {
   void equipProp(id)
 })
 
+frameTray?.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement | null)?.closest?.('.prop-chip') as HTMLButtonElement | null
+  if (!btn) return
+  e.preventDefault()
+  const id = btn.dataset.frame
+  if (!isFrameId(id)) return
+  lsSet(FRAME_LS, id)
+  syncFrameTray()
+})
+
 
 function disposeSpineSticker(): void {
   if (!spineSticker) return
@@ -2869,6 +2984,27 @@ function castOrAxieLabel(id: string): string {
  */
 let buddyHero: Axie3D | null = null
 let buddyHeroRequest = 0
+/** The hero's own wardrobe overlay — same approach as the camera, on a second 2x canvas. */
+let buddyHeroOverlay: HTMLCanvasElement | null = null
+let buddyHeroCtx: CanvasRenderingContext2D | null = null
+
+function drawBuddyHeroWardrobe(): void {
+  const hero = buddyHero
+  const overlay = buddyHeroOverlay
+  if (!hero || !overlay) return
+  const worn = buddyState.active?.wardrobe.worn ?? null
+  if (!worn || !hero.ready || !overlay.isConnected) {
+    if (!overlay.hidden) overlay.hidden = true
+    return
+  }
+  const pad = syncOverlaySize(overlay, hero.canvas)
+  if (!pad) return
+  if (!buddyHeroCtx) buddyHeroCtx = overlay.getContext('2d')
+  if (!buddyHeroCtx) return
+  if (overlay.hidden) overlay.hidden = false
+  drawWardrobe(buddyHeroCtx, worn, offsetJoints(hero.jointScreenPositions(), pad.dx, pad.dy))
+}
+
 async function showBuddyFaceIn(host: HTMLElement): Promise<void> {
   const req = ++buddyHeroRequest
   for (const old of host.querySelectorAll('[data-buddy-face]')) old.remove()
@@ -2876,6 +3012,7 @@ async function showBuddyFaceIn(host: HTMLElement): Promise<void> {
   if (req !== buddyHeroRequest) return
   if (!spec) {
     buddyHero?.pause()
+    if (buddyHeroOverlay) buddyHeroOverlay.hidden = true
     const img = document.createElement('img')
     img.src = eggSpriteUrl()
     img.alt = ''
@@ -2888,11 +3025,19 @@ async function showBuddyFaceIn(host: HTMLElement): Promise<void> {
     buddyHero = createAxie3D('buddy-hero')
     buddyHero.canvas.className = 'bd-hero-canvas'
     buddyHero.canvas.dataset.buddyFace = '3d'
+    buddyHero.onFrame(drawBuddyHeroWardrobe)
+  }
+  if (!buddyHeroOverlay) {
+    buddyHeroOverlay = document.createElement('canvas')
+    buddyHeroOverlay.className = 'bd-hero-wardrobe'
+    buddyHeroOverlay.dataset.buddyFace = 'wardrobe'
+    buddyHeroOverlay.setAttribute('aria-hidden', 'true')
+    buddyHeroOverlay.hidden = true
   }
   const hero = buddyHero
   await hero.load(spec)
   if (req !== buddyHeroRequest) return
-  host.append(hero.canvas)
+  host.append(hero.canvas, buddyHeroOverlay)
   hero.resume()
 }
 
@@ -2900,6 +3045,7 @@ async function showBuddyFaceIn(host: HTMLElement): Promise<void> {
 function pauseBuddyFace(): void {
   buddyHeroRequest++
   buddyHero?.pause()
+  if (buddyHeroOverlay) buddyHeroOverlay.hidden = true
 }
 
 function showViewfinderFromFeed(): void {
@@ -2915,6 +3061,8 @@ function showViewfinderFromFeed(): void {
     if (activeCast !== want) void selectCast(want)
     else syncCastTrayUI()
     syncQuestHud()
+    // sprites are cached per page; decode them before the first frame that needs them
+    preloadWardrobe()
     requestBuddyBeforeLine()
   } else if (!customAxieId) {
     // Guest dopamine: default Kotaro on camera if none selected
@@ -6081,6 +6229,7 @@ function syncQuestHud(): void {
       bdWishPill.innerHTML = html
       bdWishPill.hidden = !html
     }
+    syncFrameTray()
     return
   }
   // Flag off (or no buddy yet): the legacy quest chip owns the HUD again.
@@ -6116,6 +6265,7 @@ async function boot(): Promise<void> {
   // One-Axie loop (VITE_BUDDY=1): the buddy screens replace the feed as the app.
   if (buddyEnabled) {
     bindDeviceKey(() => deviceKey)
+    preloadWardrobe()
     buddyUi = mountBuddyScreens({
       goSnap: () => showViewfinderFromFeed(),
       showFace: (host) => showBuddyFaceIn(host),

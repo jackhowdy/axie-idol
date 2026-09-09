@@ -6,10 +6,10 @@ const SESSION_LS = 'axieIdol.buddySession'
 const ADDRESS_LS = 'axieIdol.buddyAddress'
 
 /** localStorage can throw (private browsing, some in-app browsers incl. Ronin Wallet's) — never let a read/write crash the module. */
-function lsGet(key: string): string | null {
+export function lsGet(key: string): string | null {
   try { return localStorage.getItem(key) } catch { return null }
 }
-function lsSet(key: string, value: string): void {
+export function lsSet(key: string, value: string): void {
   try { localStorage.setItem(key, value) } catch { /* ignore */ }
 }
 
