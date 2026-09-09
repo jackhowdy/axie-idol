@@ -1277,6 +1277,12 @@ async function fetchAxieOwnership(axieId) {
 
 
 const MAX_POSTS_PER_HOUR = 10
+/**
+ * One-Axie loop: the legacy ceiling of 10 posts/hour is the same number as the daily bond cap,
+ * so a player who takes eleven photos in an hour would be 429'd off their own camera. Buddy
+ * snaps get a much higher ceiling; the ones past the daily cap simply earn no bond.
+ */
+const MAX_BUDDY_POSTS_PER_HOUR = 40
 const MAX_LIKES_PER_HOUR = 60
 const MAX_COMMENTS_PER_HOUR = 30
 const MAX_FOLLOWS_PER_HOUR = 60
@@ -1875,8 +1881,8 @@ function pruneHour(arr, now = Date.now()) {
   return arr.length
 }
 
-function rateLimitFor(kind) {
-  if (kind === 'posts') return MAX_POSTS_PER_HOUR
+function rateLimitFor(kind, opts = {}) {
+  if (kind === 'posts') return opts.buddy ? MAX_BUDDY_POSTS_PER_HOUR : MAX_POSTS_PER_HOUR
   if (kind === 'comments') return MAX_COMMENTS_PER_HOUR
   if (kind === 'follows') return MAX_FOLLOWS_PER_HOUR
   if (kind === 'sparks') return MAX_SPARKS_PER_HOUR
@@ -1893,8 +1899,8 @@ function rateArr(bucket, kind) {
   return bucket.likes
 }
 
-function checkRate(deviceKey, kind) {
-  const limit = rateLimitFor(kind)
+function checkRate(deviceKey, kind, opts = {}) {
+  const limit = rateLimitFor(kind, opts)
   const b = getBucket(deviceKey)
   const arr = rateArr(b, kind)
   const count = pruneHour(arr)
@@ -2992,7 +2998,7 @@ async function handleCreatePost(req, res) {
     return
   }
 
-  const rate = checkRate(deviceKey, 'posts')
+  const rate = checkRate(deviceKey, 'posts', { buddy: body.buddy === true })
   if (!rate.ok) {
     sendJson(res, 429, {
       error: `Post rate limit: max ${rate.limit}/hour`,

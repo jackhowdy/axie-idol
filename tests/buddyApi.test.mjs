@@ -160,6 +160,32 @@ test('daily cap holds across hatch: egg snaps and post-hatch snaps share the sam
   assert.equal(g.body.active.bondToday, 10)
 })
 
+// The legacy limit of 10 posts/hour equals the daily bond cap, so a real player who shoots
+// eleven photos in an hour would be 429'd off their own camera. Buddy posts get 40/hour; the
+// eleventh is accepted and simply earns no bond (the daily cap already spent it).
+test('buddy posts get a 40/hour ceiling: an 11th snap in the same hour is still accepted', async () => {
+  const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  const snap = () => api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
+  for (let i = 0; i < 5; i++) assert.equal((await snap()).status, 201, `egg snap ${i + 1}`)
+  assert.equal((await api('/api/buddy/hatch', { method: 'POST', device: d, body: { name: 'Miso' } })).status, 200)
+  for (let i = 0; i < 5; i++) assert.equal((await snap()).status, 201, `bond snap ${i + 1}`)
+  const eleventh = await snap()
+  assert.equal(eleventh.status, 201, `11th buddy snap must not be rate limited: ${eleventh.text}`)
+  assert.equal(eleventh.json.buddy.granted, 0, 'daily bond cap already spent, the photo still goes in the book')
+})
+
+test('legacy (non-buddy) posts keep the 10/hour limit', async () => {
+  const d = dev()
+  for (let i = 0; i < 10; i++) {
+    const p = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d } })
+    assert.equal(p.status, 201, `post ${i + 1}: ${p.text}`)
+  }
+  const eleventh = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d } })
+  assert.equal(eleventh.status, 429, eleventh.text)
+  assert.equal(eleventh.json.limit, 10)
+})
+
 test('buddy posts still respect the cast lock for non-neutral cast ids', async () => {
   const d = dev()
   const p = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'bing', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
