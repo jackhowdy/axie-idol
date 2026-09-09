@@ -12,6 +12,8 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "dev:worker": "wrangler dev --port 8788",
     "deploy": "npm run build && wrangler deploy",
+    "seed:ladder": "node scripts/seed-ladder.mjs",
+    "reset:local": "node scripts/reset-local.mjs",
     "copy-mixer-assets": "node scripts/copy-mixer-assets.mjs",
     "catalogue": "node scripts/build-part-catalogue.mjs"
   },

@@ -8,6 +8,109 @@ Open the local URL in a browser. Use the build script for production assets.
 
 Exact scripts: see package.json (dev on 5174, build, preview).
 
+## One Axie (R1)
+
+Round 1 is a single-Axie game, not a feed. Under the flag the legacy Feed / Ladder / Crew screens,
+the tab bar, the onboarding card and the crew and prop trays are unreachable; the camera tray holds
+the buddy's wardrobe and (from bond 5) the photo frames instead.
+
+**The loop**
+
+1. You find an egg. Taking photos with it is the only thing that grows it.
+2. Five photos in, it hatches into a wild Axie nobody else has — you name it, it says three lines.
+3. Every snap is one bond and the day's wish adds one or two, up to ten bond a day, no further.
+4. Each level changes the next photo: something to wear, a pose, a trick, finally the Mystic glow.
+5. Bond earned this month ranks you on the monthly Idol ladder; the month's Idol wears the crown.
+
+Own an Axie on Ronin? Sign a message and it skips the egg, starting at bond level 1 with a badge.
+
+**Growth ladder** (`LADDER` in `server/buddyRules.mjs` — the server is the authority on unlocks)
+
+| Level | Bond | Reward | Unlocks |
+|-------|------|--------|---------|
+| 1 | 5 | Name and party hat | `hat` |
+| 2 | 10 | Scarf | `scarf` |
+| 3 | 16 | Shades ("Good friends") | `shades` |
+| 4 | 24 | Signature pose | `pose-1` |
+| 5 | 34 | Cape and frames | `cape` |
+| 6 | 46 | First trick | `trick-1` |
+| 7 | 60 | Crown ("Best friends") | `crown` |
+| 8 | 76 | Second trick | `trick-2` |
+| 9 | 95 | Sparkle trail | `trail` |
+| 10 | 120 | Mystic glow and Idol card ("Idol") | `glow` |
+
+Ten bond a day is the cap, so the 120 bond to Idol is twelve days of hitting the cap every single
+day, and a few weeks at any realistic pace. Buddy posts are rate limited at
+40/hour per device (legacy posts stay at 10) — the extra snaps past the daily cap still go in the
+scrapbook, they just earn no bond.
+
+**Flags**
+
+- `VITE_BUDDY=1` — client. Baked in at build time; the buddy screens replace the feed as the app.
+- `BUDDY` — server (`wrangler.toml` `[vars]`, or the environment for `node server.mjs`). Default on;
+  set it to `0` to turn the buddy endpoints off.
+
+**Endpoints** (all keyed by `X-Device-Key`, or `X-Buddy-Session` after a Ronin sign-in)
+
+| Endpoint | What it does |
+|----------|--------------|
+| `GET /api/buddy` | The account: active buddy, retired ones, today's wish and greeting |
+| `POST /api/buddy/egg` | Start a fresh wild egg |
+| `POST /api/buddy/hatch` | Hatch the egg under a name; returns the three personality lines |
+| `POST /api/buddy/claim` | Make an owned Ronin Axie the buddy instead (skips the egg) |
+| `POST /api/buddy/retire` | Retire the active Axie into the scrapbook and start a new egg |
+| `POST /api/buddy/switch` | Make a retired buddy active again |
+| `POST /api/buddy/wear` | Wear a wardrobe item, or `null` to take it off |
+| `POST /api/buddy/wish/done` | Mark today's wish done for its bonus bond |
+| `GET /api/buddy/before` | The before-the-shot line for the viewfinder |
+| `POST /api/buddy/talk` | One conversational reply, answered from the Axie's own memories |
+| `GET /api/buddy/diary` | This week's diary pages |
+| `GET /api/ladder/monthly` | The monthly Idol ladder plus your own row |
+| `GET /api/ronin/nonce`, `POST /api/ronin/verify`, `GET /api/ronin/axies` | Wallet sign-in and inventory |
+| `POST /api/account/recovery`, `POST /api/account/recover` | One-shot code to move a guest account to a new phone |
+
+`POST /api/posts` with `buddy: true` is the snap itself: it returns the egg or bond result
+(`granted`, `unlocks`, `moments`, `wishDone`) alongside the post.
+
+**Seeding the ladder**
+
+```bash
+npm run seed:ladder -- --base http://127.0.0.1:5174 --yes
+```
+
+Creates eight device accounts, hatches each one, takes 12–40 tiny snaps per account at scattered
+coordinates (so places and moments differ), then prints the top of `/api/ladder/monthly`. It refuses
+to run without `--yes`. Everything goes over the public API, so point it only at a server you are
+happy to fill with fake Axies. Note that the daily cap of ten bond applies to seeded accounts too:
+a single run gives every seeded Axie the same ten bond, so the ladder fills but does not spread.
+
+**Resetting local state**
+
+```bash
+npm run reset:local              # dry run — lists what it would remove
+npm run reset:local -- --yes     # removes it
+```
+
+Stop `node server.mjs` first (it holds the stores in memory and writes them back). It removes
+`data/posts.json`, `data/buddies.json`, `data/castCrew.json` and everything in `data/uploads/`,
+and prints each path. Nothing else in `data/` is touched. `DATA_DIR` overrides the directory.
+
+**Resetting the live store**
+
+Redeploying does **not** clear anything: the Worker keeps `buddies` in the same `IdolStore` Durable
+Object as `posts`, `castCrew` and the uploaded photos, and a Durable Object outlives every deploy.
+Two ways to empty it:
+
+- **Rename the object (recommended).** In `worker/index.mjs`, change both `env.STORE.idFromName('main')`
+  calls to a new name (`'main-r1'`, say) and deploy. The Worker then talks to a brand-new Durable
+  Object, so every store starts empty. This also empties `posts` and the photos — the old object is
+  still there under the old name if you ever need it back.
+- **Delete the storage.** Clear the existing object's keys through wrangler's Durable Object storage
+  API instead, if you want to keep the same object id.
+
+Either way, clear the browser too: the device key, the recovery code and the chosen photo frame live
+in `localStorage`, so a phone that is not cleared walks back in as the same account.
+
 ## Phone testing (iPhone Safari)
 
 Phones need a **secure context (HTTPS)** for live `getUserMedia`. Proxy the Vite
