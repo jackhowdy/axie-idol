@@ -6,12 +6,12 @@
  * `.buddy` / `#buddy-sheet`, and the API calls from `src/buddy.ts`.
  */
 import {
-  buddyState, buddyHeaders, startEgg, hatch, retire, switchTo, wear, wishDone,
+  buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone,
   roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery,
 } from './buddy'
 import {
   eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml,
-  suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
+  bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
 export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary' | 'talk'
@@ -32,6 +32,8 @@ export type BuddyUi = {
   show: (which: BuddyScreen) => Promise<void>
   sheet: (html: string) => void
   hideSheet: () => void
+  /** Boot could not reach the server: a retry card in place of a blank document. */
+  showBootError: () => void
 }
 
 const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary', 'talk']
@@ -92,6 +94,19 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     const face = el.querySelector<HTMLElement>('[data-face="buddy"]')
     if (face) void nav.showFace(face)
     else nav.hideFace()
+  }
+
+  /**
+   * The one screen that is rendered without asking the server anything. `#buddy-egg` is the host
+   * because it is where `show('auto')` would have landed, and the retry runs the same boot path.
+   */
+  function showBootError(): void {
+    hideSheet()
+    hideAll()
+    const el = sections.egg
+    el.innerHTML = bootErrorHtml()
+    el.hidden = false
+    nav.hideFace()
   }
 
   async function getJson<T>(path: string): Promise<T> {
@@ -170,6 +185,10 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (act === 'ronin') { await roninSignIn(); await show('claim'); return }
     if (act === 'select-axie') { claimPick = a.dataset.id || null; await show('claim'); return }
     if (act === 'pick-axie') {
+      // Claiming replaces an unhatched egg, and the snaps already in it are lost work — say so
+      // before it happens rather than after.
+      const pendingSnaps = b && !b.hatchedAt ? b.egg.snaps : 0
+      if (pendingSnaps >= 1 && !confirm(`Your egg with ${pendingSnaps} snaps will be set aside. Continue?`)) return
       const r = await claim(a.dataset.id!)
       pendingLines = r.lines
       await show('hatch')
@@ -209,7 +228,18 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (act === 'retake') { nav.clearSheetQueue(); hideSheet(); nav.goSnap(); return }
     if (act === 'save' || act === 'sheet-next') { nav.onSheetNext(); return }
     if (act === 'close-sheet') { hideSheet(); return }
+    // The retry on the boot-failure card: the same two steps boot itself runs, and if they fail
+    // again the card comes straight back rather than an alert over a blank page.
+    if (act === 'retry-boot') {
+      try {
+        await loadBuddy()
+        await show('auto')
+      } catch {
+        showBootError()
+      }
+      return
+    }
   }
 
-  return { show, sheet, hideSheet }
+  return { show, sheet, hideSheet, showBootError }
 }

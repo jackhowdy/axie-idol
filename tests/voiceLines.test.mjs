@@ -16,6 +16,18 @@ test('all library lines pass the ten rules', () => {
   }
 })
 
+// `{count}` and `{days}` are filled by the server from real numbers. The server spells them with
+// wordsFor() first; if that ever regresses, a filled template line carries a digit and breaks the
+// voice rule, so the rule is checked on the filled line, not just the raw one.
+test('every template line still passes the rules once its slots are filled', () => {
+  const slots = { count: 'three', days: 'two', thing: 'a dog', place: 'the park', weather: 'rainy' }
+  for (const s of Object.keys(TEMPLATES)) for (const l of TEMPLATES[s]) {
+    const filled = fillSlots(l, slots)
+    assert.doesNotMatch(filled, /\{\w+\}/, `${s}: unfilled slot in ${filled}`)
+    assert.ok(checkRules(filled), `${s}: ${filled}`)
+  }
+})
+
 test('checkRules rejects long, numeric, game-word and emoji lines', () => {
   assert.equal(checkRules('This sentence has far more than fourteen words in it which is too many for the rules.'), false)
   assert.equal(checkRules('You are at level 4 now.'), false)
