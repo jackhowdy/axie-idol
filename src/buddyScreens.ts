@@ -163,6 +163,14 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     void run(a).catch((err: unknown) => { alert((err as Error).message || String(err)) }).finally(() => { busy = false })
   })
 
+  // The hatch button echoes the name as it is typed ("Hello, Happy").
+  document.addEventListener('input', (e) => {
+    const target = e.target
+    if (!(target instanceof HTMLInputElement) || target.id !== 'bd-name') return
+    const echo = document.querySelector<HTMLElement>('[data-name-echo]')
+    if (echo) echo.textContent = target.value.trim() || 'Miso'
+  })
+
   // Enter sends a talk message too, same as tapping the send button.
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return

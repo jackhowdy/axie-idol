@@ -158,6 +158,8 @@ const GUEST_SESSION_KEY = 'axieIdol.guestId'
 const GUEST_REMEMBERED_LS = 'axieIdol.guestId'
 const RONIN_LS = 'axieIdol.roninAddress'
 const DEVICE_KEY_LS = 'axieIdol.deviceKey'
+/** Set once the live camera has started successfully, so later Snap taps skip the enable gate. */
+const CAMERA_OK_LS = 'axieIdol.cameraOk'
 const BURNS_UI_LS = 'axieIdol.burnsUi'
 const CAST_CREW_CACHE_LS = 'axieIdol.castCrew'
 const CELEBRATED_NOTIFS_LS = 'axieIdol.celebratedNotifs'
@@ -1184,6 +1186,7 @@ async function startCamera(nextFacing: Facing = facing): Promise<boolean> {
     cameraDenied.hidden = true
     mode = 'camera'
     cameraStarted = true
+    lsSet(CAMERA_OK_LS, '1')
     video.classList.toggle('mirror', facing === 'user')
     await video.play().catch(() => undefined)
     btnFlip.disabled = false
@@ -3187,15 +3190,25 @@ function showViewfinderFromFeed(): void {
     }
   }
   scheduleStickerCenter()
-  if (isMobileLike() || !stream) {
-    showCameraGate(true)
-  }
-  if (!isMobileLike() && !stream) {
+  if (stream && cameraStarted) {
+    // The live camera is still running from the last shot.
+    showCameraGate(false)
+  } else if (lsGet(CAMERA_OK_LS) === '1') {
+    // The player enabled the camera once already. This runs inside their tap on the Snap
+    // button, so the browser treats it as the user gesture it needs; only a failure shows
+    // the gate again.
     void (async () => {
-      const ok = await startCamera('environment')
-      if (!ok) showCameraGate(true)
-      else showCameraGate(false)
+      const ok = await startCamera(facing)
+      showCameraGate(!ok)
     })()
+  } else if (isMobileLike() || !stream) {
+    showCameraGate(true)
+    if (!isMobileLike()) {
+      void (async () => {
+        const ok = await startCamera('environment')
+        showCameraGate(!ok)
+      })()
+    }
   }
 }
 
