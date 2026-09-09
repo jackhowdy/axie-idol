@@ -204,6 +204,17 @@ test('talk answers from memory and never with a number', async () => {
   assert.match(sad.json.reply, /sofa|here|stay|face/i)
 })
 
+test('talk answers what was actually asked: a hatch question always gets the hatch line', async () => {
+  const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  for (let i = 0; i < 5; i++) await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
+  await api('/api/buddy/hatch', { method: 'POST', device: d, body: { name: 'Miso' } })
+  const r = await api('/api/buddy/talk', { method: 'POST', device: d, body: { text: 'Where did you hatch?' } })
+  assert.equal(r.status, 200)
+  assert.match(r.json.reply, /came out|hatch/i)
+  assert.doesNotMatch(r.json.reply, /\d/)
+})
+
 test('talk answers curiously to a question and generically otherwise, always without digits', async () => {
   const d = dev()
   await api('/api/buddy/egg', { method: 'POST', device: d })

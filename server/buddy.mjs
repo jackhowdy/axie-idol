@@ -112,11 +112,21 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     return line
   }
 
-  /** A memory sentence built from the buddy's own records (`places`, `moments`, `hatchedAt`) — never a digit. */
-  function memoryLine(b) {
+  /**
+   * A memory reply built only from `b.places` (a count) and a fixed hatch-day fact — the
+   * only two things this function actually reads. Answers what was asked: hatch/came-out
+   * wording gets the hatch line, place/park/where/been wording gets the places line (when
+   * there are any places to talk about), otherwise it falls back to `places`-driven
+   * randomness like before. Never a digit — the count is spelled with `wordsFor`.
+   */
+  function memoryLine(b, text = '') {
     const placeCount = Object.keys(b.places || {}).length
-    if (!placeCount || rng() < 0.5) return 'This is where I came out. It looked bigger from inside.'
-    return `We went to ${wordsFor(placeCount)} places. The first one was warm.`
+    const placesLine = () => `We went to ${wordsFor(placeCount)} places. The first one was warm.`
+    const hatchLine = 'This is where I came out. It looked bigger from inside.'
+    if (/hatch|came out|born|egg/.test(text)) return hatchLine
+    if (/park|place|where|been/.test(text) && placeCount) return placesLine()
+    if (!placeCount || rng() < 0.5) return hatchLine
+    return placesLine()
   }
 
   function validName(raw) {
@@ -288,7 +298,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const text = String(body.text || '').slice(0, 200).toLowerCase()
       let reply
       if (/sad|tired|rough|bad day|lonely/.test(text)) reply = say(active, 'talk-warm')
-      else if (/remember|hatch|first|where|place|park|noodle/.test(text)) reply = memoryLine(active)
+      else if (/remember|hatch|first|where|place|park|noodle/.test(text)) reply = memoryLine(active, text)
       else if (text.includes('?')) reply = say(active, 'talk-curious')
       else reply = say(active, 'talk', { thing: 'the sky' })
       save(store); sendJson(res, 200, { reply }); return true

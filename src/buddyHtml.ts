@@ -243,10 +243,13 @@ export function homeHtml(b: Buddy, greeting: string | null): string {
         <div><p class="bd-eyebrow">Day ${dayCount(b)} · my Axie</p><h1>${esc(b.name)}</h1></div>
         <span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.streak}-day streak</span>
       </header>
-      ${greeting ? `<div class="bd-speech-row"><div class="bd-speech bd-speech-home">${esc(greeting)}</div><button type="button" class="bd-link" data-action="talk">Talk</button></div>` : ''}
+      <div class="bd-speech-row">${greeting
+        ? `<div class="bd-speech bd-speech-home">${esc(greeting)}</div><button type="button" class="bd-link" data-action="talk">Talk</button>`
+        : `<div class="bd-speech bd-speech-home bd-speech-quiet">${esc(b.name)}</div><button type="button" class="bd-link" data-action="talk">Talk to ${esc(b.name)}</button>`
+      }</div>
       <div class="bd-card bd-hero">
         <div class="bd-hero-row">
-          <div class="bd-hero-3d" data-face="buddy"><span class="bd-badge">${icon('star', 11)} Bond ${b.level}</span></div>
+          <div class="bd-hero-3d" data-face="buddy" data-action="talk"><span class="bd-badge">${icon('star', 11)} Bond ${b.level}</span></div>
           <div class="bd-hero-text">
             <b>${esc(b.levelName || `Bond ${b.level}`)}</b>
             <span class="bd-muted">${who} · ${b.snapCount} snaps · ${b.moments.length} of ${b.momentsTotal} moments</span>

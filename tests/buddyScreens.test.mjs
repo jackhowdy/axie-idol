@@ -54,6 +54,17 @@ test('home locks wardrobe items that are not unlocked yet and names the bond tha
   assert.match(html, /data-item="hat"/)
 })
 
+test('home always offers a way to talk, greeting or not', () => {
+  const withGreeting = homeHtml(miso, 'New day. New street?')
+  assert.match(withGreeting, /data-action="talk"/)
+  const withoutGreeting = homeHtml(miso, null)
+  // the "Talk" control (a small bubble naming the Axie plus a "Talk to <name>" link) must
+  // still be reachable even with no queued greeting, and tapping the hero box works too
+  assert.match(withoutGreeting, /data-action="talk"/)
+  assert.match(withoutGreeting, /Talk to Miso/)
+  assert.match(withoutGreeting, /<div class="bd-hero-3d" data-face="buddy" data-action="talk">/)
+})
+
 test('hatch and reaction render the spoken lines', () => {
   assert.match(hatchHtml({ ...egg, name: 'Miso', traits: ['Shy'] }, ['Oh. Hello.']), /Oh\. Hello\./)
   assert.match(
