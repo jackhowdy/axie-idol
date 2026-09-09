@@ -10,6 +10,7 @@ data/*.json
 design/squad/squad-of-mine.html
 public/assets/axie/
 scripts/.cache/
+scripts/.seed-devices.json
 
 # subagent-driven-development scratch
 .superpowers/

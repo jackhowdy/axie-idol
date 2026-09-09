@@ -7,10 +7,22 @@
  * goes over the public HTTP API — no server internals, no client imports.
  *
  *   node scripts/seed-ladder.mjs --base http://127.0.0.1:5199 --yes
+ *   node scripts/seed-ladder.mjs --base http://127.0.0.1:5199 --admin-key demo --yes
+ *
+ * The daily bond cap is ten, so snapping alone leaves every seeded account tied at ten bond and
+ * the ladder has no podium. `--admin-key` calls the operator-only `POST /api/admin/seed-bond`
+ * hook afterwards to write a stepped bond per account; that route only exists when the server was
+ * started with a matching `ADMIN_KEY`, and it is refused (as a plain 404) otherwise.
+ *
+ * The eight device ids are remembered in `scripts/.seed-devices.json` per base URL, so re-running
+ * tops up the same eight Axies instead of adding eight more.
  *
  * It refuses to do anything without `--yes`, and it is a writing script: point it at a local or
  * staging server, never at anything you are not willing to fill with fake Axies.
  */
+import { readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 /** The class name pools from the client's own suggestName(), copied so this script imports no client code. */
 const NAMES = [
@@ -32,27 +44,58 @@ const MIN_SNAPS = 12
 const MAX_SNAPS = 40
 /** The hatch needs five egg photos first. */
 const HATCH_AT = 5
+/**
+ * Monthly bond per podium place, written through the admin hook. Deliberately uneven and with a
+ * clear top three, so the ladder reads like a month of real play rather than a generated list.
+ */
+const PODIUM = [214, 188, 171, 166, 152, 120, 62, 40]
+
+const DEVICES_FILE = join(dirname(fileURLToPath(import.meta.url)), '.seed-devices.json')
 
 function parseArgs(argv) {
-  const args = { base: 'http://127.0.0.1:5199', yes: false }
+  const args = { base: 'http://127.0.0.1:5199', yes: false, adminKey: '' }
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--base') args.base = argv[++i] || args.base
+    else if (argv[i] === '--admin-key') args.adminKey = argv[++i] || ''
     else if (argv[i] === '--yes') args.yes = true
   }
   return args
 }
 
 const rand = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1))
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
 
 /** Scatter the snaps around Hong Kong so each one lands in its own grid cell. */
 function coordFor(i) {
   return { lat: 22.24 + i * 0.011, lng: 114.13 + ((i * 7) % 13) * 0.009 }
 }
 
-async function api(base, path, { method = 'GET', body, device } = {}) {
+/** Remembered device ids, keyed by base URL so two servers never share accounts. */
+function loadDevices(base) {
+  try {
+    const all = JSON.parse(readFileSync(DEVICES_FILE, 'utf8'))
+    const list = all?.[base]
+    if (Array.isArray(list) && list.length === ACCOUNTS && list.every((d) => typeof d === 'string' && d)) return list
+  } catch {
+    /* no file yet, or unreadable — start fresh */
+  }
+  return null
+}
+
+function saveDevices(base, devices) {
+  let all = {}
+  try {
+    all = JSON.parse(readFileSync(DEVICES_FILE, 'utf8')) || {}
+  } catch {
+    /* first run */
+  }
+  all[base] = devices
+  writeFileSync(DEVICES_FILE, `${JSON.stringify(all, null, 2)}\n`)
+}
+
+async function api(base, path, { method = 'GET', body, device, adminKey } = {}) {
   const headers = { 'content-type': 'application/json' }
   if (device) headers['X-Device-Key'] = device
+  if (adminKey) headers['X-Admin-Key'] = adminKey
   const res = await fetch(base + path, { method, headers, body: body ? JSON.stringify(body) : undefined })
   const text = await res.text()
   let json = null
@@ -64,17 +107,26 @@ async function api(base, path, { method = 'GET', body, device } = {}) {
   return { status: res.status, json, text }
 }
 
-async function seedOne(base, index) {
-  const device = `seed-${Date.now().toString(36)}-${index}-${Math.random().toString(36).slice(2, 8)}`
+/** Bring one device up to a hatched Axie with `total` snaps behind it, reusing whatever is there. */
+async function seedOne(base, index, device) {
   const name = NAMES[index % NAMES.length]
   const total = rand(MIN_SNAPS, MAX_SNAPS)
-  if (total > MAX_SNAPS) throw new Error(`planned ${total} snaps, over the ${MAX_SNAPS}/hour ceiling`)
 
-  const egg = await api(base, '/api/buddy/egg', { method: 'POST', device })
-  if (egg.status !== 201) throw new Error(`egg failed (${egg.status}): ${egg.text.slice(0, 200)}`)
+  const before = await api(base, '/api/buddy', { device })
+  let b = before.json?.active || null
+  let reused = Boolean(b?.hatchedAt)
 
-  let hatched = false
-  for (let i = 0; i < total; i++) {
+  if (!b) {
+    const egg = await api(base, '/api/buddy/egg', { method: 'POST', device })
+    if (egg.status !== 201) throw new Error(`egg failed (${egg.status}): ${egg.text.slice(0, 200)}`)
+    b = egg.json.active
+  }
+
+  // A reused account already has its snaps; only a fresh or half-finished one needs more taken.
+  const taken = reused ? total : b.egg?.snaps || 0
+  let added = 0
+  let hatched = Boolean(b.hatchedAt)
+  for (let i = taken; i < total; i++) {
     const { lat, lng } = coordFor(i + index * 3)
     const post = await api(base, '/api/posts', {
       method: 'POST',
@@ -91,32 +143,65 @@ async function seedOne(base, index) {
       },
     })
     if (post.status !== 201) throw new Error(`snap ${i + 1} failed (${post.status}): ${post.text.slice(0, 200)}`)
+    added++
     if (!hatched && i + 1 >= HATCH_AT) {
       const h = await api(base, '/api/buddy/hatch', { method: 'POST', device, body: { name } })
       if (h.status !== 200) throw new Error(`hatch failed (${h.status}): ${h.text.slice(0, 200)}`)
       hatched = true
     }
   }
+
   const me = await api(base, '/api/buddy', { device })
-  const b = me.json?.active || null
-  return { device, name, snaps: total, bond: b?.bond ?? 0, level: b?.level ?? 0, cls: b?.class || '?' }
+  const active = me.json?.active || null
+  return { device, buddyId: active?.id || null, name: active?.name || name, snaps: active?.snapCount ?? added, added, reused, cls: active?.class || '?' }
+}
+
+/** Write a stepped bond onto one seeded Axie through the operator-only hook. */
+async function setBond(base, adminKey, buddyId, bond) {
+  const r = await api(base, '/api/admin/seed-bond', { method: 'POST', adminKey, body: { buddyId, bond, monthlyBond: bond } })
+  if (r.status === 404) {
+    throw new Error('seed-bond returned 404 — the server has no ADMIN_KEY set, or --admin-key does not match it')
+  }
+  if (r.status !== 200) throw new Error(`seed-bond failed (${r.status}): ${r.text.slice(0, 200)}`)
+  return r.json
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   if (!args.yes) {
     console.error('seed-ladder: refusing to run without --yes')
-    console.error(`  it would create ${ACCOUNTS} device accounts and up to ${MAX_SNAPS} posts each on ${args.base}`)
-    console.error('  usage: node scripts/seed-ladder.mjs --base <url> --yes')
+    console.error(`  it would create or top up ${ACCOUNTS} device accounts and up to ${MAX_SNAPS} posts each on ${args.base}`)
+    console.error('  usage: node scripts/seed-ladder.mjs --base <url> [--admin-key <key>] --yes')
     process.exitCode = 2
     return
   }
   const base = args.base.replace(/\/+$/, '')
-  console.log(`seed-ladder: ${ACCOUNTS} accounts against ${base}`)
+  const remembered = loadDevices(base)
+  const devices = remembered
+    || Array.from({ length: ACCOUNTS }, (_, i) => `seed-${Date.now().toString(36)}-${i}-${Math.random().toString(36).slice(2, 8)}`)
 
+  console.log(`seed-ladder: ${ACCOUNTS} accounts against ${base}${remembered ? ' (reusing remembered devices)' : ''}`)
+  if (!args.adminKey) {
+    console.warn('  warning: no --admin-key, so bond comes from snaps alone. The daily cap is ten,')
+    console.warn('           so every seeded Axie will tie at ten bond and the ladder will have no podium.')
+  }
+
+  const seeded = []
   for (let i = 0; i < ACCOUNTS; i++) {
-    const r = await seedOne(base, i)
-    console.log(`  ${String(i + 1).padStart(2)}. ${r.name.padEnd(8)} ${r.cls.padEnd(8)} ${String(r.snaps).padStart(2)} snaps · bond ${r.bond} · level ${r.level}`)
+    const r = await seedOne(base, i, devices[i])
+    seeded.push(r)
+    console.log(`  ${String(i + 1).padStart(2)}. ${r.name.padEnd(8)} ${r.cls.padEnd(8)} ${String(r.snaps).padStart(2)} snaps (+${r.added} this run)${r.reused ? ' · reused' : ''}`)
+  }
+  saveDevices(base, devices)
+
+  if (args.adminKey) {
+    console.log('\nwriting the podium through /api/admin/seed-bond')
+    for (let i = 0; i < seeded.length; i++) {
+      const r = seeded[i]
+      if (!r.buddyId) throw new Error(`no buddy id for account ${i + 1}`)
+      const out = await setBond(base, args.adminKey, r.buddyId, PODIUM[i] ?? PODIUM.at(-1))
+      console.log(`  ${r.name.padEnd(8)} bond ${String(out.bond).padStart(3)} · level ${out.level}`)
+    }
   }
 
   const ladder = await api(base, '/api/ladder/monthly', { device: `seed-reader-${Math.random().toString(36).slice(2, 8)}` })

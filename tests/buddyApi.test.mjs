@@ -13,7 +13,9 @@ const PNG_1x1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfF
 let base = process.env.BASE_URL || ''
 let server = null
 before(async () => { if (!base) { server = await startNodeServer({ BUDDY: '1', BUDDY_TEST_SKIP_CHAIN: '1' }); base = server.baseUrl } })
-after(async () => { if (server) await server.stop() })
+/** Started inside the ADMIN_KEY test below — the shared server deliberately has no admin key. */
+let adminServer = null
+after(async () => { if (server) await server.stop(); if (adminServer) await adminServer.stop() })
 
 async function api(path, { method = 'GET', body, device = 'dev-a' } = {}) {
   const r = await fetch(base + path, { method, headers: { 'content-type': 'application/json', 'X-Device-Key': device }, body: body ? JSON.stringify(body) : undefined })
@@ -184,6 +186,60 @@ test('legacy (non-buddy) posts keep the 10/hour limit', async () => {
   const eleventh = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d } })
   assert.equal(eleventh.status, 429, eleventh.text)
   assert.equal(eleventh.json.limit, 10)
+})
+
+// The operator-only ladder seeding hook. It must not exist at all on a server that never set
+// ADMIN_KEY, and a caller without the key must not be able to tell the route is there: both cases
+// fall through to core's ordinary unknown-route 404, body and all.
+test('the admin seed hook does not exist on a server with no ADMIN_KEY', async () => {
+  const r = await fetch(base + '/api/admin/seed-bond', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ buddyId: 'whatever', bond: 200, monthlyBond: 200 }),
+  })
+  assert.equal(r.status, 404)
+  assert.deepEqual(await r.json(), { error: 'Not found' }, 'the plain unknown-route 404, nothing that hints the route exists')
+})
+
+test('with ADMIN_KEY set, the seed hook writes bond and the monthly ladder shows it', async () => {
+  adminServer = await startNodeServer({ BUDDY: '1', BUDDY_TEST_SKIP_CHAIN: '1', ADMIN_KEY: 'test-key' })
+  const call = async (path, { method = 'GET', body, device, adminKey } = {}) => {
+    const headers = { 'content-type': 'application/json' }
+    if (device) headers['X-Device-Key'] = device
+    if (adminKey) headers['X-Admin-Key'] = adminKey
+    const r = await fetch(adminServer.baseUrl + path, { method, headers, body: body ? JSON.stringify(body) : undefined })
+    const text = await r.text(); let json = null; try { json = JSON.parse(text) } catch {}
+    return { status: r.status, json, text }
+  }
+  const d = dev()
+  await call('/api/buddy/egg', { method: 'POST', device: d })
+  for (let i = 0; i < 5; i++) await call('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
+  const h = await call('/api/buddy/hatch', { method: 'POST', device: d, body: { name: 'Podium' } })
+  assert.equal(h.status, 200, h.text)
+  const buddyId = h.json.active.id
+
+  const wrong = await call('/api/admin/seed-bond', { method: 'POST', adminKey: 'not-the-key', body: { buddyId, bond: 214, monthlyBond: 214 } })
+  assert.equal(wrong.status, 404, 'a wrong key is indistinguishable from no route')
+  assert.deepEqual(wrong.json, { error: 'Not found' })
+
+  const ok = await call('/api/admin/seed-bond', { method: 'POST', adminKey: 'test-key', body: { buddyId, bond: 214, monthlyBond: 214 } })
+  assert.equal(ok.status, 200, ok.text)
+  assert.equal(ok.json.bond, 214)
+  assert.equal(ok.json.level, 10, 'past the 120 bond the ladder tops out at')
+  assert.ok(ok.json.wardrobe.unlocked.includes('crown'), 'wardrobe recomputed from the ladder for the new bond')
+  assert.ok(ok.json.wardrobe.unlocked.includes('hat'), 'and the items it already had are kept')
+
+  // A prototype-chain id must miss like any other unknown buddy, not reach Object.prototype
+  const proto = await call('/api/admin/seed-bond', { method: 'POST', adminKey: 'test-key', body: { buddyId: 'constructor', bond: 9, monthlyBond: 9 } })
+  assert.equal(proto.status, 404)
+  assert.equal(proto.json.error, 'Buddy not found')
+
+  const ladder = await call('/api/ladder/monthly', { device: d })
+  assert.equal(ladder.status, 200)
+  const row = ladder.json.rows.find((r) => r.buddyId === buddyId)
+  assert.ok(row, 'the seeded buddy is on the monthly ladder')
+  assert.equal(row.monthlyBond, 214)
+  assert.equal(row.level, 10)
 })
 
 test('buddy posts still respect the cast lock for non-neutral cast ids', async () => {

@@ -224,8 +224,48 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     return b.wish
   }
 
+  /**
+   * Operator-only ladder seeding, for the demo. Not part of the game: it writes bond straight onto
+   * a buddy so a seeded ladder can show a real podium instead of eight accounts tied at the daily
+   * cap, which is all the public API can produce in a single day.
+   *
+   * Every rejection path returns `false`, so core answers with its ordinary
+   * `{ error: 'Not found' }` 404 and the route is indistinguishable from one that does not exist.
+   * On a deployment that never set `ADMIN_KEY`, it genuinely does not exist.
+   */
+  async function handleAdmin(req, res, url) {
+    const adminKey = typeof env.ADMIN_KEY === 'string' ? env.ADMIN_KEY : ''
+    if (!adminKey) return false
+    if (req.headers?.get?.('x-admin-key') !== adminKey) return false
+    if (url.pathname !== '/api/admin/seed-bond' || req.method !== 'POST') return false
+
+    let body
+    try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}') } catch { sendJson(res, 400, { error: 'Invalid JSON' }); return true }
+    const store = load()
+    // Own-property lookup only: an id of `constructor` or `__proto__` must miss, not reach up the
+    // prototype chain and hand us something that is not a buddy.
+    const buddyId = String(body.buddyId || '')
+    const b = Object.prototype.hasOwnProperty.call(store.buddies, buddyId) ? store.buddies[buddyId] : null
+    if (!b) { sendJson(res, 404, { error: 'Buddy not found' }); return true }
+    const bondRaw = Number(body.bond)
+    const monthlyRaw = Number(body.monthlyBond)
+    if (!Number.isFinite(bondRaw) || !Number.isFinite(monthlyRaw)) { sendJson(res, 400, { error: 'bond and monthlyBond must be numbers' }); return true }
+    b.bond = Math.max(0, Math.floor(bondRaw))
+    b.monthly = { key: monthKey(), bond: Math.max(0, Math.floor(monthlyRaw)) }
+    // Recompute the wardrobe from the ladder for the new bond, union with whatever it already had.
+    for (const row of LADDER) {
+      if (row.unlock && b.bond >= row.bond && !b.wardrobe.unlocked.includes(row.unlock)) b.wardrobe.unlocked.push(row.unlock)
+    }
+    save(store)
+    sendJson(res, 200, { buddyId: b.id, name: b.name, bond: b.bond, level: levelFor(b.bond), monthly: b.monthly, wardrobe: b.wardrobe })
+    return true
+  }
+
   async function handle(req, res, url) {
-    if (!enabled || !/^\/api\/(buddy|ronin|ladder|account)\b/.test(url.pathname)) return false
+    if (!enabled || !/^\/api\/(buddy|ronin|ladder|account|admin)\b/.test(url.pathname)) return false
+    // Operator routes come first: they carry no device key, and the body is only read once the key
+    // has matched, so a malformed body on an unauthorised call cannot answer differently either.
+    if (url.pathname.startsWith('/api/admin/')) return handleAdmin(req, res, url)
     let body = {}
     if (req.method === 'POST') { try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}') } catch { sendJson(res, 400, { error: 'Invalid JSON' }); return true } }
     const ownerKey = ownerKeyFrom(req, body, url)

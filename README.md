@@ -76,13 +76,22 @@ scrapbook, they just earn no bond.
 
 ```bash
 npm run seed:ladder -- --base http://127.0.0.1:5174 --yes
+npm run seed:ladder -- --base http://127.0.0.1:5174 --admin-key <key> --yes   # with a podium
 ```
 
 Creates eight device accounts, hatches each one, takes 12–40 tiny snaps per account at scattered
 coordinates (so places and moments differ), then prints the top of `/api/ladder/monthly`. It refuses
 to run without `--yes`. Everything goes over the public API, so point it only at a server you are
-happy to fill with fake Axies. Note that the daily cap of ten bond applies to seeded accounts too:
-a single run gives every seeded Axie the same ten bond, so the ladder fills but does not spread.
+happy to fill with fake Axies. The eight device ids are remembered in `scripts/.seed-devices.json`
+(git-ignored, keyed by base URL), so re-running tops up the same eight Axies instead of adding
+eight more.
+
+`--admin-key <key>` gives the ladder a real podium. Snaps alone cannot: the daily cap of ten bond
+applies to seeded accounts too, so without it every seeded Axie ties at ten bond and the script
+says so. With it, the script calls the operator-only `POST /api/admin/seed-bond` after hatching to
+write a stepped bond per account. That route only exists when the server itself was started with a
+matching `ADMIN_KEY` — on the live Worker, `npx wrangler secret put ADMIN_KEY` — and without the
+secret, or with the wrong key, it answers the same plain 404 as any unknown route.
 
 **Resetting local state**
 
