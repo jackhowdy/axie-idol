@@ -347,8 +347,10 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const bondRaw = Number(body.bond)
     const monthlyRaw = Number(body.monthlyBond)
     if (!Number.isFinite(bondRaw) || !Number.isFinite(monthlyRaw)) { sendJson(res, 400, { error: 'bond and monthlyBond must be numbers' }); return true }
+    const beforeLevel = levelFor(b.bond)
     b.bond = Math.max(0, Math.floor(bondRaw))
     b.monthly = { key: monthKey(), bond: Math.max(0, Math.floor(monthlyRaw)) }
+    earnTrait(b, beforeLevel, levelFor(b.bond))
     // Recompute the wardrobe from the ladder for the new bond, union with whatever it already had.
     for (const row of LADDER) {
       if (row.unlock && b.bond >= row.bond && !b.wardrobe.unlocked.includes(row.unlock)) b.wardrobe.unlocked.push(row.unlock)
@@ -429,8 +431,10 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }
       const w = ensureWish(active)
       if (w.done) { sendJson(res, 200, payload(store, ownerKey)); return true }
-      w.done = true; active.firstsDone.push(w.id); const r = addBond(active, w.bonus)
-      save(store); sendJson(res, 200, payload(store, ownerKey, { granted: r.granted, unlocks: r.unlocks })); return true
+      const r = addBond(active, w.bonus)
+      // A full day must not burn the wish: leave it open so the bonus can land tomorrow.
+      if (r.granted > 0) { w.done = true; active.firstsDone.push(w.id) }
+      save(store); sendJson(res, 200, payload(store, ownerKey, { granted: r.granted, unlocks: r.unlocks, capped: r.granted === 0 })); return true
     }
     if (p === '/api/buddy/wear' && req.method === 'POST') {
       if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }
