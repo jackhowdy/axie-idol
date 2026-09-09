@@ -28,6 +28,7 @@ export type Monthly = {
 }
 export type DiaryEntry = { day: number; dayKey: string; title: string; line: string; photoId: string | null }
 export type Diary = { week: number; entries: DiaryEntry[]; anniversary: string | null; next: string }
+export type TalkExchange = { you: string; reply: string }
 
 const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
 /** Every name, line, label and id that reaches the markup goes through this. */
@@ -445,6 +446,31 @@ export function diaryHtml(d: Diary, b: Buddy): string {
       <div class="bd-card bd-note">${icon('bell', 18)}<p class="bd-small">${esc(d.anniversary || `Next: ${d.next}`)}</p></div>
     </div>
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="snap">${icon('camera', 20)} Write the next page</button></div>`
+}
+
+/** You on the right, the Axie on the left — the last three exchanges only, oldest first. */
+export function talkHtml(b: Buddy, exchanges: TalkExchange[]): string {
+  const bubbles = exchanges.slice(-3)
+    .map((x) => `
+      <div class="bd-talk-row bd-talk-you"><div class="bd-bubble bd-bubble-you">${esc(x.you)}</div></div>
+      <div class="bd-talk-row bd-talk-buddy"><div class="bd-bubble bd-bubble-buddy">${esc(x.reply)}</div></div>`)
+    .join('')
+    || `<p class="bd-small bd-muted">Say something to ${esc(b.name || 'your Axie')}.</p>`
+  return `
+    <div class="bd-scroll">
+      <header class="bd-head bd-head-row">
+        <button type="button" class="bd-round" data-action="home" aria-label="Back">${icon('back', 18)}</button>
+        <p class="bd-eyebrow">Talk with ${esc(b.name || 'your Axie')}</p>
+        <span class="bd-round bd-round-ghost"></span>
+      </header>
+      <div class="bd-talk">${bubbles}</div>
+    </div>
+    <div class="bd-actions">
+      <div class="bd-input-row bd-talk-input-row">
+        <input id="bd-talk-input" class="bd-input" maxlength="200" placeholder="Say something" autocomplete="off">
+        <button type="button" class="bd-btn bd-btn-primary" data-action="talk-send" aria-label="Send">${icon('chevron', 18)}</button>
+      </div>
+    </div>`
 }
 
 const NAMES: Record<string, string[]> = {

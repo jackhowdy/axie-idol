@@ -1,5 +1,5 @@
 // The written line library from docs/voice-bible.md. Lines are the floor; a model may add more later.
-export const SITUATIONS = ['hatch', 'morning', 'wish', 'before', 'after', 'bedtime', 'return', 'big', 'moment', 'unlock', 'talk']
+export const SITUATIONS = ['hatch', 'morning', 'wish', 'before', 'after', 'bedtime', 'return', 'big', 'moment', 'unlock', 'talk', 'talk-warm', 'talk-curious']
 
 export const LINES = {
   Explorer: {
@@ -116,6 +116,8 @@ export const TEMPLATES = {
   moment: ['Something happened just now. Did you see it?'],
   unlock: ['Something changed. Look at me. Look.'],
   talk: ['Say that again. I was looking at {thing}.'],
+  'talk-warm': ['Then it\'s a sofa day. I\'ll do the face until you laugh.'],
+  'talk-curious': ['I don\'t know that one. I only really know puddles and buses.'],
 }
 
 const GAME_WORDS = /\b(bond|level|streak|points?|ladder|rank|unlock|xp)\b/i

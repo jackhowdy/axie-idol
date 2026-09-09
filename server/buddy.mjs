@@ -13,6 +13,9 @@ const DAILY_CAP = 10
 const PLACE_GRID_DEG = 0.003 // ~300 m
 /** Scrapbook keeps the last N photo records (id + upload path); photoIds stays uncapped. */
 const PHOTO_CAP = 60
+/** Spells small counts in words so a talk reply never carries a digit (voice rule). */
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
+const wordsFor = (n) => (n >= 0 && n < ONES.length ? ONES[n] : 'a lot of')
 
 export function createBuddyModule({ storage, helpers, env = {}, catalogue = catalogueJson, now = () => Date.now(), rng = Math.random }) {
   const { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress } = helpers
@@ -107,6 +110,13 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const line = pickLine({ traits: b.traits, situation, slots, recent: b.recentLines, rng })
     b.recentLines = [...b.recentLines.filter((l) => l !== line), line].slice(-60)
     return line
+  }
+
+  /** A memory sentence built from the buddy's own records (`places`, `moments`, `hatchedAt`) — never a digit. */
+  function memoryLine(b) {
+    const placeCount = Object.keys(b.places || {}).length
+    if (!placeCount || rng() < 0.5) return 'This is where I came out. It looked bigger from inside.'
+    return `We went to ${wordsFor(placeCount)} places. The first one was warm.`
   }
 
   function validName(raw) {
@@ -272,6 +282,16 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       if (!active?.hatchedAt) { sendJson(res, 200, { line: null }); return true }
       const line = say(active, 'before', { thing: url.searchParams.get('thing') || 'the whole street', place: url.searchParams.get('place') || 'here' })
       save(store); sendJson(res, 200, { line }); return true
+    }
+    if (p === '/api/buddy/talk' && req.method === 'POST') {
+      if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }
+      const text = String(body.text || '').slice(0, 200).toLowerCase()
+      let reply
+      if (/sad|tired|rough|bad day|lonely/.test(text)) reply = say(active, 'talk-warm')
+      else if (/remember|hatch|first|where|place|park|noodle/.test(text)) reply = memoryLine(active)
+      else if (text.includes('?')) reply = say(active, 'talk-curious')
+      else reply = say(active, 'talk', { thing: 'the sky' })
+      save(store); sendJson(res, 200, { reply }); return true
     }
     if (p === '/api/ronin/nonce' && req.method === 'GET') {
       const address = normalizeAddress(url.searchParams.get('address') || '')

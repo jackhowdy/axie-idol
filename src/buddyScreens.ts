@@ -7,14 +7,14 @@
  */
 import {
   buddyState, buddyHeaders, startEgg, hatch, retire, switchTo, wear, wishDone,
-  beforeLine, roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery,
+  roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery,
 } from './buddy'
 import {
-  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml,
-  suggestName, esc, type Monthly, type Diary, type OwnedAxie,
+  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml,
+  suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
-export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary'
+export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary' | 'talk'
 export type BuddyNav = {
   goSnap: () => void
   showFace: (host: HTMLElement) => Promise<void>
@@ -34,7 +34,7 @@ export type BuddyUi = {
   hideSheet: () => void
 }
 
-const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary']
+const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary', 'talk']
 
 export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   const sections = {} as Record<Exclude<BuddyScreen, 'auto'>, HTMLElement>
@@ -44,6 +44,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   let pendingLines: string[] = []
   let claimAxies: OwnedAxie[] = []
   let claimPick: string | null = null
+  let exchanges: TalkExchange[] = []
   let busy = false
 
   function hideAll(): void {
@@ -55,7 +56,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (which === 'auto') which = !before ? 'egg' : before.hatchedAt ? 'home' : 'egg'
     // Never create a second egg behind an active Axie — only "fresh egg" retires one.
     if (which === 'egg' && before?.hatchedAt) which = 'home'
-    if ((which === 'home' || which === 'ladder' || which === 'diary') && !before?.hatchedAt) which = 'egg'
+    if ((which === 'home' || which === 'ladder' || which === 'diary' || which === 'talk') && !before?.hatchedAt) which = 'egg'
     if (which === 'hatch' && !before) which = 'egg'
 
     if (which === 'egg' && !buddyState.active) await startEgg()
@@ -71,13 +72,15 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     } else if (which === 'ladder') html = ladderHtml(buddyState.active!)
     else if (which === 'monthly') html = monthlyHtml(await getJson<Monthly>('/api/ladder/monthly'))
     else if (which === 'diary') html = diaryHtml(await getJson<Diary>('/api/buddy/diary'), buddyState.active!)
+    else if (which === 'talk') html = talkHtml(buddyState.active!, exchanges)
 
     hideSheet()
     hideAll()
     el.innerHTML = html
     el.hidden = false
     const scroller = el.querySelector<HTMLElement>('.bd-scroll')
-    if (scroller) scroller.scrollTop = 0
+    if (scroller) scroller.scrollTop = which === 'talk' ? scroller.scrollHeight : 0
+    if (which === 'talk') el.querySelector<HTMLInputElement>('#bd-talk-input')?.focus()
     const face = el.querySelector<HTMLElement>('[data-face="buddy"]')
     if (face) void nav.showFace(face)
     else nav.hideFace()
@@ -88,6 +91,17 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     const data = (await res.json().catch(() => ({}))) as T & { error?: string }
     if (!res.ok) throw new Error(data.error || `${path} ${res.status}`)
     return data
+  }
+
+  async function talkSend(): Promise<void> {
+    const input = document.querySelector<HTMLInputElement>('#bd-talk-input')
+    const text = (input?.value || '').trim()
+    if (!text) return
+    const res = await fetch('/api/buddy/talk', { method: 'POST', headers: buddyHeaders(), body: JSON.stringify({ text }) })
+    const data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string }
+    if (!res.ok) throw new Error(data.error || `/api/buddy/talk ${res.status}`)
+    exchanges = [...exchanges, { you: text, reply: data.reply || '' }].slice(-3)
+    await show('talk')
   }
 
   function sheet(html: string): void {
@@ -108,6 +122,17 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (busy) return
     busy = true
     void run(a).catch((err: unknown) => { alert((err as Error).message || String(err)) }).finally(() => { busy = false })
+  })
+
+  // Enter sends a talk message too, same as tapping the send button.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return
+    const target = e.target
+    if (!(target instanceof HTMLInputElement) || target.id !== 'bd-talk-input') return
+    e.preventDefault()
+    if (busy) return
+    busy = true
+    void talkSend().catch((err: unknown) => { alert((err as Error).message || String(err)) }).finally(() => { busy = false })
   })
 
   async function run(a: HTMLElement): Promise<void> {
@@ -131,11 +156,8 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       if (echo) echo.textContent = input.value
       return
     }
-    if (act === 'talk') {
-      const line = await beforeLine({})
-      if (line) { buddyState.greeting = line; await show('home') }
-      return
-    }
+    if (act === 'talk') { await show('talk'); return }
+    if (act === 'talk-send') { await talkSend(); return }
     if (act === 'claim') { await show('claim'); return }
     if (act === 'ronin') { await roninSignIn(); await show('claim'); return }
     if (act === 'select-axie') { claimPick = a.dataset.id || null; await show('claim'); return }

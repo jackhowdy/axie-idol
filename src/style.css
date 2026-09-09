@@ -3794,6 +3794,16 @@ button.id-chip {
 .bd-diary-line { font-size: 13px; font-weight: 700; line-height: 1.45; }
 .bd-diary-foot { padding-top: 6px; border-top: 1px dashed #E6D9B8; font-size: 11px; font-weight: 800; color: var(--muted); }
 
+/* --- talk --- */
+.bd-talk { display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; justify-content: flex-end; }
+.bd-talk-row { display: flex; }
+.bd-talk-you { justify-content: flex-end; }
+.bd-talk-buddy { justify-content: flex-start; }
+.bd-bubble { max-width: 80%; padding: 9px 12px; font-size: 13px; font-weight: 800; line-height: 1.35; }
+.bd-bubble-you { background: var(--accent); color: #FFFFFF; border-radius: 16px 16px 4px 16px; }
+.bd-bubble-buddy { background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px 16px 16px 4px; }
+.bd-talk-input-row { flex: 1 1 auto; }
+
 /* --- moment card --- */
 .bd-moment { display: flex; align-items: center; gap: 12px; }
 .bd-moment-mark { width: 52px; height: 52px; flex: 0 0 auto; border-radius: var(--radius-pill); background: var(--text); border: 3px solid #FFD166; color: #FFD166; display: inline-flex; align-items: center; justify-content: center; }

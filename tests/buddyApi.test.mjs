@@ -191,6 +191,38 @@ test('diary lists the week from the buddy record', async () => {
   assert.ok(r.json.entries.every((e) => typeof e.line === 'string' && e.line.length > 0))
 })
 
+test('talk answers from memory and never with a number', async () => {
+  const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  for (let i = 0; i < 5; i++) await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
+  await api('/api/buddy/hatch', { method: 'POST', device: d, body: { name: 'Miso' } })
+  const r = await api('/api/buddy/talk', { method: 'POST', device: d, body: { text: 'Do you remember where you hatched?' } })
+  assert.equal(r.status, 200)
+  assert.match(r.json.reply, /hatch|came out|first/i)
+  assert.doesNotMatch(r.json.reply, /\d/)
+  const sad = await api('/api/buddy/talk', { method: 'POST', device: d, body: { text: 'I had a rough day' } })
+  assert.match(sad.json.reply, /sofa|here|stay|face/i)
+})
+
+test('talk answers curiously to a question and generically otherwise, always without digits', async () => {
+  const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  for (let i = 0; i < 5; i++) await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
+  await api('/api/buddy/hatch', { method: 'POST', device: d, body: { name: 'Miso' } })
+  const q = await api('/api/buddy/talk', { method: 'POST', device: d, body: { text: 'What is your favourite colour?' } })
+  assert.equal(q.status, 200)
+  assert.doesNotMatch(q.json.reply, /\d/)
+  const other = await api('/api/buddy/talk', { method: 'POST', device: d, body: { text: 'The weather is nice today' } })
+  assert.equal(other.status, 200)
+  assert.doesNotMatch(other.json.reply, /\d/)
+})
+
+test('talk requires an active hatched Axie', async () => {
+  const d = dev()
+  const r = await api('/api/buddy/talk', { method: 'POST', device: d, body: { text: 'Hello' } })
+  assert.equal(r.status, 409)
+})
+
 function wallet() {
   const priv = secp.utils.randomPrivateKey()
   const pub = secp.getPublicKey(priv, false)

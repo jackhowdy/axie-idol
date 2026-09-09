@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -151,4 +151,48 @@ test('moment and unlock sheets advance the queue instead of just closing', () =>
 test('suggestName picks a name for the class', () => {
   assert.ok(suggestName('Beast').length > 1)
   assert.ok(suggestName(null).length > 1)
+})
+
+test('monthlyHtml handles a hatched buddy with no bond this month (you: null) without throwing', () => {
+  const html = monthlyHtml({
+    month: '2026-09', endsAt: '2026-10-01T00:00:00Z',
+    rows: [{ rank: 1, buddyId: 'a', name: 'Bubbles', class: 'Aquatic', kind: 'wild', traits: [], level: 5, monthlyBond: 188, rarity: 0.2 }],
+    you: null,
+  })
+  assert.match(html, /Bubbles/)
+  assert.doesNotMatch(html, / me"/, 'no row is marked as mine when you is null')
+  assert.match(html, /Take a photo this month to join the ladder\./)
+})
+
+test('talkHtml renders the input, back action and the last three exchanges with you on the right', () => {
+  const exchanges = [
+    { you: 'Old message dropped', reply: 'Old reply dropped' },
+    { you: 'Hello there', reply: 'Hello. You\'re my person now. Where are we?' },
+    { you: 'How are you?', reply: 'I don\'t know that one. I only really know puddles and buses.' },
+    { you: 'I had a rough day', reply: 'Then it\'s a sofa day. I\'ll do the face until you laugh.' },
+  ]
+  const html = talkHtml(miso, exchanges)
+  assert.doesNotMatch(html, /Old message dropped/, 'only the last three exchanges show')
+  assert.doesNotMatch(html, /Old reply dropped/)
+  assert.match(html, /Hello there/)
+  assert.match(html, /sofa day/)
+  assert.match(html, /data-action="talk-send"/)
+  assert.match(html, /id="bd-talk-input"/)
+  assert.match(html, /data-action="home"/, 'has a way back to Home')
+  const youIdx = html.indexOf('bd-talk-you')
+  const buddyIdx = html.indexOf('bd-talk-buddy')
+  assert.ok(youIdx > -1 && buddyIdx > -1)
+})
+
+test('talkHtml escapes user text in the bubbles', () => {
+  const evil = '<img src=x onerror="alert(1)">'
+  const html = talkHtml(miso, [{ you: evil, reply: evil }])
+  assert.doesNotMatch(html, /<img src=x/)
+  assert.match(html, /&lt;img src=x/)
+})
+
+test('talkHtml shows an empty state with no exchanges yet', () => {
+  const html = talkHtml(miso, [])
+  assert.match(html, /data-action="talk-send"/)
+  assert.match(html, /id="bd-talk-input"/)
 })
