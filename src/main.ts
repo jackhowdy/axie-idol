@@ -918,6 +918,21 @@ function drawWardrobeOverlay(): void {
   drawWardrobe(wardrobeCtx, worn, offsetJoints(axie3d.jointScreenPositions(), pad.dx, pad.dy))
 }
 
+/** 1x1 transparent GIF: a src that can never paint anything, whatever the hidden flag says. */
+const BLANK_STICKER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+
+/**
+ * Hide the legacy `<img>` sticker because a 3D face has taken over the layer, and drop whatever it
+ * was pointing at. Leaving the old src loaded meant a hatched buddy still carried `/previews/egg-1.svg`
+ * underneath, which could flash on a slow device between the hide and the 3D canvas painting.
+ */
+function hideStickerImg(): void {
+  stickerImg.hidden = true
+  stickerImg.style.pointerEvents = 'none'
+  if (stickerImg.getAttribute('src') !== BLANK_STICKER) stickerImg.src = BLANK_STICKER
+  stickerImg.alt = ''
+}
+
 function disposeAxie3D(): void {
   if (!axie3d) return
   setWardrobeOverlayShown(false)
@@ -948,8 +963,7 @@ async function showAxie3D(id: string, req: number): Promise<boolean> {
     const ok = await axie3d.load(spec)
     if (req !== castRequest) return false
     if (!ok) return false
-    stickerImg.hidden = true
-    stickerImg.style.pointerEvents = 'none'
+    hideStickerImg()
     stickerTarget = axie3d.canvas
     bindStickerPointers(axie3d.canvas)
     applyStickerTransform()
@@ -2729,9 +2743,9 @@ function applyPngFallback(cast: FaceId): void {
   const src = mascotStickerUrl(cast)
   if (!src) {
     // No 2D art for this face (the hatched buddy is mixer-only) — leave the layer empty
-    // rather than pointing the <img> at the page URL, which renders as a broken image.
-    stickerImg.hidden = true
-    stickerImg.style.pointerEvents = 'none'
+    // rather than pointing the <img> at the page URL, which renders as a broken image. The src
+    // is cleared too: the previous face's art (the egg sprite) must not survive under the buddy.
+    hideStickerImg()
     return
   }
   stickerImg.src = src
