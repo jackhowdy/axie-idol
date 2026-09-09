@@ -41,6 +41,47 @@ export function dayCount(b: Pick<Buddy, 'createdAt' | 'hatchedAt'>): number {
   return Math.max(1, Math.floor((Date.now() - from) / 864e5) + 1)
 }
 
+/**
+ * A friendly title for every bond level. The server only names three of them
+ * (`LEVEL_NAMES` in server/buddyRules.mjs: 3, 7 and 10), and without the rest the Home hero
+ * printed "Bond 1" twice — once on the badge, once as the title. Server value wins when set.
+ */
+const LEVEL_TITLES: Record<number, string> = {
+  1: 'Just hatched',
+  2: 'Getting to know you',
+  3: 'Good friends',
+  4: 'Buddies',
+  5: 'Close',
+  6: 'Inseparable',
+  7: 'Best friends',
+  8: 'Legends',
+  9: 'Famous',
+  10: 'Idol',
+}
+export function levelTitle(b: Pick<Buddy, 'level' | 'levelName'>): string {
+  return b.levelName || LEVEL_TITLES[b.level] || `Bond ${b.level}`
+}
+
+/**
+ * Axies that are not the active one: set aside by "Start a fresh egg", or replaced by a wallet
+ * claim. They stayed in `buddyState.buddies` with no screen offering a way back, so a retired
+ * Axie was unreachable — this row is that way back. The server un-retires on switch.
+ *
+ * Only hatched buddies show: an abandoned egg has no name, no class and nothing to come back to.
+ */
+export function restingRowHtml(buddies: Buddy[], activeId: string | null): string {
+  const resting = (buddies || []).filter((b) => b && b.hatchedAt && b.id !== activeId)
+  if (!resting.length) return ''
+  const chips = resting.map((b) => `<button type="button" class="bd-rest" data-action="switch" data-id="${esc(b.id)}">
+      <span class="bd-rest-art bd-class-${esc(String(b.class || 'wild').toLowerCase())}"></span>
+      <span class="bd-hero-text"><b>${esc(b.name || 'Axie')}</b><span class="bd-muted">${esc(b.class || 'Wild')} · Bond ${b.level}</span></span>
+      <span class="bd-pill bd-pill-ok">Come back</span>
+    </button>`).join('')
+  return `
+      <div class="bd-card-head"><span class="bd-label">Resting Axies · ${resting.length}</span><span class="bd-link">Only one is active</span></div>
+      <div class="bd-rests">${chips}</div>`
+}
+
 export function chipHtml(label: string, kind: 'plain' | 'rare' | 'mystic' | 'earned' = 'plain'): string {
   const cls = kind === 'rare' ? ' bd-chip-rare' : kind === 'mystic' ? ' bd-chip-mystic' : kind === 'earned' ? ' bd-chip-earned' : ''
   const mark = kind === 'plain' ? '' : icon('star', 10)
@@ -91,7 +132,8 @@ const EGG_TIERS = [
   { at: 100, text: '15% Mystic chance · keepsake shell' },
 ]
 
-export function eggHtml(b: Buddy): string {
+/** `buddies` is the whole roster from the server — only used for the "Resting Axies" row. */
+export function eggHtml(b: Buddy, opts: { buddies?: Buddy[] } = {}): string {
   const snaps = b.egg.snaps
   const places = b.egg.grids.length
   const nextTier = b.eggOdds?.nextTier ?? null
@@ -126,7 +168,7 @@ export function eggHtml(b: Buddy): string {
         ${rows}
         <div class="bd-meter"><i style="width:${Math.min(100, snaps)}%"></i></div>
         <p class="bd-small">Odds max out at 100. New places nudge them up. Every egg photo counts as bond once it hatches, so waiting is never wasted.</p>
-      </div>
+      </div>${restingRowHtml(opts.buddies || [], b.id)}
     </div>
     <div class="bd-actions">
       ${canHatch ? '<button type="button" class="bd-btn bd-btn-outline" data-action="hatch-now">Hatch now</button>' : ''}
@@ -253,7 +295,11 @@ function photoPath(b: Buddy, photoId: string | null): string | null {
   return hit?.imagePath || null
 }
 
-export function homeHtml(b: Buddy, greeting: string | null): string {
+/**
+ * `buddies` feeds the "Resting Axies" row; `address` decides how the wallet line reads. Both are
+ * optional so the renderer stays a pure string-in/string-out function for the unit test.
+ */
+export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Buddy[]; address?: string | null } = {}): string {
   const filled = Math.ceil(b.level / 2)
   const hearts = Array.from({ length: 5 }, (_, i) => `<span class="bd-heart${i < filled ? ' on' : ''}">${icon(i < filled ? 'heartFilled' : 'heart', 18)}</span>`).join('')
   const floorBond = b.ladder.find((r) => r.level === b.level)?.bond ?? 0
@@ -281,6 +327,10 @@ export function homeHtml(b: Buddy, greeting: string | null): string {
   // The Mystic glow arrives at bond level 10 and stays on: the hero box glows in the CSS, the
   // camera layer and the capture get the same treatment from main.ts.
   const glow = b.level >= 10 ? ' bd-glow' : ''
+  // The only wallet entry point once the egg has hatched — the egg screen's version is gone by then.
+  const wallet = opts.address
+    ? '<a class="bd-link" data-action="claim">Wallet connected · pick another Axie</a>'
+    : 'Own an Axie on Ronin? <a class="bd-link" data-action="claim">Bring it</a>'
   return `
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
@@ -295,7 +345,7 @@ export function homeHtml(b: Buddy, greeting: string | null): string {
         <div class="bd-hero-row">
           <div class="bd-hero-3d${glow}" data-face="buddy" data-action="talk"><span class="bd-badge">${icon('star', 11)} Bond ${b.level}</span></div>
           <div class="bd-hero-text">
-            <b>${esc(b.levelName || `Bond ${b.level}`)}</b>
+            <b>${esc(levelTitle(b))}</b>
             <span class="bd-muted">${who} · ${b.snapCount} snaps · ${b.moments.length} of ${b.momentsTotal} moments</span>
             <div class="bd-chips">${b.traits.map((t) => chipHtml(t)).join('')}${b.earnedTrait ? chipHtml(b.earnedTrait, 'earned') : ''}${b.mystic ? chipHtml('Mystic', 'mystic') : ''}</div>
             <div class="bd-hearts">${hearts}</div>
@@ -306,10 +356,11 @@ export function homeHtml(b: Buddy, greeting: string | null): string {
       <div class="bd-card-head"><span class="bd-label">${esc(b.name)}'s wishes</span><span class="bd-link">Wishes add extra bond</span></div>
       ${wishPillHtml(b) || '<p class="bd-small bd-muted">A new wish arrives each morning.</p>'}
       <div class="bd-card-head"><span class="bd-label">Wardrobe · ${b.wardrobe.unlocked.filter((u) => WEARABLES.includes(u)).length} of ${WEARABLES.length}</span><a class="bd-link" data-action="ladder">Growth ladder</a></div>
-      <div class="bd-items">${wardrobe}</div>
+      <div class="bd-items">${wardrobe}</div>${restingRowHtml(opts.buddies || [], b.id)}
       <div class="bd-card-head"><span class="bd-label">Scrapbook · ${b.snapCount}</span><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>
       <div class="bd-book">${book}</div>
       <p class="bd-small bd-center">Not the one? <a class="bd-link" data-action="fresh-egg">Start a fresh egg</a> · ${esc(b.name)} stays in your scrapbook · <a class="bd-link" data-action="recovery">Recovery code</a></p>
+      <p class="bd-small bd-center">${wallet}</p>
     </div>
     <div class="bd-actions">
       <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="snap">${icon('camera', 20)} Snap with ${esc(b.name)}</button>

@@ -3822,6 +3822,14 @@ button.id-chip {
 .bd-rank-art { width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px; }
 .bd-rank .bd-hero-text b { font-size: 13px; }
 
+/* --- resting Axies (the way back to one you set aside) --- */
+.bd-rests { display: flex; flex-direction: column; gap: 6px; }
+.bd-rest { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--border); font-family: var(--font-ui); color: var(--text); cursor: pointer; text-align: left; }
+.bd-rest-art { width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px; }
+.bd-rest .bd-hero-text { flex: 1 1 auto; min-width: 0; }
+.bd-rest .bd-hero-text b { font-size: 13px; }
+.bd-rest .bd-muted { font-size: 11px; font-weight: 700; }
+
 /* --- diary --- */
 .bd-diary { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 18px; background: #FFFDF6; border: 1px solid #E6D9B8; box-shadow: 0 10px 26px rgba(26, 43, 60, 0.1); }
 .bd-diary-row { display: flex; gap: 12px; }

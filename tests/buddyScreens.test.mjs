@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -262,6 +262,64 @@ test('the boot-failure card offers a retry instead of a blank document', () => {
   assert.match(html, /Couldn't reach the server/)
   assert.match(html, /data-action="retry-boot"/)
   assert.match(html, /Retry/)
+})
+
+test('resting row offers a way back to every hatched Axie that is not the active one', () => {
+  const tofu = { ...miso, id: 'tofu', name: 'Tofu', class: 'Plant', level: 6, retiredAt: '2026-09-05T00:00:00Z' }
+  const html = restingRowHtml([{ ...miso, id: 'miso' }, tofu], 'miso')
+  assert.match(html, /data-action="switch"/)
+  assert.match(html, /data-id="tofu"/)
+  assert.doesNotMatch(html, /data-id="miso"/, 'the active Axie is not offered as resting')
+  assert.match(html, /Tofu/)
+  assert.match(html, /Plant/)
+  assert.match(html, /Bond 6/)
+  assert.match(html, /Come back/)
+})
+
+test('resting row is empty when nothing is resting, and skips an abandoned egg', () => {
+  assert.equal(restingRowHtml([{ ...miso, id: 'miso' }], 'miso'), '')
+  assert.equal(restingRowHtml([], 'miso'), '')
+  assert.equal(restingRowHtml([{ ...egg, id: 'old-egg' }], 'miso'), '', 'an unhatched egg has nothing to come back to')
+})
+
+test('resting row escapes the name', () => {
+  const evil = { ...miso, id: 'x', name: '<img src=x onerror="alert(1)">' }
+  const html = restingRowHtml([evil], 'miso')
+  assert.doesNotMatch(html, /<img src=x/)
+  assert.match(html, /&lt;img src=x/)
+})
+
+test('the resting row reaches the screens that need it: egg and home', () => {
+  const tofu = { ...miso, id: 'tofu', name: 'Tofu', retiredAt: '2026-09-05T00:00:00Z' }
+  const eggScreen = eggHtml(egg, { buddies: [tofu] })
+  assert.match(eggScreen, /data-action="switch"[^>]*data-id="tofu"/)
+  const home = homeHtml({ ...miso, id: 'miso' }, null, { buddies: [{ ...miso, id: 'miso' }, tofu] })
+  assert.match(home, /data-action="switch"[^>]*data-id="tofu"/)
+  // and neither screen grows a row when there is nothing set aside
+  assert.doesNotMatch(eggHtml(egg), /data-action="switch"/)
+  assert.doesNotMatch(homeHtml(miso, null), /data-action="switch"/)
+})
+
+test('home offers a wallet entry point, worded for the connected state', () => {
+  const cold = homeHtml(miso, null)
+  assert.match(cold, /Own an Axie on Ronin\?/)
+  assert.match(cold, /data-action="claim"[^>]*>Bring it</)
+  const warm = homeHtml(miso, null, { address: '0xabc' })
+  assert.match(warm, /data-action="claim"/)
+  assert.match(warm, /Wallet connected · pick another Axie/)
+  assert.doesNotMatch(warm, /Own an Axie on Ronin\?/)
+})
+
+test('every bond level has its own title, so the hero never says Bond 1 twice', () => {
+  const hero = (b) => /<b>([^<]*)<\/b>/.exec(homeHtml(b, null).split('bd-hero-text')[1])[1]
+  assert.equal(hero({ ...miso, level: 1, levelName: null }), 'Just hatched')
+  assert.equal(hero({ ...miso, level: 2, levelName: null }), 'Getting to know you')
+  assert.equal(hero({ ...miso, level: 8, levelName: null }), 'Legends')
+  // the server still wins where it names a level
+  assert.equal(hero({ ...miso, level: 3, levelName: 'Good friends' }), 'Good friends')
+  // the badge still reads "Bond 1" — the title beside it must not repeat it
+  const lvl1 = homeHtml({ ...miso, level: 1, levelName: null }, null)
+  assert.equal(lvl1.match(/Bond 1</g)?.length, 1, 'only the badge says Bond 1')
 })
 
 test('suggestName picks a name for the class', () => {

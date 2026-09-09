@@ -72,9 +72,9 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (which === 'egg' && !buddyState.active) await startEgg()
     const el = sections[which]
     let html = ''
-    if (which === 'egg') html = eggHtml(buddyState.active!)
+    if (which === 'egg') html = eggHtml(buddyState.active!, { buddies: buddyState.buddies })
     else if (which === 'hatch') html = hatchHtml(buddyState.active!, pendingLines)
-    else if (which === 'home') html = homeHtml(buddyState.active!, buddyState.greeting)
+    else if (which === 'home') html = homeHtml(buddyState.active!, buddyState.greeting, { buddies: buddyState.buddies, address: buddyState.address })
     else if (which === 'claim') {
       claimAxies = buddyState.address ? await ownedAxies().catch(() => []) : []
       if (claimPick && !claimAxies.some((a) => a.id === claimPick)) claimPick = null
@@ -116,6 +116,12 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     return data
   }
 
+  /**
+   * The one send path: the send button and the Enter key both land here, so they behave
+   * identically. A failed send throws with the text still in the box; a successful one clears it
+   * before the re-render, so the sent line never lingers under the bubble it just became.
+   * `show('talk')` re-renders the screen and puts focus back in the fresh input.
+   */
   async function talkSend(): Promise<void> {
     const input = document.querySelector<HTMLInputElement>('#bd-talk-input')
     const text = (input?.value || '').trim()
@@ -124,6 +130,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     const data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string }
     if (!res.ok) throw new Error(data.error || `/api/buddy/talk ${res.status}`)
     exchanges = [...exchanges, { you: text, reply: data.reply || '' }].slice(-3)
+    if (input) input.value = ''
     await show('talk')
   }
 
@@ -200,7 +207,15 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       await show('egg')
       return
     }
-    if (act === 'switch') { await switchTo(a.dataset.id!); await show('auto'); return }
+    if (act === 'switch') {
+      // Switching away from an unhatched egg discards it server-side, exactly like a claim does —
+      // the snaps in it are lost work, so say so first.
+      const pendingSnaps = b && !b.hatchedAt ? b.egg.snaps : 0
+      if (pendingSnaps >= 1 && !confirm(`Your egg with ${pendingSnaps} snaps will be set aside. Continue?`)) return
+      await switchTo(a.dataset.id!)
+      await show('auto')
+      return
+    }
     if (act === 'wear') {
       const item = a.dataset.item!
       await wear(b?.wardrobe.worn === item ? null : item)
