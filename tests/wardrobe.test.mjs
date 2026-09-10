@@ -27,15 +27,16 @@ const stubCtx = (w = 720, h = 720) => {
 const stubImg = (w = 256, h = 256, complete = true) => ({ complete, naturalWidth: w, naturalHeight: h })
 
 /**
- * A plausible projected joint set for a 240x240 canvas: the character fills the frame, the ear
- * span (the unit every anchor is measured in) is 120 px, so one unit = 120 px.
+ * A plausible projected joint set for a 240x240 canvas: the character's silhouette spans x 20..220
+ * (200 px wide, so one unit = 200 px and scale = 2) with its top at y 30. `head` is that top
+ * centre; the rest are rig joints.
  */
 const joints = () => ({
-  head: { x: 120, y: 62, scale: 1.2 },
-  eyeL: { x: 148, y: 116, scale: 1.2 },
-  eyeR: { x: 148, y: 116, scale: 1.2 },
-  neck: { x: 132, y: 138, scale: 1.2 },
-  back: { x: 116, y: 160, scale: 1.2 },
+  head: { x: 120, y: 30, scale: 2 },
+  eyeL: { x: 148, y: 116, scale: 2 },
+  eyeR: { x: 148, y: 116, scale: 2 },
+  neck: { x: 132, y: 138, scale: 2 },
+  back: { x: 116, y: 160, scale: 2 },
 })
 
 test('every wearable has an anchor on a known joint', () => {
@@ -47,32 +48,35 @@ test('every wearable has an anchor on a known joint', () => {
   }
 })
 
-test('unitFor is the ear span in pixels, and never zero or negative', () => {
+test('unitFor is the body width in pixels, and never zero or negative', () => {
   assert.equal(unitFor({ x: 0, y: 0, scale: 1.2 }), 120)
   assert.equal(unitFor({ x: 0, y: 0, scale: 0 }), 100)
   assert.equal(unitFor({ x: 0, y: 0, scale: -3 }), 100)
   assert.equal(unitFor({ x: 0, y: 0, scale: Number.NaN }), 100)
 })
 
-test('placeItem centres the sprite on the joint plus the anchor offset', () => {
+test('placeItem puts the rest line on the joint plus the anchor offset, centred horizontally', () => {
   const j = { x: 100, y: 200, scale: 1 } // one unit = 100 px
-  const box = placeItem({ joint: 'head', dx: 0.2, dy: -0.5, w: 1.5 }, j, 256, 256)
+  const box = placeItem({ joint: 'head', dx: 0.2, dy: -0.5, w: 1.5, rest: 0.5 }, j, 256, 256)
   assert.equal(box.w, 150)
   assert.equal(box.h, 150)
-  // centre = (100 + 20, 200 - 50) = (120, 150); box is centred on it
+  // rest point = (100 + 20, 200 - 50) = (120, 150); rest is mid-height, so the box is centred on it
   assert.equal(box.x, 120 - 75)
   assert.equal(box.y, 150 - 75)
+  // a rest line lower in the art lifts the box so that line still lands on the same point
+  const low = placeItem({ joint: 'head', dx: 0.2, dy: -0.5, w: 1.5, rest: 0.8 }, j, 256, 256)
+  assert.equal(low.y + 0.8 * low.h, 150)
 })
 
 test('placeItem keeps the sprite aspect ratio', () => {
   const j = { x: 0, y: 0, scale: 1 }
-  const box = placeItem({ joint: 'neck', dx: 0, dy: 0, w: 1 }, j, 256, 128)
+  const box = placeItem({ joint: 'neck', dx: 0, dy: 0, w: 1, rest: 0.5 }, j, 256, 128)
   assert.equal(box.w, 100)
   assert.equal(box.h, 50)
 })
 
 test('placeItem falls back to a square for a sprite with no intrinsic size', () => {
-  const box = placeItem({ joint: 'neck', dx: 0, dy: 0, w: 1 }, { x: 0, y: 0, scale: 1 }, 0, 0)
+  const box = placeItem({ joint: 'neck', dx: 0, dy: 0, w: 1, rest: 0.5 }, { x: 0, y: 0, scale: 1 }, 0, 0)
   assert.equal(box.w, 100)
   assert.equal(box.h, 100)
 })
@@ -82,8 +86,8 @@ test('the five anchors resolve to sensible boxes on a real joint set', () => {
   for (const item of WEARABLE_IDS) {
     const a = ITEM_ANCHORS[item]
     const box = placeItem(a, j[a.joint], 256, 256)
-    // big enough to read, small enough not to swamp the character (unit = 120 px)
-    assert.ok(box.w >= 60 && box.w <= 220, `${item} width ${box.w}`)
+    // big enough to read, small enough not to swamp the character (unit = 200 px)
+    assert.ok(box.w >= 70 && box.w <= 180, `${item} width ${box.w}`)
     assert.equal(box.h, box.w)
     // inside the 2x overlay the live view uses (240 px of padding on each side)
     const x = box.x + 240
@@ -93,27 +97,29 @@ test('the five anchors resolve to sensible boxes on a real joint set', () => {
   }
 })
 
-test('hats and crowns sit above the head joint, scarves and capes below the eyes', () => {
+test('the rest line of each item lands on its joint: hats on the top of the head, shades on the eyes', () => {
   const j = joints()
-  const bottom = (item) => {
+  const restY = (item) => {
     const a = ITEM_ANCHORS[item]
     const b = placeItem(a, j[a.joint], 256, 256)
-    return b.y + b.h
+    return b.y + a.rest * b.h
   }
-  // the head joint is the top of the body: headwear must clear it
-  assert.ok(bottom('hat') <= j.head.y + 4, `hat bottom ${bottom('hat')}`)
-  assert.ok(bottom('crown') <= j.head.y + 8, `crown bottom ${bottom('crown')}`)
-  const shades = placeItem(ITEM_ANCHORS.shades, j.eyeL, 256, 256)
-  assert.ok(Math.abs(shades.y + shades.h / 2 - j.eyeL.y) < 20, 'shades sit on the eyes')
-  assert.ok(bottom('scarf') > j.eyeL.y, 'scarf hangs below the eyes')
-  assert.ok(bottom('cape') > j.neck.y, 'cape hangs below the neck')
+  // the base of the cone / band sits a hair below the top of the silhouette, never on the body
+  assert.ok(restY('hat') >= j.head.y && restY('hat') <= j.head.y + 12, `hat base ${restY('hat')}`)
+  assert.ok(restY('crown') >= j.head.y && restY('crown') <= j.head.y + 12, `crown base ${restY('crown')}`)
+  const hat = placeItem(ITEM_ANCHORS.hat, j.head, 256, 256)
+  assert.ok(Math.abs(hat.x + hat.w / 2 - j.head.x) < 1, 'hat is centred over the head')
+  assert.ok(hat.w >= 0.5 * 200 && hat.w <= 0.75 * 200, `hat spans most of the head: ${hat.w}`)
+  assert.ok(Math.abs(restY('shades') - j.eyeL.y) < 2, 'shades sit on the eyes')
+  assert.ok(restY('scarf') > j.eyeL.y, 'scarf hangs below the eyes')
+  assert.ok(restY('cape') > j.neck.y, 'cape clasps below the neck')
 })
 
 test('offsetJoints shifts every joint and keeps the scale', () => {
   const moved = offsetJoints(joints(), 240, 240)
   assert.equal(moved.head.x, 360)
-  assert.equal(moved.head.y, 302)
-  assert.equal(moved.head.scale, 1.2)
+  assert.equal(moved.head.y, 270)
+  assert.equal(moved.head.scale, 2)
   assert.equal(moved.back.x, 356)
   assert.deepEqual(Object.keys(moved).sort(), [...JOINT_NAMES].sort())
 })

@@ -7,10 +7,12 @@
  * `node --experimental-strip-types`. Everything that needs a document or a canvas takes its
  * dependencies as arguments and is only called from the browser.
  *
- * Units: every anchor offset and width is measured in *ear spans* — the projected distance between
- * the two ear joints. `Joint.scale` is that distance / 100 (see `jointScreenPositions` in
+ * Units: every anchor offset and width is measured in *body widths* — the width of the character's
+ * rendered silhouette on screen. `Joint.scale` is that width / 100 (see `jointScreenPositions` in
  * axie3d.ts), so one unit = `scale * 100` px. That keeps items the right size whatever the canvas
- * size, device pixel ratio or camera framing.
+ * size, device pixel ratio or camera framing (the ear span this once used foreshortens to a third
+ * of the body in the 3/4 camera, which is how a hat landed small and on the upper body). The `head`
+ * joint is the head's top surface at the horn, nudged toward the body's centre line.
  */
 
 export const WEARABLE_IDS = ['hat', 'scarf', 'shades', 'cape', 'crown'] as const
@@ -28,33 +30,37 @@ export type JointScreen = Record<JointName, Joint>
 
 export type ItemAnchor = {
   joint: JointName
-  /** Offset from the joint, in ear spans (+x right, +y down on screen). */
+  /** Offset of the rest line from the joint, in body widths (+x right, +y down on screen). */
   dx: number
   dy: number
-  /** Sprite width in ear spans; the height follows the sprite's aspect ratio. */
+  /** Sprite width in body widths; the height follows the sprite's aspect ratio. */
   w: number
+  /**
+   * Where the art rests, as a fraction of the sprite's height from its top: the base of a hat's
+   * cone, the middle of a pair of lenses. That line is what lands on the joint (plus dx/dy), so an
+   * item sits where its art touches the character, not where its square box is centred.
+   */
+  rest: number
 }
 
 export type Box = { x: number; y: number; w: number; h: number }
 
 /**
- * Where each item sits. Tuned so headwear clears the top of the body (the horn joint is the top of
- * the silhouette, and the camera frames the character to fill its canvas, so a hat needs the whole
- * of its own height above that joint) and so nothing lands outside the 2x overlay canvas the live
- * view draws into. Sprites are square (256x256) with the art filling the box, so the vertical
- * offsets below are half the item's own height plus a small gap.
+ * Where each item sits. Headwear rests on the top of the silhouette (`head`), a hair below it so
+ * it reads as worn rather than floating; shades centre on the eye joint; the scarf loops the neck;
+ * the cape hangs from the spine. Sprites are square (256x256) with `rest` read off the art.
  */
 export const ITEM_ANCHORS: Record<WearableId, ItemAnchor> = {
-  hat: { joint: 'head', dx: 0, dy: -0.6, w: 1.1 },
-  crown: { joint: 'head', dx: 0, dy: -0.5, w: 0.95 },
+  hat: { joint: 'head', dx: 0, dy: 0.04, w: 0.7, rest: 0.79 },
+  crown: { joint: 'head', dx: 0, dy: 0.04, w: 0.55, rest: 0.76 },
   // the rig has one mid eye joint (Root_Eye_M_JNT) covering both eyes, so the lenses centre on it
-  shades: { joint: 'eyeL', dx: 0, dy: 0, w: 0.72 },
-  scarf: { joint: 'neck', dx: 0, dy: 0.1, w: 0.95 },
+  shades: { joint: 'eyeL', dx: 0, dy: 0, w: 0.42, rest: 0.51 },
+  scarf: { joint: 'neck', dx: 0, dy: 0.04, w: 0.6, rest: 0.39 },
   // the 3/4 camera puts the character's rear toward screen-right, so the cape shifts that way
-  cape: { joint: 'back', dx: 0.15, dy: 0.12, w: 1.25 },
+  cape: { joint: 'back', dx: 0.12, dy: 0.08, w: 0.8, rest: 0.2 },
 }
 
-/** Pixels per anchor unit. Falls back to 100 px for a missing or degenerate ear span. */
+/** Pixels per anchor unit. Falls back to 100 px for a missing or degenerate body width. */
 export function unitFor(joint: Joint): number {
   const s = joint.scale
   return Number.isFinite(s) && s > 0 ? s * 100 : 100
@@ -68,7 +74,7 @@ export function placeItem(anchor: ItemAnchor, joint: Joint, spriteW: number, spr
   const h = w * aspect
   return {
     x: joint.x + anchor.dx * unit - w / 2,
-    y: joint.y + anchor.dy * unit - h / 2,
+    y: joint.y + anchor.dy * unit - anchor.rest * h,
     w,
     h,
   }

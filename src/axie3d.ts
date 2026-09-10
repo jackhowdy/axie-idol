@@ -966,6 +966,15 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
   /** Wardrobe joints, resolved once per loaded character — traversing the rig every frame is waste. */
   let jointCache = new Map<string, Object3D | null>()
   const projectVec = new Vector3()
+  /**
+   * The rendered silhouette in canvas pixels, read back from the drawing buffer at most a few times a
+   * second, with the horn joint's position at that moment. Between readbacks the box follows the
+   * horn joint, so a hat rides the idle bob smoothly while its size and seat come from what is
+   * actually on screen (joints alone put it small and on the body: the ears foreshorten in the 3/4
+   * camera and the horn joint sits at the base of the horn, off toward the face).
+   */
+  let silhouette: { l: number; t: number; r: number; b: number; hornX: number; hornY: number; at: number } | null = null
+  let silhouettePixels: Uint8Array | null = null
   let frameCb: (() => void) | null = null
   let raf = 0
   let hiddenTimer = 0
@@ -1006,6 +1015,7 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
         }
         character = next
         jointCache = new Map()
+        silhouette = null
         if (location.search.includes('dev=1')) {
           const rows: string[] = []
           next.wrapper.traverse((o) => {
@@ -1086,6 +1096,7 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
     dispose() {
       frameCb = null
       jointCache = new Map()
+      silhouette = null
       cancelAnimationFrame(raf)
       raf = 0
       if (hiddenTimer) window.clearInterval(hiddenTimer)
@@ -1125,22 +1136,63 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
     return { x: ((v.x + 1) / 2) * canvas.width, y: ((1 - v.y) / 2) * canvas.height }
   }
 
+  /** Alpha bounding box of the drawing buffer (GL rows run bottom-up; converted to top-down). */
+  function measureSilhouette(horn: { x: number; y: number }): void {
+    const gl = renderer.getContext()
+    const w = canvas.width
+    const h = canvas.height
+    if (w < 8 || h < 8) return
+    if (!silhouettePixels || silhouettePixels.length !== w * h * 4) silhouettePixels = new Uint8Array(w * h * 4)
+    try {
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, silhouettePixels)
+    } catch {
+      return
+    }
+    const px = silhouettePixels
+    let minx = w
+    let miny = h
+    let maxx = -1
+    let maxy = -1
+    for (let y = 0; y < h; y += 2) {
+      const row = y * w
+      for (let x = 0; x < w; x += 2) {
+        if (px[(row + x) * 4 + 3] > 40) {
+          if (x < minx) minx = x
+          if (x > maxx) maxx = x
+          if (y < miny) miny = y
+          if (y > maxy) maxy = y
+        }
+      }
+    }
+    // nothing drawn yet (first frame, or a load in progress): keep whatever was measured before
+    if (maxx < 0 || maxx - minx < 8) return
+    silhouette = { l: minx, r: maxx, t: h - 1 - maxy, b: h - 1 - miny, hornX: horn.x, hornY: horn.y, at: performance.now() }
+  }
+
   /**
-   * Wardrobe anchors in canvas pixels. `scale` is the projected ear span / 100 — the unit every
+   * Wardrobe anchors in canvas pixels. `scale` is the silhouette width / 100 — the unit every
    * anchor in wardrobe.ts is measured in, so items track the camera framing and the pixel ratio.
+   * `head` is the head's top surface at the horn, nudged toward the body's centre line; the rest
+   * are rig joints. Called from the frame callback, after the frame has been drawn.
    */
   function jointScreenPositions(): JointScreen | null {
     if (!character) return null
-    const head = projectJoint(jointObject('Root_Horn_T_JNT') || jointObject('Root_Horn_M_JNT'))
+    const horn = projectJoint(jointObject('Root_Horn_T_JNT') || jointObject('Root_Horn_M_JNT'))
     const eye = projectJoint(jointObject('Root_Eye_M_JNT'))
     const spine = projectJoint(jointObject('Spine01_JNT'))
-    if (!head || !eye || !spine) return null
-    const earL = projectJoint(jointObject('Root_Ear_L_JNT'))
-    const earR = projectJoint(jointObject('Root_Ear_R_JNT'))
-    const span = earL && earR ? Math.hypot(earL.x - earR.x, earL.y - earR.y) : 0
-    // no ear joints (never seen on the pack's rigs): the camera frames the body to fill the canvas,
-    // where the ear span measures a little over half the width
-    const scale = span > 1 ? span / 100 : (canvas.width * 0.55) / 100
+    if (!horn || !eye || !spine) return null
+    if (!silhouette || performance.now() - silhouette.at > 400) measureSilhouette(horn)
+    // The horn joint is where the horn meets the head: the head's top surface, which is where a hat
+    // sits (the silhouette's highest pixel can be a tall back part). It leans toward the face in
+    // the 3/4 camera, so the seat slides a little toward the body's centre line.
+    let head = horn
+    let scale = (canvas.width * 0.65) / 100
+    if (silhouette) {
+      const width = silhouette.r - silhouette.l
+      scale = width / 100
+      const cx = (silhouette.l + silhouette.r) / 2 + (horn.x - silhouette.hornX)
+      head = { x: horn.x + (cx - horn.x) * 0.3, y: horn.y }
+    }
     return {
       head: { ...head, scale },
       eyeL: { ...eye, scale },
