@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -403,4 +403,46 @@ test('dayCount counts calendar days, not twenty-four-hour spans', () => {
   assert.equal(dayCount(b, new Date(2026, 8, 11, 21, 0, 0).getTime()), 2, 'a full day later')
   assert.equal(dayCount(b, new Date(2026, 8, 17, 9, 0, 0).getTime()), 8, 'a week on')
   assert.equal(dayCount({ createdAt: 'garbage', hatchedAt: null }), 1)
+})
+
+test('the egg and Home screens carry the account button', () => {
+  assert.match(homeHtml(miso, null), /data-action="account"/)
+  assert.match(eggHtml({ ...miso, hatchedAt: null, egg: { snaps: 2, grids: [], distanceKm: 0, foodSnaps: 0 } }, {}), /data-action="account"/)
+})
+
+test('account: a guest sees Ronin sign-in and the recovery code; a wallet sees the wallet and no code', () => {
+  const guest = accountHtml(miso, { buddies: [miso], address: null })
+  assert.match(guest, /Guest on this phone/)
+  assert.match(guest, /data-action="ronin-account"/)
+  assert.match(guest, /data-action="recovery"/)
+  assert.match(guest, /data-action="recover"/)
+  assert.match(guest, /data-action="claim"/)
+  assert.match(guest, /data-action="fresh-egg"/)
+  assert.match(guest, /Miso/)
+  assert.match(guest, /Only one is active/)
+  const wallet = accountHtml(miso, { buddies: [miso], address: '0x1234567890abcdef1234567890abcdef12345678' })
+  assert.match(wallet, /Ronin Wallet/)
+  assert.match(wallet, /0x1234…5678/)
+  assert.doesNotMatch(wallet, /data-action="recovery"/, 'the wallet is the account: no recovery code')
+  assert.doesNotMatch(wallet, /data-action="ronin-account"/)
+  assert.match(wallet, /data-action="claim"/)
+})
+
+test('account: resting Axies are listed with a switch, and an egg shows its snaps', () => {
+  const resting = { ...miso, id: 'b2', name: 'Tofu', class: 'Plant', level: 3 }
+  const html = accountHtml(miso, { buddies: [miso, resting], address: null })
+  assert.match(html, /data-action="switch" data-id="b2"/)
+  assert.match(html, /Tofu/)
+  const egg = accountHtml({ ...miso, hatchedAt: null, egg: { snaps: 3, grids: [], distanceKm: 0, foodSnaps: 0 } }, { buddies: [], address: null })
+  assert.match(egg, /Your egg/)
+  assert.match(egg, /3 snaps so far/)
+  assert.doesNotMatch(egg, /data-action="fresh-egg"/)
+  assert.match(accountHtml(null, {}), /No Axie yet/)
+})
+
+test('account escapes names', () => {
+  const evil = '<img src=x onerror=alert(1)>'
+  const html = accountHtml({ ...miso, name: evil }, { buddies: [], address: null })
+  assert.doesNotMatch(html, /<img/)
+  assert.match(html, /&lt;img/)
 })

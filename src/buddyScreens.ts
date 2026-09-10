@@ -10,11 +10,11 @@ import {
   roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto,
 } from './buddy'
 import {
-  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml,
+  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml,
   bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
-export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary' | 'talk'
+export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary' | 'talk' | 'account'
 export type BuddyNav = {
   goSnap: () => void
   showFace: (host: HTMLElement) => Promise<void>
@@ -40,7 +40,7 @@ export type BuddyUi = {
   showBootError: () => void
 }
 
-const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary', 'talk']
+const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary', 'talk', 'account']
 
 export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   const sections = {} as Record<Exclude<BuddyScreen, 'auto'>, HTMLElement>
@@ -98,6 +98,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     else if (which === 'monthly') html = monthlyHtml(await getJson<Monthly>('/api/ladder/monthly'))
     else if (which === 'diary') html = diaryHtml(await getJson<Diary>('/api/buddy/diary'), buddyState.active!)
     else if (which === 'talk') html = talkHtml(buddyState.active!, exchanges)
+    else if (which === 'account') html = accountHtml(buddyState.active, { buddies: buddyState.buddies, address: buddyState.address })
 
     hideSheet()
     hideAll()
@@ -229,6 +230,9 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (act === 'talk-send') { await talkSend(); return }
     if (act === 'claim') { await show('claim'); return }
     if (act === 'ronin') { await roninSignIn(); await show('claim'); return }
+    if (act === 'account') { await show('account'); return }
+    // Signing in from the Account screen stays on it: the point is to keep what you have, not to pick.
+    if (act === 'ronin-account') { await roninSignIn(); await show('account'); return }
     if (act === 'select-axie') { claimPick = a.dataset.id || null; await show('claim'); return }
     if (act === 'pick-axie') {
       // Claiming replaces an unhatched egg, and the snaps already in it are lost work — say so

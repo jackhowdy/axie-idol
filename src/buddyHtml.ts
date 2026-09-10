@@ -161,7 +161,9 @@ export function eggHtml(b: Buddy, opts: { buddies?: Buddy[] } = {}): string {
   const stage = snaps >= 20 ? 3 : snaps >= 5 ? 2 : 1
   return `
     <div class="bd-scroll">
-      <header class="bd-head bd-center">
+      <header class="bd-head bd-head-row">
+        <span class="bd-round bd-round-ghost"></span>
+        <div class="bd-center bd-grow">
         <p class="bd-eyebrow">Day ${dayCount(b)} · your egg</p>
         <h1>${canHatch ? 'Ready when you are' : snaps === 0 ? 'You found an egg' : 'Keep taking it places'}</h1>
         <p class="bd-muted">${canHatch
@@ -169,6 +171,8 @@ export function eggHtml(b: Buddy, opts: { buddies?: Buddy[] } = {}): string {
           : snaps === 0
             ? 'Take it places. After five photos together it hatches into an Axie nobody else has.'
             : `${leftWord} more ${left === 1 ? 'photo' : 'photos'} together and it hatches into an Axie nobody else has.`}</p>
+        </div>
+        <button type="button" class="bd-round" data-action="account" aria-label="Account">${icon('user', 18)}</button>
       </header>
       <div class="bd-egg-tile">
         <div class="bd-egg stage-${stage}"></div>
@@ -349,7 +353,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
         <div><p class="bd-eyebrow">Day ${dayCount(b)} · my Axie</p><h1>${esc(b.name)}</h1></div>
-        <span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.streak}-day streak</span>
+        <span class="bd-head-actions"><span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.streak}-day streak</span><button type="button" class="bd-round" data-action="account" aria-label="Account">${icon('user', 18)}</button></span>
       </header>
       <div class="bd-speech-row">${greeting
         ? `<div class="bd-speech bd-speech-home">${esc(greeting)}</div>${opts.talk ? '<button type="button" class="bd-link" data-action="talk">Talk</button>' : ''}`
@@ -397,6 +401,59 @@ export function bootErrorHtml(): string {
     <div class="bd-actions">
       <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="retry-boot">Retry</button>
     </div>`
+}
+
+/**
+ * Account: who this phone is playing as, how to keep the Axies for good, and every Axie on the
+ * account. A guest sees the Ronin sign-in and the recovery code (guest-only, the wallet is the
+ * account otherwise); a signed-in player sees the wallet and the owned-Axie shortcut. Reached from
+ * the person button on the egg and Home screens.
+ */
+export function accountHtml(b: Buddy | null, opts: { buddies?: Buddy[]; address?: string | null } = {}): string {
+  const address = opts.address || null
+  const short = address ? (address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address) : ''
+  const identity = address
+    ? `
+      <div class="bd-card bd-wallet">
+        <span class="bd-wallet-mark">R</span>
+        <span class="bd-hero-text"><b>Ronin Wallet</b><span class="bd-muted">${esc(short)} · every Axie here stays on this wallet, on any phone</span></span>
+        <span class="bd-pill bd-pill-ok">Signed</span>
+      </div>
+      <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="claim">Bring an Axie you own</button></div>`
+    : `
+      <div class="bd-card bd-wallet">
+        <span class="bd-wallet-mark">?</span>
+        <span class="bd-hero-text"><b>Guest on this phone</b><span class="bd-muted">Sign in with Ronin to keep every Axie, wild or owned, on your account for good.</span></span>
+      </div>
+      <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="ronin-account">Sign in with Ronin</button></div>
+      <p class="bd-small bd-center"><a class="bd-link" data-action="claim">Bring an Axie you own</a> · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
+      <div class="bd-card">
+        <div class="bd-card-head"><span class="bd-label">Moving phones?</span></div>
+        <p class="bd-small">A recovery code moves this account to another phone. It works once.</p>
+        <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="recovery">Show recovery code</button></div>
+      </div>`
+  const active = b
+    ? b.hatchedAt
+      ? `<div class="bd-row"><b>${esc(b.name)}</b><span class="bd-muted">${esc(b.kind === 'owned' ? 'owned' : `Wild ${b.class ?? 'Axie'}`)} · Bond ${b.level}</span><span class="bd-pill bd-pill-ok">Active</span></div>`
+      : `<div class="bd-row"><b>Your egg</b><span class="bd-muted">${b.egg.snaps} ${b.egg.snaps === 1 ? 'snap' : 'snaps'} so far</span><span class="bd-pill bd-pill-ok">Active</span></div>`
+    : '<p class="bd-small bd-muted">No Axie yet.</p>'
+  const fresh = b?.hatchedAt ? `<p class="bd-small bd-center">Not the one? <a class="bd-link" data-action="fresh-egg">Start a fresh egg</a> · ${esc(b.name)} stays in your scrapbook</p>` : ''
+  return `
+    <div class="bd-scroll">
+      <header class="bd-head bd-head-row">
+        <button type="button" class="bd-round" data-action="back" aria-label="Back">${icon('back', 18)}</button>
+        <p class="bd-eyebrow">Account</p>
+        <span class="bd-round bd-round-ghost"></span>
+      </header>
+      ${identity}
+      <div class="bd-card">
+        <div class="bd-card-head"><span class="bd-label">Your Axies</span><span class="bd-link">Only one is active</span></div>
+        ${active}
+        ${restingRowHtml(opts.buddies || [], b?.id || null)}
+      </div>
+      ${fresh}
+    </div>
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="back">Back to ${b?.hatchedAt ? esc(b.name) : 'the egg'}</button></div>`
 }
 
 export function claimHtml(axies: OwnedAxie[], selectedId: string | null, address: string | null): string {
