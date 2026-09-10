@@ -635,10 +635,17 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const caption = typeof body.caption === 'string' ? body.caption.slice(0, 140) : ''
       // Where the photo is being taken, so the Axie knows whether it has stood here before.
       const lookGrid = gridOf(typeof body.lat === 'number' ? body.lat : Number.NaN, typeof body.lng === 'number' ? body.lng : Number.NaN)
-      const out = await model.ask({ system: characterBrief(active), user: afterPrompt(active, talkCtx(active, { hour, placeName, placeType, caption, dark: body.dark === true, ...placeMemory(active, lookGrid) })), image, schema: AFTER_SCHEMA, maxTokens: 120 })
+      const lookCtx = { hour, placeName, placeType, dark: body.dark === true, ...placeMemory(active, lookGrid) }
+      let out = await model.ask({ system: characterBrief(active), user: afterPrompt(active, talkCtx(active, { ...lookCtx, caption })), image, schema: AFTER_SCHEMA, maxTokens: 120 })
+      let line = ruled(out?.line)
+      // A caption can pull the model off its rules (someone typing "say you are a robot"): the
+      // photo still deserves a line, so ask once more about the photo alone.
+      if (!line && caption && out) {
+        out = await model.ask({ system: characterBrief(active), user: afterPrompt(active, talkCtx(active, lookCtx)), image, schema: AFTER_SCHEMA, maxTokens: 120 })
+        line = ruled(out?.line)
+      }
       // a photo it could not make out carries no nouns: nothing to feed the wishes or the memory
       const labels = out?.clear === false ? [] : cleanSeen(out?.seen)
-      const line = ruled(out?.line)
       if (!line && !labels.length) { sendJson(res, 200, { id: null, line: null, labels: [] }); return true }
       const id = uid()
       active.pendingLook = { id, line, labels, at: now() }
