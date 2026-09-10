@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers'
 import { Buffer } from 'node:buffer'
 import { createCore } from '../server/core.mjs'
 
-const STORE_NAMES = ['posts', 'castCrew', 'follows', 'notifications', 'owners', 'burns', 'axies', 'buddies']
+const STORE_NAMES = ['posts', 'castCrew', 'follows', 'notifications', 'owners', 'burns', 'axies', 'buddies', 'diag']
 const SMALL_STORES = STORE_NAMES.filter((n) => n !== 'posts')
 const PUT_BATCH = 128
 

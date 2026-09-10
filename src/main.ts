@@ -14,9 +14,10 @@ import type { PropOverlay } from './propOverlay'
 import type { SpineSticker } from './spineSticker'
 import {
   buddyEnabled, bindDeviceKey, loadBuddy, buddyState, faceIdForBuddy, snapContext, beforeLine,
-  wear, lsGet, lsSet,
+  wear, lsGet, lsSet, buddyHeaders,
   type SnapResult,
 } from './buddy'
+import { fallbackAxieSvg } from './fallbackAxie'
 import { mountBuddyScreens } from './buddyScreens'
 import { reactionHtml, momentHtml, unlockHtml, vfChipHtml, wishPillHtml, frameTrayHtml, wardrobeTrayHtml } from './buddyHtml.ts'
 import {
@@ -947,13 +948,46 @@ function disposeAxie3D(): void {
   applyStickerTransform()
 }
 
+/**
+ * Field report for a phone we cannot reproduce. The 3D rig is the one part of the app that can
+ * fail with nothing visible on any log here — an iPhone showed the egg and never the hatched
+ * Axie. Fire-and-forget: diagnostics must never break, block or slow the camera, and one report
+ * per kind per page load keeps a failing device from spending its whole rate bucket on shouting.
+ */
+const diagSent = new Set<string>()
+function reportDiag(kind: string, message: string, extra: Record<string, unknown> = {}): void {
+  if (diagSent.has(kind)) return
+  diagSent.add(kind)
+  try {
+    const body = JSON.stringify({
+      kind,
+      message: String(message).slice(0, 400),
+      ua: navigator.userAgent,
+      extra: {
+        webgl2: Boolean(document.createElement('canvas').getContext('webgl2')),
+        mem: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null,
+        spec: buddyState.active?.kind ?? null,
+        ...extra,
+      },
+    })
+    void fetch('/api/diag', { method: 'POST', headers: buddyHeaders(), body, keepalive: true }).catch(() => undefined)
+  } catch {
+    /* a report that cannot be built is not worth a broken camera */
+  }
+}
+
 /** Show a mixer-backed 3D face on the camera; PNG stays until the model is ready. */
 async function showAxie3D(id: string, req: number): Promise<boolean> {
   const warming = !isAxieMixerReady()
   if (warming) setMascotLoading(true, 'Warming up the 3D Axies… first time takes a moment')
   try {
     const spec = await specForFace(id)
-    if (!spec) return false
+    if (!spec) {
+      // A hatched buddy always has a spec; no spec for one is a real failure worth reporting.
+      // An unhatched egg legitimately has none, and says nothing.
+      if (id === 'buddy' && buddyState.active?.hatchedAt) reportDiag('3d-load-failed', 'no 3D spec for the hatched buddy')
+      return false
+    }
     if (req !== castRequest) return false
     if (!axie3d) {
       axie3d = createAxie3D('axie3d')
@@ -964,7 +998,10 @@ async function showAxie3D(id: string, req: number): Promise<boolean> {
     }
     const ok = await axie3d.load(spec)
     if (req !== castRequest) return false
-    if (!ok) return false
+    if (!ok) {
+      if (id === 'buddy') reportDiag('3d-load-failed', 'mixer load returned false')
+      return false
+    }
     hideStickerImg()
     stickerTarget = axie3d.canvas
     bindStickerPointers(axie3d.canvas)
@@ -974,6 +1011,7 @@ async function showAxie3D(id: string, req: number): Promise<boolean> {
     return true
   } catch (err) {
     console.warn('[axie-idol] mixer 3D failed', id, err)
+    if (id === 'buddy') reportDiag('3d-load-failed', err instanceof Error ? err.message : String(err))
     return false
   } finally {
     if (warming && req === castRequest) setMascotLoading(false)
@@ -2759,6 +2797,35 @@ function applyPngFallback(cast: FaceId): void {
   applyStickerTransform()
 }
 
+/**
+ * The camera must never be empty. When the 3D buddy fails outright, or is still not ready after
+ * this long, a flat 2D Axie takes the layer so the shot still composes and the player still sees
+ * their Axie — with a toast saying what happened, rather than a silent blank frame.
+ */
+const BUDDY_3D_PATIENCE_MS = 15_000
+let buddyStandInShown = false
+
+function showBuddyStandIn(): void {
+  const b = buddyState.active
+  const name = b?.name || 'Your Axie'
+  stickerImg.src = fallbackAxieSvg(b?.class ?? null, name)
+  stickerImg.alt = `${name} (stand-in)`
+  stickerImg.hidden = false
+  stickerImg.style.pointerEvents = 'auto'
+  bindStickerPointers(stickerImg)
+  applyStickerTransform()
+  buddyStandInShown = true
+  setMascotLoading(false)
+  showLiveToast("3D Axie couldn't load on this phone, using a stand-in", 3200)
+}
+
+/** The real character arrived after all — take the stand-in back off the layer. */
+function hideBuddyStandIn(): void {
+  if (!buddyStandInShown) return
+  buddyStandInShown = false
+  hideStickerImg()
+}
+
 async function initSticker3D(): Promise<void> {
   disposeSpineSticker()
   const cast = activeCast
@@ -2777,10 +2844,24 @@ async function initSticker3D(): Promise<void> {
   // Mixer-backed faces: numeric cast, Olek, Agonia Echo, Golden
   if (!url && is3DMixerFace(cast)) {
     disposeSticker3D()
+    // The hatched buddy has no 2D art of its own, so a failed or slow rig used to leave the
+    // camera empty. Report it, and put a stand-in on the layer until the real one is ready.
+    const isBuddy = cast === 'buddy'
+    buddyStandInShown = false
+    const slow = isBuddy
+      ? window.setTimeout(() => {
+          if (req !== castRequest || axie3d?.ready) return
+          reportDiag('3d-slow', `buddy face not ready after ${BUDDY_3D_PATIENCE_MS / 1000}s`)
+          showBuddyStandIn()
+        }, BUDDY_3D_PATIENCE_MS)
+      : 0
     const ok = await showAxie3D(cast, req)
+    if (slow) window.clearTimeout(slow)
     if (req !== castRequest) return
     setMascotLoading(false)
-    if (!ok) applyPngFallback(cast)
+    if (ok) hideBuddyStandIn()
+    else if (isBuddy) showBuddyStandIn()
+    else applyPngFallback(cast)
     return
   }
   disposeAxie3D()

@@ -8,6 +8,7 @@
 import { Buffer } from 'node:buffer'
 import { ResponseShim } from './shim.mjs'
 import { createBuddyModule } from './buddy.mjs'
+import { createDiagModule } from './diag.mjs'
 
 const randomUUID = () => crypto.randomUUID()
 
@@ -3760,11 +3761,18 @@ const buddy = createBuddyModule({
   helpers: { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress, checkRate, recordRate, removePost },
 })
 
+/** Not gated on BUDDY: the reports are about the 3D rig, which the camera uses either way. */
+const diag = createDiagModule({
+  storage, env,
+  helpers: { sendJson, readBody, deviceKeyFrom, checkRate, recordRate },
+})
+
 async function handleApi(req) {
   const url = req.url
   if (!url.pathname.startsWith('/api/')) return null
   const res = new ResponseShim()
   const route = async () => {
+    if (await diag.handle(req, res, url)) return
     if (await buddy.handle(req, res, url)) return
 
     const genesMatch = /^\/api\/axie\/([^/]+)$/.exec(url.pathname)
