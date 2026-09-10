@@ -12,7 +12,8 @@
  * axie3d.ts), so one unit = `scale * 100` px. That keeps items the right size whatever the canvas
  * size, device pixel ratio or camera framing (the ear span this once used foreshortens to a third
  * of the body in the 3/4 camera, which is how a hat landed small and on the upper body). The `head`
- * joint is the head's top surface at the horn, nudged toward the body's centre line.
+ * joint is the head's top surface at the horn, nudged toward the body's centre line; `chest` is
+ * the lower body, two thirds of the way down the silhouette.
  */
 
 export const WEARABLE_IDS = ['hat', 'scarf', 'shades', 'cape', 'crown'] as const
@@ -21,7 +22,7 @@ export type WearableId = (typeof WEARABLE_IDS)[number]
 export const FRAME_IDS = ['none', 'polaroid', 'film', 'postcard'] as const
 export type FrameId = (typeof FRAME_IDS)[number]
 
-export const JOINT_NAMES = ['head', 'eyeL', 'eyeR', 'neck', 'back'] as const
+export const JOINT_NAMES = ['head', 'eyeL', 'eyeR', 'neck', 'chest', 'back'] as const
 export type JointName = (typeof JOINT_NAMES)[number]
 
 /** One projected joint in canvas pixels. `scale` is the ear span / 100. */
@@ -55,7 +56,8 @@ export const ITEM_ANCHORS: Record<WearableId, ItemAnchor> = {
   crown: { joint: 'head', dx: 0, dy: 0.04, w: 0.55, rest: 0.76 },
   // the rig has one mid eye joint (Root_Eye_M_JNT) covering both eyes, so the lenses centre on it
   shades: { joint: 'eyeL', dx: 0, dy: 0, w: 0.42, rest: 0.51 },
-  scarf: { joint: 'neck', dx: 0, dy: 0.04, w: 0.6, rest: 0.39 },
+  // an Axie has no neck: the scarf wraps the lower body, two thirds of the way down the silhouette
+  scarf: { joint: 'chest', dx: 0, dy: 0, w: 0.8, rest: 0.39 },
   // the 3/4 camera puts the character's rear toward screen-right, so the cape shifts that way
   cape: { joint: 'back', dx: 0.12, dy: 0.08, w: 0.8, rest: 0.2 },
 }

@@ -34,11 +34,19 @@ const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;'
 /** Every name, line, label and id that reaches the markup goes through this. */
 export const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, (c) => ESCAPES[c])
 export const pct = (n: number): number => Math.max(0, Math.min(100, Math.round((Number.isFinite(n) ? n : 0) * 100)))
-/** Day 1 is the day the egg was found. */
-export function dayCount(b: Pick<Buddy, 'createdAt' | 'hatchedAt'>): number {
-  const from = Date.parse(b.createdAt || b.hatchedAt || new Date().toISOString())
+/**
+ * Day 1 is the day the egg was found, counted in calendar days on the phone's clock: an egg found
+ * at nine in the evening is on day two the next morning, like the wish is. (Counting whole
+ * twenty-four-hour spans kept it on "Day 1" until nine the next evening.)
+ */
+export function dayCount(b: Pick<Buddy, 'createdAt' | 'hatchedAt'>, now: number = Date.now()): number {
+  const from = Date.parse(b.createdAt || b.hatchedAt || new Date(now).toISOString())
   if (Number.isNaN(from)) return 1
-  return Math.max(1, Math.floor((Date.now() - from) / 864e5) + 1)
+  const start = new Date(from)
+  const today = new Date(now)
+  const a = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())
+  const b2 = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  return Math.max(1, Math.round((b2 - a) / 864e5) + 1)
 }
 
 /**

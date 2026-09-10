@@ -1186,18 +1186,25 @@ export function createAxie3D(id = 'axie3d'): Axie3D {
     // sits (the silhouette's highest pixel can be a tall back part). It leans toward the face in
     // the 3/4 camera, so the seat slides a little toward the body's centre line.
     let head = horn
+    // no silhouette yet: the lower body is most of the way from the eye down to the spine joint
+    let chest = { x: (eye.x + spine.x) / 2, y: eye.y + (spine.y - eye.y) * 0.9 }
     let scale = (canvas.width * 0.65) / 100
     if (silhouette) {
       const width = silhouette.r - silhouette.l
       scale = width / 100
-      const cx = (silhouette.l + silhouette.r) / 2 + (horn.x - silhouette.hornX)
+      const dx = horn.x - silhouette.hornX
+      const dy = horn.y - silhouette.hornY
+      const cx = (silhouette.l + silhouette.r) / 2 + dx
       head = { x: horn.x + (cx - horn.x) * 0.3, y: horn.y }
+      // the lower body: three quarters of the way down the silhouette (clear of the mouth), a touch toward the face
+      chest = { x: cx + (eye.x - cx) * 0.25, y: silhouette.t + dy + (silhouette.b - silhouette.t) * 0.74 }
     }
     return {
       head: { ...head, scale },
       eyeL: { ...eye, scale },
       eyeR: { ...eye, scale },
       neck: { x: (eye.x + spine.x) / 2, y: (eye.y + spine.y) / 2, scale },
+      chest: { ...chest, scale },
       back: { ...spine, scale },
     }
   }

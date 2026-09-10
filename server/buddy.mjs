@@ -719,7 +719,16 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     return { unlocks }
   }
   const hoursSince = (iso) => (iso ? (now() - Date.parse(iso)) / 36e5 : 0)
-  const daysSince = (iso) => Math.max(1, Math.floor(hoursSince(iso) / 24) + 1)
+  // Calendar days in Manila time, like the wish and the daily photo count: day one is the day
+  // it happened, day two starts at midnight, not twenty-four hours later.
+  const daysSince = (iso) => {
+    if (!iso) return 1
+    const then = Date.parse(iso)
+    if (Number.isNaN(then)) return 1
+    const a = Date.parse(manilaDayKey(new Date(then)) + 'T00:00:00Z')
+    const b = Date.parse(manilaDayKey(new Date(now())) + 'T00:00:00Z')
+    return Math.max(1, Math.round((b - a) / 864e5) + 1)
+  }
 
   return { handle, recordSnap, getActive, ownerKeyFrom, load, save, accountFor, publicBuddy, say, ensureWish, addBond }
 }

@@ -36,6 +36,7 @@ const joints = () => ({
   eyeL: { x: 148, y: 116, scale: 2 },
   eyeR: { x: 148, y: 116, scale: 2 },
   neck: { x: 132, y: 138, scale: 2 },
+  chest: { x: 124, y: 172, scale: 2 },
   back: { x: 116, y: 160, scale: 2 },
 })
 
@@ -111,7 +112,9 @@ test('the rest line of each item lands on its joint: hats on the top of the head
   assert.ok(Math.abs(hat.x + hat.w / 2 - j.head.x) < 1, 'hat is centred over the head')
   assert.ok(hat.w >= 0.5 * 200 && hat.w <= 0.75 * 200, `hat spans most of the head: ${hat.w}`)
   assert.ok(Math.abs(restY('shades') - j.eyeL.y) < 2, 'shades sit on the eyes')
-  assert.ok(restY('scarf') > j.eyeL.y, 'scarf hangs below the eyes')
+  assert.ok(restY('scarf') > j.eyeL.y + 40, 'scarf wraps the lower body, well below the eyes')
+  const scarf = placeItem(ITEM_ANCHORS.scarf, j.chest, 256, 256)
+  assert.ok(scarf.w >= 0.7 * 200, `scarf is wide enough to wrap the body: ${scarf.w}`)
   assert.ok(restY('cape') > j.neck.y, 'cape clasps below the neck')
 })
 

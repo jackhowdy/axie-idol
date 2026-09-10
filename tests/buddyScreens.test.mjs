@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -390,4 +390,15 @@ test('the after-the-shot card counts photos, not bond, against the day', () => {
   assert.match(full, /Today&#39;s 10 photos are counted, this one still goes in the book/)
   assert.match(full, /wish done \+1/)
   assert.match(full, /10 of 10 photos today/)
+})
+
+test('dayCount counts calendar days, not twenty-four-hour spans', () => {
+  // found at 21:00 local; at 01:00 the next morning it is day two, at 21:00 the next evening still day two
+  const found = new Date(2026, 8, 10, 21, 0, 0)
+  const b = { createdAt: found.toISOString(), hatchedAt: null }
+  assert.equal(dayCount(b, found.getTime() + 60 * 60 * 1000), 1, 'same evening')
+  assert.equal(dayCount(b, new Date(2026, 8, 11, 1, 0, 0).getTime()), 2, 'past midnight')
+  assert.equal(dayCount(b, new Date(2026, 8, 11, 21, 0, 0).getTime()), 2, 'a full day later')
+  assert.equal(dayCount(b, new Date(2026, 8, 17, 9, 0, 0).getTime()), 8, 'a week on')
+  assert.equal(dayCount({ createdAt: 'garbage', hatchedAt: null }), 1)
 })
