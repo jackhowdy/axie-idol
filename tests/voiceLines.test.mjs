@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { LINES, TEMPLATES, SITUATIONS, pickLine, fillSlots, checkRules } from '../server/voiceLines.mjs'
+import { LINES, GENERIC, TEMPLATES, SITUATIONS, pickLine, fillSlots, checkRules } from '../server/voiceLines.mjs'
 import { TRAITS } from '../server/buddyRules.mjs'
 
 test('every trait has every core situation with at least one line', () => {
@@ -43,15 +43,25 @@ test('pickLine prefers the lead trait, avoids recent lines, fills slots', () => 
   const filled = fillSlots('Get {thing} in it. Closer.', { thing: 'the noodles' })
   assert.equal(filled, 'Get the noodles in it. Closer.')
 
-  // When all trait lines and all template lines are in recent, fallback to templates only
+  // When every trait line is in recent, the trait-neutral pool speaks next: never a repeated trait line
   const shyBefore = LINES.Shy.before
   const templatesBefore = TEMPLATES.before
   const recentAll = [...shyBefore, ...templatesBefore]
   const t = pickLine({ traits: ['Shy'], situation: 'before', slots: { thing: 'a dog' }, recent: recentAll, rng: () => 0 })
   assert.ok(typeof t === 'string' && t.length > 0, 'always returns something')
   assert.ok(!shyBefore.includes(t), 'never returns a trait line from recent')
+  assert.ok(GENERIC.before.includes(t), 'falls back to the trait-neutral pool before any template')
 
-  // Should return one of the filled template lines
-  const filledTemplates = templatesBefore.map((line) => fillSlots(line, { thing: 'a dog' })).filter((line) => line.includes('a dog') || !line.includes('{'))
-  assert.ok(filledTemplates.includes(t), 'returns a template line when no fresh trait line exists')
+  // With the generic pool spent too, a filled template may speak; a trait line still never repeats
+  const recentEverything = [...recentAll, ...GENERIC.before]
+  const t2 = pickLine({ traits: ['Shy'], situation: 'before', slots: { thing: 'a dog' }, recent: recentEverything, rng: () => 0 })
+  assert.ok(!shyBefore.includes(t2), 'still never a trait line from recent')
+  const filledTemplates = templatesBefore.map((line) => fillSlots(line, { thing: 'a dog' })).filter((line) => !line.includes('{'))
+  assert.ok(GENERIC.before.includes(t2) || filledTemplates.includes(t2), 'generic or a filled template when everything is spent')
+
+  // Without a noun for the slot, no line with {thing} is ever spoken
+  for (let i = 0; i < 12; i++) {
+    const l = pickLine({ traits: ['Explorer', 'Foodie', 'Shy'], situation: 'after', slots: {}, recent: [], rng: Math.random })
+    assert.ok(!/\{/.test(l), 'no unfilled slot: ' + l)
+  }
 })
