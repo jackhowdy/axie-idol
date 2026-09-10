@@ -7,7 +7,7 @@
  */
 import {
   buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone,
-  roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery,
+  roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto,
 } from './buddy'
 import {
   eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml,
@@ -27,6 +27,10 @@ export type BuddyNav = {
   onSheetNext: () => void
   /** Drop the queued sheets — the shot they belonged to is being retaken. */
   clearSheetQueue: () => void
+  /** The post id of the photo the open sheets are about, so it can be un-kept. */
+  lastPhotoId: () => string | null
+  /** The camera's own toast — screens have no toast of their own. */
+  toast: (message: string) => void
 }
 export type BuddyUi = {
   show: (which: BuddyScreen) => Promise<void>
@@ -259,6 +263,17 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     // queue main.ts filled from the snap result and lands on Home when it runs dry.
     if (act === 'retake') { nav.clearSheetQueue(); hideSheet(); nav.goSnap(); return }
     if (act === 'save' || act === 'sheet-next') { nav.onSheetNext(); return }
+    // "Don't keep this one" / "Skip": the photo goes, and with it the rest of the sheets it
+    // brought. Bond and snap count already earned stay — the shot happened.
+    if (act === 'unkeep') {
+      const photoId = nav.lastPhotoId()
+      nav.clearSheetQueue()
+      hideSheet()
+      if (photoId) await unkeepPhoto(photoId)
+      await show('home')
+      nav.toast('Not kept')
+      return
+    }
     if (act === 'close-sheet') { hideSheet(); return }
     // The retry on the boot-failure card: the same two steps boot itself runs, and if they fail
     // again the card comes straight back rather than an alert over a blank page.

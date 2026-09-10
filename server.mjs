@@ -12,6 +12,7 @@ import {
   readFileSync,
   writeFileSync,
   renameSync,
+  rmSync,
 } from 'node:fs'
 import { resolve, join, extname, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -99,6 +100,12 @@ const storage = createFileStorage()
 const blobs = {
   async put(filename, bytes) {
     writeFileSync(join(UPLOADS_DIR, filename), bytes)
+  },
+  /** Used when a photo is un-kept: the post is gone, so the upload should not linger. */
+  async delete(filename) {
+    const full = resolve(UPLOADS_DIR, filename)
+    if (!full.startsWith(UPLOADS_DIR) || !existsSync(full)) return
+    rmSync(full, { force: true })
   },
 }
 const core = createCore({ storage, blobs, env: process.env, log: console })

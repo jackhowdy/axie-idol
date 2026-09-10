@@ -454,7 +454,8 @@ export function reactionHtml(r: Snap): string {
     <div class="bd-actions">
       <button type="button" class="bd-btn bd-btn-ghost" data-action="retake">Retake</button>
       <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="save">Save</button>
-    </div>`
+    </div>
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="unkeep">Don't keep this one</button></div>`
 }
 
 export function momentHtml(m: Moment, b: Buddy): string {
@@ -469,7 +470,10 @@ export function momentHtml(m: Moment, b: Buddy): string {
       </div>
     </div>
     <p class="bd-small">Moments · ${b.moments.length} of ${b.momentsTotal}</p>
-    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="sheet-next">Keep it in the book</button></div>`
+    <div class="bd-actions">
+      <button type="button" class="bd-btn bd-btn-ghost" data-action="unkeep">Skip</button>
+      <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="sheet-next">Keep it in the book</button>
+    </div>`
 }
 
 export function unlockHtml(u: Unlock, b: Buddy): string {

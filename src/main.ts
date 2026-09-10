@@ -5177,7 +5177,7 @@ async function submitPost(): Promise<void> {
     if (buddyEnabled) {
       viewfinder.hidden = false
       viewfinder.classList.add('active')
-      await handleBuddySnap(data.buddy ?? null)
+      await handleBuddySnap(data.buddy ?? null, data.post?.id ?? null)
       return
     }
     await showFeed()
@@ -5231,9 +5231,15 @@ async function submitPost(): Promise<void> {
  * `buddyScreens` calls `advanceBuddySheet` from its single delegated handler.
  */
 let buddySheetQueue: string[] = []
+/**
+ * The post the open after-the-shot sheets are about. "Don't keep this one" needs an id to send,
+ * and the sheets are the only place it can be acted on, so it lives exactly as long as they do.
+ */
+let lastPhotoId: string | null = null
 
-async function handleBuddySnap(snap: SnapResult | null): Promise<void> {
+async function handleBuddySnap(snap: SnapResult | null, photoId: string | null = null): Promise<void> {
   buddySheetQueue = []
+  lastPhotoId = photoId
   if (!snap) {
     await buddyUi?.show('auto')
     return
@@ -6427,7 +6433,9 @@ async function boot(): Promise<void> {
       showFace: (host) => showBuddyFaceIn(host),
       hideFace: () => pauseBuddyFace(),
       onSheetNext: () => advanceBuddySheet(),
-      clearSheetQueue: () => { buddySheetQueue = [] },
+      clearSheetQueue: () => { buddySheetQueue = []; lastPhotoId = null },
+      lastPhotoId: () => lastPhotoId,
+      toast: (message) => showLiveToast(message, 1800),
     })
     try {
       await loadBuddy()

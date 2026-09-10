@@ -36,6 +36,7 @@ const wordsFor = (n) => (Number.isFinite(n) && n >= 0 && n < ONES.length ? ONES[
 const RATE_LIMITS = {
   'POST /api/buddy/egg': 5,
   'POST /api/buddy/retire': 5,
+  'POST /api/buddy/photo/unkeep': 20,
   'POST /api/account/recover': 10,
   'POST /api/account/recovery': 10,
   'GET /api/ronin/nonce': 20,
@@ -47,7 +48,7 @@ const NONCES_PER_ADDRESS = 5
 const NONCE_ADDRESS_CAP = 2000
 
 export function createBuddyModule({ storage, helpers, env = {}, catalogue = catalogueJson, now = () => Date.now(), rng = Math.random }) {
-  const { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress, checkRate, recordRate } = helpers
+  const { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress, checkRate, recordRate, removePost } = helpers
   const enabled = env.BUDDY !== '0'
 
   const emptyStore = () => ({ accounts: {}, buddies: {}, usedRecoveryCodes: {}, pendingNonces: {} })
@@ -440,6 +441,26 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       // A full day must not burn the wish: leave it open so the bonus can land tomorrow.
       if (r.granted > 0) { w.done = true; active.firstsDone.push(w.id) }
       save(store); sendJson(res, 200, payload(store, ownerKey, { granted: r.granted, unlocks: r.unlocks, capped: r.granted === 0 })); return true
+    }
+    /**
+     * The opposite of "keep it in the book": a photo the player does not want in the scrapbook.
+     * The bond it already earned stays — the snap happened, and taking it back would turn a
+     * change of mind about a picture into a punishment. `snapCount` is the true total and is
+     * likewise untouched; only the picture and the moment card that points at it go.
+     */
+    if (p === '/api/buddy/photo/unkeep' && req.method === 'POST') {
+      const photoId = String(body.photoId || '')
+      const known = Boolean(photoId) && Boolean(active) && (active.photoIds.includes(photoId) || (active.photos || []).some((x) => x.id === photoId))
+      // Someone else's photo, an unknown id, or no active buddy all answer the same way: this
+      // route can only ever speak about the caller's own active Axie.
+      if (!known) { sendJson(res, 404, { error: 'Photo not found' }); return true }
+      active.photoIds = active.photoIds.filter((id) => id !== photoId)
+      active.photos = (active.photos || []).filter((x) => x.id !== photoId)
+      active.moments = active.moments.filter((m) => m.photoId !== photoId)
+      save(store)
+      // The post and its upload belong to the host's store, not this one.
+      if (typeof removePost === 'function') { try { await removePost(photoId) } catch { /* the buddy record is already clean */ } }
+      sendJson(res, 200, payload(store, ownerKey)); return true
     }
     if (p === '/api/buddy/wear' && req.method === 'POST') {
       if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }

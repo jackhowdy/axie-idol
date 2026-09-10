@@ -117,6 +117,33 @@ test('a buddy post records the photo path so the scrapbook can render a real thu
   assert.ok(typeof photos[0].at === 'string' && photos[0].at.length > 0)
 })
 
+test('un-keeping a photo drops it from the scrapbook and the feed, but never the bond it earned', async () => {
+  const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
+  const p = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
+  assert.equal(p.status, 201, p.text)
+  const photoId = p.json.post.id
+  const before = await api('/api/buddy', { device: d })
+  assert.equal(before.json.active.photos.length, 1)
+  const snapCount = before.json.active.snapCount
+
+  const gone = await api('/api/buddy/photo/unkeep', { method: 'POST', device: d, body: { photoId } })
+  assert.equal(gone.status, 200, gone.text)
+  const after = await api('/api/buddy', { device: d })
+  assert.equal(after.json.active.photos.length, 0, 'photo record gone')
+  assert.deepEqual(after.json.active.photoIds, [], 'photo id gone')
+  assert.equal(after.json.active.snapCount, snapCount, 'the snap still happened')
+  assert.equal(after.json.active.egg.snaps, before.json.active.egg.snaps, 'egg progress is not taken back')
+
+  const feed = await api('/api/feed')
+  assert.ok(!(feed.json.posts || []).some((x) => x.id === photoId), 'the post left the feed too')
+
+  const missing = await api('/api/buddy/photo/unkeep', { method: 'POST', device: d, body: { photoId } })
+  assert.equal(missing.status, 404, 'un-keeping the same photo twice is a 404')
+  const stranger = await api('/api/buddy/photo/unkeep', { method: 'POST', device: dev(), body: { photoId: 'no-such-photo' } })
+  assert.equal(stranger.status, 404, 'an unknown id is a 404')
+})
+
 test('name filter and length', async () => {
   const d = dev()
   await api('/api/buddy/egg', { method: 'POST', device: d })

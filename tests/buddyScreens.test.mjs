@@ -189,6 +189,15 @@ test('moment and unlock sheets advance the queue instead of just closing', () =>
   assert.match(reactionHtml({ kind: 'snap', granted: 1, bond: 5, level: 1, next: null, line: 'A DOG.', labels: [], isNewPlace: false, wishDone: null, unlocks: [], moments: [], bondToday: 1, dailyCap: 10 }), /data-action="save"/)
 })
 
+test('keeping a photo has an opposite: the reaction sheet and every moment card offer a way out', () => {
+  const reaction = reactionHtml({ kind: 'snap', granted: 1, bond: 5, level: 1, next: null, line: 'A DOG.', labels: [], isNewPlace: false, wishDone: null, unlocks: [], moments: [], bondToday: 1, dailyCap: 10 })
+  assert.match(reaction, /data-action="unkeep"/)
+  assert.match(reaction, /Don't keep this one/)
+  const moment = momentHtml({ id: 'dog', title: 'A dog', line: 'A DOG.', rarity: 0.4 }, miso)
+  assert.match(moment, /data-action="unkeep"[^>]*>Skip</)
+  assert.match(moment, /Keep it in the book/, 'the primary is unchanged')
+})
+
 test('the camera chip counts plainly once the egg is past the last tier', () => {
   const maxed = { ...egg, egg: { snaps: 120, grids: [] }, eggOdds: { tier: 100, rareParts: 2, mysticChance: 0.15, nextTier: null } }
   const chip = vfChipHtml(maxed)

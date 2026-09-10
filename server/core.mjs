@@ -3733,9 +3733,31 @@ async function handleSettleDay(req, res) {
   sendJson(res, 200, { result, burns: burnsTodayPayload(store) })
 }
 
+/**
+ * Take a post back out of the feed, with its upload. Used by the buddy module when the player
+ * says they do not want a photo kept. The blob only goes if the host adapter knows how to
+ * delete one — a host that does not simply leaves the file, which nothing links to any more.
+ */
+async function removePost(postId) {
+  const store = loadStore()
+  const i = store.posts.findIndex((p) => p.id === postId)
+  if (i < 0) return false
+  const [post] = store.posts.splice(i, 1)
+  saveStore(store)
+  const name = String(post.imagePath || '').replace(/^\/uploads\//, '')
+  if (name && !/[/\\]|\.\./.test(name) && typeof blobs?.delete === 'function') {
+    try {
+      await blobs.delete(name)
+    } catch (err) {
+      log.warn?.('[core] upload delete failed', name, err?.message)
+    }
+  }
+  return true
+}
+
 const buddy = createBuddyModule({
   storage, env,
-  helpers: { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress, checkRate, recordRate },
+  helpers: { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress, checkRate, recordRate, removePost },
 })
 
 async function handleApi(req) {

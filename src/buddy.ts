@@ -99,6 +99,8 @@ export async function retire(): Promise<void> { apply(await call<Payload>('/api/
 export async function switchTo(buddyId: string): Promise<void> { apply(await call<Payload>('/api/buddy/switch', { buddyId })) }
 export async function wear(item: string | null): Promise<void> { apply(await call<Payload>('/api/buddy/wear', { item })) }
 export async function wishDone(): Promise<void> { apply(await call<Payload>('/api/buddy/wish/done', {})) }
+/** The opposite of keeping it: drops the photo from the scrapbook and the feed. Bond already earned stays. */
+export async function unkeepPhoto(photoId: string): Promise<void> { apply(await call<Payload>('/api/buddy/photo/unkeep', { photoId })) }
 export async function beforeLine(ctx: { thing?: string; place?: string }): Promise<string | null> {
   const q = new URLSearchParams(); if (ctx.thing) q.set('thing', ctx.thing); if (ctx.place) q.set('place', ctx.place)
   return (await call<{ line: string | null }>(`/api/buddy/before?${q}`)).line

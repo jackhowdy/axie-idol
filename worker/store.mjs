@@ -28,6 +28,7 @@ export class IdolStore extends DurableObject {
       },
       blobs: {
         put: (name, bytes, mime) => this.putBlob(name, bytes, mime || 'image/png'),
+        delete: (name) => this.deleteBlob(name),
       },
       env: {
         SEED_POSTS: env.SEED_POSTS || '0',
@@ -64,6 +65,18 @@ export class IdolStore extends DurableObject {
     const puts = { [`blob:${name}:meta`]: { mime, parts, size: u8.length } }
     for (let i = 0; i < parts; i++) puts[`blob:${name}:${i}`] = u8.slice(i * CHUNK, (i + 1) * CHUNK)
     await this.ctx.storage.put(puts)
+  }
+
+  /** Mirror of putBlob: R2 object, or every chunk key plus its meta. Missing blob = nothing to do. */
+  async deleteBlob(name) {
+    if (this.env.UPLOADS) {
+      await this.env.UPLOADS.delete(name)
+      return
+    }
+    const meta = await this.ctx.storage.get(`blob:${name}:meta`)
+    if (!meta) return
+    const keys = Array.from({ length: meta.parts }, (_, i) => `blob:${name}:${i}`)
+    await this.ctx.storage.delete([...keys, `blob:${name}:meta`])
   }
 
   async getBlob(name) {
