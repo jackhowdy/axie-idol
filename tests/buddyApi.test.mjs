@@ -870,3 +870,20 @@ test('look: a spot the Axie has stood on before reaches the model as memory, a n
   assert.doesNotMatch(voice.calls[2].user, /exact spot/, 'a different spot carries no such memory')
   assert.match(voice.calls[2].user, /Earlier today you saw slide\./, 'what the last photo showed is remembered by day')
 })
+
+
+test('a photo the model could not make out carries no nouns, so nothing false reaches the chips or the memory', async () => {
+  const voice = fakeVoice([{ clear: false, seen: ['glass', 'shine'], line: 'It is so dark. Where are we?' }, { clear: false, seen: [], line: 'Everything went wobbly. Hold still.' }])
+  const { buddy, call } = directModule({ voice })
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 21 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  const look = await call('/api/buddy/look', { method: 'POST', body: { imageBase64: PHOTO, dark: true } })
+  assert.deepEqual(look.body.labels, [], 'guessed nouns are dropped when the model says it could not see')
+  assert.equal(look.body.line, 'It is so dark. Where are we?')
+  assert.match(voice.calls[0].user, /came out very dark/, 'the phone measurement reaches the prompt')
+  const r = await buddy.recordSnap({ id: 'p1' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 21, image: PHOTO, dark: true })
+  assert.deepEqual(r.labels, [])
+  const b = buddy.getActive('device:unit-dev')
+  assert.equal((b.seen || []).length, 0, 'nothing remembered from a photo it could not see')
+})

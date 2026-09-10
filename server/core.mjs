@@ -3174,6 +3174,8 @@ async function handleCreatePost(req, res) {
     image: typeof body.imageBase64 === 'string' ? body.imageBase64 : null,
     // the look the client already drew onto this image (see /api/buddy/look)
     lookId: typeof body.lookId === 'string' ? body.lookId.slice(0, 64) : null,
+    // the phone measured the capture as very dark (see darkness() in main.ts)
+    dark: body.dark === true,
   })
   if (buddyResult) post.buddyId = buddy.getActive(buddyOwnerKey)?.id || null
 

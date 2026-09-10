@@ -353,9 +353,9 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const image = model.enabled ? splitImage(ctx.image) : null
       if (image) {
         // the place count was already bumped for this photo, so "before" is one less
-        const snapCtx = talkCtx(b, { hour, weather: ctx.weather, placeName: ctx.placeName, placeType: ctx.placeType, firstTimeHere: isNewPlace, ...placeMemory(b, grid, 1) })
+        const snapCtx = talkCtx(b, { hour, weather: ctx.weather, placeName: ctx.placeName, placeType: ctx.placeType, firstTimeHere: isNewPlace, dark: ctx.dark === true, ...placeMemory(b, grid, 1) })
         const out = await model.ask({ system: characterBrief(b), user: afterPrompt(b, snapCtx), image, schema: AFTER_SCHEMA, maxTokens: 120 })
-        const seen = cleanSeen(out?.seen)
+        const seen = out?.clear === false ? [] : cleanSeen(out?.seen)
         if (seen.length) labels = seen
         modelLine = ruled(out?.line)
       }
@@ -634,8 +634,9 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const placeType = typeof body.placeType === 'string' ? body.placeType.slice(0, 16) : undefined
       // Where the photo is being taken, so the Axie knows whether it has stood here before.
       const lookGrid = gridOf(typeof body.lat === 'number' ? body.lat : Number.NaN, typeof body.lng === 'number' ? body.lng : Number.NaN)
-      const out = await model.ask({ system: characterBrief(active), user: afterPrompt(active, talkCtx(active, { hour, placeName, placeType, ...placeMemory(active, lookGrid) })), image, schema: AFTER_SCHEMA, maxTokens: 120 })
-      const labels = cleanSeen(out?.seen)
+      const out = await model.ask({ system: characterBrief(active), user: afterPrompt(active, talkCtx(active, { hour, placeName, placeType, dark: body.dark === true, ...placeMemory(active, lookGrid) })), image, schema: AFTER_SCHEMA, maxTokens: 120 })
+      // a photo it could not make out carries no nouns: nothing to feed the wishes or the memory
+      const labels = out?.clear === false ? [] : cleanSeen(out?.seen)
       const line = ruled(out?.line)
       if (!line && !labels.length) { sendJson(res, 200, { id: null, line: null, labels: [] }); return true }
       const id = uid()

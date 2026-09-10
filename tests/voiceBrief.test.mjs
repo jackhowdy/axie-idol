@@ -118,3 +118,12 @@ test('memory: what it saw is told by relative day, and a spot it has stood on be
   assert.match(afterPrompt(b, { dayKey: '2026-09-11' }), /stood on this spot before/)
   assert.doesNotMatch(afterPrompt(b, { dayKey: '2026-09-11' }), /again\./, 'no quotable example line for the model to copy')
 })
+
+
+test('a dark or blurred photo: the prompt asks for an honest "clear" flag and names the darkness', () => {
+  const p = afterPrompt(miso, { dayKey: '2026-09-11', dark: true })
+  assert.match(p, /"clear": true only if you can plainly make out real things/)
+  assert.match(p, /"seen" is an empty list and your line is about not seeing well/)
+  assert.match(p, /The photo came out very dark/)
+  assert.doesNotMatch(afterPrompt(miso, { dayKey: '2026-09-11' }), /came out very dark/)
+})

@@ -98,6 +98,7 @@ export function memoryFacts(b, ctx = {}) {
   const snaps = b?.snapCount || 0
   if (snaps) facts.push(`You have ${wordsFor(snaps)} ${snaps === 1 ? 'photo' : 'photos'} together.`)
   if (ctx.hour != null) facts.push(`It is ${hourWord(Number(ctx.hour))}.`)
+  if (ctx.dark) facts.push('The photo came out very dark; the phone could hardly see.')
   if (ctx.weather) facts.push(`The weather is ${ctx.weather}.`)
   if (ctx.placeName) facts.push(`You are at ${ctx.placeName}${ctx.firstTimeHere ? ', for the first time' : ''}.`)
   else if (ctx.placeType) facts.push(`You are at a ${ctx.placeType}${ctx.firstTimeHere ? ', for the first time' : ''}.`)
@@ -138,14 +139,14 @@ export function relativeDay(dayKey, todayKey) {
 
 export const AFTER_SCHEMA = {
   type: 'OBJECT',
-  properties: { seen: { type: 'ARRAY', items: { type: 'STRING' } }, line: { type: 'STRING' } },
-  required: ['seen', 'line'],
+  properties: { clear: { type: 'BOOLEAN' }, seen: { type: 'ARRAY', items: { type: 'STRING' } }, line: { type: 'STRING' } },
+  required: ['clear', 'seen', 'line'],
 }
 export const LINE_SCHEMA = { type: 'OBJECT', properties: { line: { type: 'STRING' } }, required: ['line'] }
 export const REPLY_SCHEMA = { type: 'OBJECT', properties: { reply: { type: 'STRING' } }, required: ['reply'] }
 
 export function afterPrompt(b, ctx) {
-  return `${memoryFacts(b, ctx)}\nYour person just took this photo with you in it. First, "seen": up to four plain lowercase nouns for the main things in the photo besides yourself (singular, no brand names, no people's names; a person is "person"). Then "line": your reaction, one or two short sentences in your voice, about one thing that is really in the photo. Only things you can see: never add stairs, roofs or animals that are not there. Say what you noticed and what you want to do with it, in plain words. Memory: you may mention, in your own words, that you have stood on this spot before, or that a thing here is one you saw in an earlier photo, but only if that thing is listed above in what you saw; a thing you have never seen listed is new to you, even on a spot you know. Not every time. Vary the shape: sometimes a question, sometimes a plan ("Let's go up that."), sometimes just what you noticed and how it made you feel ("That slide is so red. I like it."). Not every line is a question. Spell any number as a word.`
+  return `${memoryFacts(b, ctx)}\nYour person just took this photo with you in it. First, "clear": true only if you can plainly make out real things in it; false if it is dark, blurred, or you would be guessing. When "clear" is false, "seen" is an empty list and your line is about not seeing well, in your voice, and names no object at all, not even inside a question: it is dark, or everything went wobbly, or where are we. Otherwise "seen": up to four plain lowercase nouns for the main things in the photo besides yourself (singular, no brand names, no people's names; a person is "person"). Then "line": your reaction, one or two short sentences in your voice, about one thing that is really in the photo. Only things you can see: never add stairs, roofs or animals that are not there. Say what you noticed and what you want to do with it, in plain words. Memory: you may mention, in your own words, that you have stood on this spot before, or that a thing here is one you saw in an earlier photo, but only if that thing is listed above in what you saw; a thing you have never seen listed is new to you, even on a spot you know. Not every time. Vary the shape: sometimes a question, sometimes a plan ("Let's go up that."), sometimes just what you noticed and how it made you feel ("That slide is so red. I like it."). Not every line is a question. Spell any number as a word.`
 }
 
 export function greetingPrompt(b, ctx) {

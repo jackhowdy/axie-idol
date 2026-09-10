@@ -2196,6 +2196,29 @@ let captureSeq = 0
 let captureAnchor: BubbleAnchor | null = null
 let captureLookId: string | null = null
 
+/**
+ * Mean brightness of a capture, 0..1, from a 24x24 downsample. A dark room reads under about 0.16;
+ * telling the server lets the Axie say it is dark instead of guessing at shapes it cannot see.
+ */
+async function darkness(blob: Blob): Promise<boolean> {
+  try {
+    const bmp = await createImageBitmap(blob)
+    const c = document.createElement('canvas')
+    c.width = 24
+    c.height = 24
+    const g = c.getContext('2d')
+    if (!g) return false
+    g.drawImage(bmp, 0, 0, 24, 24)
+    bmp.close?.()
+    const d = g.getImageData(0, 0, 24, 24).data
+    let sum = 0
+    for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]
+    return sum / (d.length / 4) / 255 < 0.16
+  } catch {
+    return false
+  }
+}
+
 async function lookAtCapture(plain: Blob, seq: number): Promise<void> {
   if (!buddyEnabled || !buddyState.active?.hatchedAt || !captureAnchor) return
   const anchor = captureAnchor
@@ -2203,9 +2226,10 @@ async function lookAtCapture(plain: Blob, seq: number): Promise<void> {
   let lookId: string | null = null
   try {
     const ctx = await snapContext()
+    const dark = await darkness(plain)
     const res = await fetch('/api/buddy/look', {
       method: 'POST', headers: buddyHeaders(),
-      body: JSON.stringify({ imageBase64: await blobToDataUrl(plain), hour: ctx.hour, ...(ctx.lat !== undefined ? { lat: ctx.lat, lng: ctx.lng } : {}) }),
+      body: JSON.stringify({ imageBase64: await blobToDataUrl(plain), hour: ctx.hour, dark, ...(ctx.lat !== undefined ? { lat: ctx.lat, lng: ctx.lng } : {}) }),
     })
     const data = (await res.json().catch(() => ({}))) as { id?: string | null; line?: string | null }
     if (!res.ok) return
