@@ -133,6 +133,7 @@ test('un-keeping a photo drops it from the scrapbook and the feed, but never the
   assert.equal(after.json.active.photos.length, 0, 'photo record gone')
   assert.deepEqual(after.json.active.photoIds, [], 'photo id gone')
   assert.equal(after.json.active.snapCount, snapCount, 'the snap still happened')
+  assert.equal(after.json.active.photoCount, snapCount - 1, 'but the book holds one photo fewer')
   assert.equal(after.json.active.egg.snaps, before.json.active.egg.snaps, 'egg progress is not taken back')
 
   const feed = await api('/api/feed')

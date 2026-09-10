@@ -40,6 +40,8 @@ export type Buddy = {
   /** Post id + the stored upload path, newest last, capped server-side at 60. Real scrapbook thumbnails. */
   photos: { id: string; imagePath: string; at: string }[]
   snapCount: number
+  /** Photos still in the book: counted snaps minus the ones the owner chose not to keep. */
+  photoCount?: number
   bondToday: number
   dailyCap: number
   streak: number

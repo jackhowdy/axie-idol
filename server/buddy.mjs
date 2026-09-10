@@ -127,7 +127,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       bond: 0, bondByDay: {}, monthly: { key: monthKey(), bond: 0 },
       wish: { day: null, id: null, text: '', bonus: 1, done: false }, firstsDone: [],
       wardrobe: { unlocked: [], worn: null }, moments: [], places: {},
-      photoIds: [], photos: [], snapCount: 0, lastSnapAt: null, recentLines: [], hatchGrid: null, rareIds: [], mysticId: null, mystic: false,
+      photoIds: [], photos: [], snapCount: 0, unkeptCount: 0, lastSnapAt: null, recentLines: [], hatchGrid: null, rareIds: [], mysticId: null, mystic: false,
     }
   }
 
@@ -147,6 +147,8 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     return {
       ...b, level, levelName: LEVEL_NAMES[level] || null, next: b.hatchedAt ? nextStep(b.bond) : null,
       photos: b.photos || [], // records written before this field existed
+      // Photos still in the book: every counted snap minus the ones the owner chose not to keep.
+      photoCount: Math.max(0, b.snapCount - (b.unkeptCount || 0)),
       eggOdds: b.hatchedAt ? null : eggOdds(b.egg.snaps, b.egg.grids.length),
       momentsTotal: MOMENTS.length, ladder: LADDER, bondToday: b.bondByDay[manilaDayKey()] || 0, dailyCap: DAILY_CAP,
       streak: streakFor(b),
@@ -457,6 +459,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       active.photoIds = active.photoIds.filter((id) => id !== photoId)
       active.photos = (active.photos || []).filter((x) => x.id !== photoId)
       active.moments = active.moments.filter((m) => m.photoId !== photoId)
+      active.unkeptCount = (active.unkeptCount || 0) + 1
       save(store)
       // The post and its upload belong to the host's store, not this one.
       if (typeof removePost === 'function') { try { await removePost(photoId) } catch { /* the buddy record is already clean */ } }

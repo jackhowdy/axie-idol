@@ -319,12 +319,14 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
     const label = unlocked ? (worn ? 'Worn' : it[0].toUpperCase() + it.slice(1)) : `Bond ${row?.level ?? '?'}`
     return `<button type="button" class="bd-item ${unlocked ? 'on' : 'locked'}${worn ? ' worn' : ''}" data-action="wear" data-item="${esc(it)}"${unlocked ? '' : ' disabled'} aria-label="${esc(it)}">${icon(it, 26)}<small>${esc(label)}</small></button>`
   }).join('')
-  // `photoIds` is capped server-side (head + tail), so the true photo count is `snapCount`.
+  // `photoIds` is capped server-side (head + tail), so the true count of kept photos is `photoCount`
+  // (older payloads: `snapCount`).
+  const kept = b.photoCount ?? b.snapCount
   const book = b.photoIds.slice(-4).reverse()
     .map((id, i) => {
       const path = photoPath(b, id)
       const art = path ? `<img class="bd-thumb-img" src="${esc(path)}" alt="" loading="lazy">` : ''
-      return `<span class="bd-thumb" data-photo-id="${esc(id)}">${art}<small>${b.snapCount - i}</small></span>`
+      return `<span class="bd-thumb" data-photo-id="${esc(id)}">${art}<small>${kept - i}</small></span>`
     }).join('')
     || '<span class="bd-small bd-muted">No photos yet. The first one starts the book.</span>'
   const who = b.kind === 'owned' ? `${esc(b.name)} · owned${b.axieId ? ` #${esc(b.axieId)}` : ''}` : `Wild ${esc(b.class ?? 'Axie')}`
@@ -361,7 +363,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
       ${wishPillHtml(b) || '<p class="bd-small bd-muted">A new wish arrives each morning.</p>'}
       <div class="bd-card-head"><span class="bd-label">Wardrobe · ${b.wardrobe.unlocked.filter((u) => WEARABLES.includes(u)).length} of ${WEARABLES.length}</span><a class="bd-link" data-action="ladder">Growth ladder</a></div>
       <div class="bd-items">${wardrobe}</div>${restingRowHtml(opts.buddies || [], b.id)}
-      <div class="bd-card-head"><span class="bd-label">Scrapbook · ${b.snapCount}</span><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>
+      <div class="bd-card-head"><span class="bd-label">Scrapbook · ${kept}</span><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>
       <div class="bd-book">${book}</div>
       <p class="bd-small bd-center">Not the one? <a class="bd-link" data-action="fresh-egg">Start a fresh egg</a> · ${esc(b.name)} stays in your scrapbook · <a class="bd-link" data-action="recovery">Recovery code</a></p>
       <p class="bd-small bd-center">${wallet}</p>
@@ -583,7 +585,7 @@ export function diaryHtml(d: Diary, b: Buddy): string {
         <span class="bd-round bd-round-ghost"></span>
       </header>
       <div class="bd-diary">${entries}
-        <div class="bd-diary-foot"><span>${b.snapCount} photos · ${b.moments.length} moments</span></div>
+        <div class="bd-diary-foot"><span>${b.photoCount ?? b.snapCount} photos · ${b.moments.length} moments</span></div>
       </div>
       <div class="bd-card bd-note">${icon('bell', 18)}<p class="bd-small">${esc(d.anniversary || `Next: ${d.next}`)}</p></div>
     </div>
