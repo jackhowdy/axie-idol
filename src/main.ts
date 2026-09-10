@@ -1003,7 +1003,8 @@ async function showAxie3D(id: string, req: number): Promise<boolean> {
       return false
     }
     hideStickerImg()
-    stickerTarget = axie3d.canvas
+    // bindStickerPointers() sets stickerTarget itself: assigning it first made the bind a no-op
+    // (same target, already bound), so the 3D character never took the drag from the old sticker.
     bindStickerPointers(axie3d.canvas)
     applyStickerTransform()
     axie3d.resume()
