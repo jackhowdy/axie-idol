@@ -290,8 +290,13 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const districtsToday = new Set(Object.values(b.places).filter((p) => p.district && p.count).map((p) => p.district)).size
     const found = detectMoments({ hour, weather: ctx.weather, placeType: ctx.placeType, labels, isNewPlace, isNewDistrict: Boolean(ctx.district), districtsToday, snapCount: b.snapCount, hatchGrid: b.hatchGrid, grid }, b.moments.map((m) => m.id))
     for (const id of found) { b.moments.push({ id, at: b.lastSnapAt, photoId: post.id }); const m = addBond(b, 2); unlocks.push(...m.unlocks) }
-    const thing = labels[0] || (ctx.placeType ? `the ${ctx.placeType}` : 'that')
-    const line = say(b, 'after', { thing, place: ctx.placeName || ctx.placeType || 'here' })
+    // Only real nouns go into slots. With nothing seen or named, lines that need {thing} or
+    // {place} are skipped, so the Axie never says "There was here" or "First time at here".
+    const slots = {}
+    if (labels[0]) slots.thing = labels[0]
+    if (ctx.placeName) slots.place = ctx.placeName
+    else if (ctx.placeType) { slots.place = `the ${ctx.placeType}`; slots.thing = slots.thing || `the ${ctx.placeType}` }
+    const line = say(b, 'after', slots)
     const momentLines = found.map((id) => MOMENTS.find((m) => m.id === id)).filter(Boolean)
     save(store)
     return {
@@ -387,7 +392,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       if (active?.hatchedAt) { ensureWish(active, { weather: url.searchParams.get('weather'), hour: url.searchParams.get('hour') }); save(store) }
       // Numeric slots are spelled: a template line that reached a digit would break the voice rule
       // ("no numbers") the moment the trait pools ran dry and `{count}`/`{days}` were filled.
-      const greeting = active?.hatchedAt ? say(active, hoursSince(active.lastSnapAt) >= 48 ? 'return' : 'morning', { count: wordsFor(daysSince(active.hatchedAt)), days: wordsFor(Math.floor(hoursSince(active.lastSnapAt) / 24)), weather: weatherWord(url.searchParams.get('weather')) }) : null
+      const greeting = active?.hatchedAt ? say(active, hoursSince(active.lastSnapAt) >= 48 ? 'return' : 'morning', { count: wordsFor(daysSince(active.hatchedAt)), days: wordsFor(Math.floor(hoursSince(active.lastSnapAt) / 24)), ...(url.searchParams.get('weather') ? { weather: weatherWord(url.searchParams.get('weather')) } : {}) }) : null
       if (greeting) save(store)
       sendJson(res, 200, payload(store, ownerKey, { greeting })); return true
     }
@@ -444,7 +449,12 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     }
     if (p === '/api/buddy/before' && req.method === 'GET') {
       if (!active?.hatchedAt) { sendJson(res, 200, { line: null }); return true }
-      const line = say(active, 'before', { thing: url.searchParams.get('thing') || 'the whole street', place: url.searchParams.get('place') || 'here' })
+      const beforeSlots = {}
+      const thingParam = (url.searchParams.get('thing') || '').trim().slice(0, 40)
+      const placeParam = (url.searchParams.get('place') || '').trim().slice(0, 40)
+      if (thingParam) beforeSlots.thing = thingParam
+      if (placeParam) beforeSlots.place = placeParam
+      const line = say(active, 'before', beforeSlots)
       save(store); sendJson(res, 200, { line }); return true
     }
     if (p === '/api/buddy/talk' && req.method === 'POST') {

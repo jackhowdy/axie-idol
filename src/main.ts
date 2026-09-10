@@ -3218,7 +3218,7 @@ function showViewfinderFromFeed(): void {
  */
 function requestBuddyBeforeLine(): void {
   if (!buddyEnabled || !buddyState.active?.hatchedAt || !bdSpeechVf) return
-  void beforeLine({ place: 'here' })
+  void beforeLine({})
     .then((line) => {
       if (!line || !bdSpeechVf || viewfinder.hidden) return
       bdSpeechVf.textContent = line
