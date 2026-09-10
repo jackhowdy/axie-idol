@@ -334,7 +334,10 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
   // `photoIds` is capped server-side (head + tail), so the true count of kept photos is `photoCount`
   // (older payloads: `snapCount`).
   const kept = b.photoCount ?? b.snapCount
-  const book = b.photoIds.slice(-4).reverse()
+  // Every kept photo, newest first, in a strip that scrolls sideways: the count on the label and
+  // the thumbnails under it are the same set. (Only the last four used to show, under a label
+  // that said eight.) Old photos past the server's cap have no thumbnail but keep their number.
+  const book = b.photoIds.slice().reverse()
     .map((id, i) => {
       const path = photoPath(b, id)
       const art = path ? `<img class="bd-thumb-img" src="${esc(path)}" alt="" loading="lazy">` : ''

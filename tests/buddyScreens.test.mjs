@@ -446,3 +446,16 @@ test('account escapes names', () => {
   assert.doesNotMatch(html, /<img/)
   assert.match(html, /&lt;img/)
 })
+
+
+test('the scrapbook shows every kept photo, newest first, numbered down from the count', () => {
+  const ids = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8']
+  const b = { ...miso, photoIds: ids, photos: ids.map((id) => ({ id, imagePath: `/uploads/${id}.png`, at: 'x' })), snapCount: 8, photoCount: 8 }
+  const html = homeHtml(b, null)
+  assert.match(html, /Scrapbook · 8/)
+  const thumbs = html.match(/class="bd-thumb"/g) || []
+  assert.equal(thumbs.length, 8, 'eight thumbnails for eight photos')
+  assert.ok(html.indexOf('data-photo-id="p8"') < html.indexOf('data-photo-id="p1"'), 'newest first')
+  assert.match(html, /data-photo-id="p8">[^<]*<img[^>]*><small>8<\/small>/)
+  assert.match(html, /data-photo-id="p1">[^<]*<img[^>]*><small>1<\/small>/)
+})

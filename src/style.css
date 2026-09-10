@@ -3778,8 +3778,9 @@ button.id-chip {
 .bd-item.worn { border-color: var(--accent-hot); }
 .bd-item.worn small { color: var(--accent-hot); }
 .bd-item.locked { color: var(--muted); border-color: var(--border); opacity: 0.7; cursor: default; }
-.bd-book { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.bd-thumb { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: linear-gradient(180deg, #BFE1FF 0%, var(--surface-soft) 100%); display: flex; align-items: flex-end; justify-content: flex-start; }
+.bd-book { display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; padding-bottom: 4px; margin: 0 -4px; padding-left: 4px; padding-right: 4px; }
+.bd-book .bd-thumb { flex: 0 0 calc((100% - 24px) / 4); scroll-snap-align: start; }
+.bd-thumb { position: relative; aspect-ratio: 1; min-width: 0; border-radius: 12px; overflow: hidden; background: linear-gradient(180deg, #BFE1FF 0%, var(--surface-soft) 100%); display: flex; align-items: flex-end; justify-content: flex-start; }
 .bd-thumb small { margin: 4px 6px; font-size: 9px; font-weight: 900; color: var(--muted); }
 
 /* --- name input --- */
