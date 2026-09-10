@@ -1730,6 +1730,7 @@ btnRetake.addEventListener('click', () => {
   captureUrl = null
   captureBlob = null
   captureLookId = null
+  plainCapture = null
   captureSeq += 1
   previewScreen.hidden = true
   previewScreen.classList.remove('active')
@@ -2195,6 +2196,20 @@ feedList.addEventListener('submit', (e) => {
 let captureSeq = 0
 let captureAnchor: BubbleAnchor | null = null
 let captureLookId: string | null = null
+/** The capture before any bubble: every look is drawn onto a fresh copy of this. */
+let plainCapture: Blob | null = null
+/** The caption the current look was made with; a different caption on Post means one more look. */
+let lookedCaption = ''
+/** Looks in flight for the current capture: only the newest one is allowed to draw. */
+let lookSeq = 0
+
+const currentCaption = (): string => captionInput?.value?.trim()?.slice(0, 140) || ''
+
+/** The caption box: leaving it (or Enter) with new words makes the Axie look again with them. */
+captionInput?.addEventListener('change', () => {
+  if (!plainCapture || currentCaption() === lookedCaption) return
+  void lookAtCapture(plainCapture, captureSeq, currentCaption())
+})
 
 /**
  * Mean brightness of a capture, 0..1, from a 24x24 downsample. A dark room reads under about 0.16;
@@ -2219,9 +2234,10 @@ async function darkness(blob: Blob): Promise<boolean> {
   }
 }
 
-async function lookAtCapture(plain: Blob, seq: number): Promise<void> {
+async function lookAtCapture(plain: Blob, seq: number, caption = ''): Promise<void> {
   if (!buddyEnabled || !buddyState.active?.hatchedAt || !captureAnchor) return
   const anchor = captureAnchor
+  const mine = ++lookSeq
   let line = ''
   let lookId: string | null = null
   try {
@@ -2229,7 +2245,7 @@ async function lookAtCapture(plain: Blob, seq: number): Promise<void> {
     const dark = await darkness(plain)
     const res = await fetch('/api/buddy/look', {
       method: 'POST', headers: buddyHeaders(),
-      body: JSON.stringify({ imageBase64: await blobToDataUrl(plain), hour: ctx.hour, dark, ...(ctx.lat !== undefined ? { lat: ctx.lat, lng: ctx.lng } : {}) }),
+      body: JSON.stringify({ imageBase64: await blobToDataUrl(plain), hour: ctx.hour, dark, caption, ...(ctx.lat !== undefined ? { lat: ctx.lat, lng: ctx.lng } : {}) }),
     })
     const data = (await res.json().catch(() => ({}))) as { id?: string | null; line?: string | null }
     if (!res.ok) return
@@ -2238,7 +2254,7 @@ async function lookAtCapture(plain: Blob, seq: number): Promise<void> {
   } catch {
     return
   }
-  if (!line || !lookId || seq !== captureSeq) return
+  if (!line || !lookId || seq !== captureSeq || mine !== lookSeq) return
   const img = new Image()
   const src = URL.createObjectURL(plain)
   img.src = src
@@ -2258,11 +2274,12 @@ async function lookAtCapture(plain: Blob, seq: number): Promise<void> {
   const family = getComputedStyle(document.body).getPropertyValue('--font-display').trim() || 'Nunito, system-ui, sans-serif'
   if (!drawSpeechBubble(ctx, line, anchor, family)) return
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 0.95))
-  if (!blob || seq !== captureSeq) return
+  if (!blob || seq !== captureSeq || mine !== lookSeq) return
   if (captureUrl) URL.revokeObjectURL(captureUrl)
   captureBlob = blob
   captureUrl = URL.createObjectURL(blob)
   captureLookId = lookId
+  lookedCaption = caption
   previewImg.src = captureUrl
   btnDownload.href = captureUrl
 }
@@ -2457,6 +2474,8 @@ async function captureComposite(): Promise<void> {
   captureBlob = blob
   captureUrl = URL.createObjectURL(blob)
   captureLookId = null
+  plainCapture = blob
+  lookedCaption = ''
   previewImg.src = captureUrl
   btnDownload.href = captureUrl
   if (captionInput) captionInput.value = ''
@@ -5212,6 +5231,11 @@ async function submitPost(): Promise<void> {
   const prevLabel = btnPost.textContent
   btnPost.textContent = 'Posting…'
   try {
+    // A caption typed since the last look: let the Axie read it before the photo goes, so the
+    // bubble on the image and the line on the card are the same words. Bounded, never blocking.
+    if (buddyEnabled && plainCapture && buddyState.active?.hatchedAt && currentCaption() !== lookedCaption) {
+      await Promise.race([lookAtCapture(plainCapture, captureSeq, currentCaption()), new Promise((r) => setTimeout(r, 7000))])
+    }
     let blob = captureBlob
     if (!blob && captureUrl) {
       const r = await fetch(captureUrl)
@@ -5350,6 +5374,7 @@ async function submitPost(): Promise<void> {
     captureUrl = null
     captureBlob = null
     captureLookId = null
+    plainCapture = null
     captureSeq += 1
     // One-Axie loop: never the legacy feed. Stay on the camera so Retake works, and float the
     // after-the-shot sheets over it; the last sheet lands on Home.

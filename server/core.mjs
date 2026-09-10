@@ -3176,6 +3176,8 @@ async function handleCreatePost(req, res) {
     lookId: typeof body.lookId === 'string' ? body.lookId.slice(0, 64) : null,
     // the phone measured the capture as very dark (see darkness() in main.ts)
     dark: body.dark === true,
+    // the caption, so a post that has to ask the model itself asks with the person's words
+    caption: typeof body.caption === 'string' ? body.caption.slice(0, 140) : '',
   })
   if (buddyResult) post.buddyId = buddy.getActive(buddyOwnerKey)?.id || null
 

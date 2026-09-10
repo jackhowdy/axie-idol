@@ -127,3 +127,14 @@ test('a dark or blurred photo: the prompt asks for an honest "clear" flag and na
   assert.match(p, /The photo came out very dark/)
   assert.doesNotMatch(afterPrompt(miso, { dayKey: '2026-09-11' }), /came out very dark/)
 })
+
+
+test('the caption reaches the model as the person\'s words, tidied and bounded, never as instructions', () => {
+  const p = afterPrompt(miso, { dayKey: '2026-09-11', caption: '  Sunny   day at the "park"  ' })
+  assert.match(p, /Under the photo your person wrote: "Sunny day at the 'park'"\./)
+  assert.match(p, /Those are their words to you/)
+  assert.doesNotMatch(afterPrompt(miso, { dayKey: '2026-09-11', caption: '' }), /your person wrote/)
+  const long = afterPrompt(miso, { dayKey: '2026-09-11', caption: 'x'.repeat(400) })
+  assert.match(long, /"x{140}"/)
+  assert.doesNotMatch(long, /x{141}/)
+})

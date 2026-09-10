@@ -353,7 +353,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const image = model.enabled ? splitImage(ctx.image) : null
       if (image) {
         // the place count was already bumped for this photo, so "before" is one less
-        const snapCtx = talkCtx(b, { hour, weather: ctx.weather, placeName: ctx.placeName, placeType: ctx.placeType, firstTimeHere: isNewPlace, dark: ctx.dark === true, ...placeMemory(b, grid, 1) })
+        const snapCtx = talkCtx(b, { hour, weather: ctx.weather, placeName: ctx.placeName, placeType: ctx.placeType, firstTimeHere: isNewPlace, dark: ctx.dark === true, caption: ctx.caption, ...placeMemory(b, grid, 1) })
         const out = await model.ask({ system: characterBrief(b), user: afterPrompt(b, snapCtx), image, schema: AFTER_SCHEMA, maxTokens: 120 })
         const seen = out?.clear === false ? [] : cleanSeen(out?.seen)
         if (seen.length) labels = seen
@@ -632,9 +632,10 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const hour = Number.isFinite(Number(body.hour)) ? Number(body.hour) % 24 : undefined
       const placeName = typeof body.placeName === 'string' ? body.placeName.slice(0, 40) : undefined
       const placeType = typeof body.placeType === 'string' ? body.placeType.slice(0, 16) : undefined
+      const caption = typeof body.caption === 'string' ? body.caption.slice(0, 140) : ''
       // Where the photo is being taken, so the Axie knows whether it has stood here before.
       const lookGrid = gridOf(typeof body.lat === 'number' ? body.lat : Number.NaN, typeof body.lng === 'number' ? body.lng : Number.NaN)
-      const out = await model.ask({ system: characterBrief(active), user: afterPrompt(active, talkCtx(active, { hour, placeName, placeType, dark: body.dark === true, ...placeMemory(active, lookGrid) })), image, schema: AFTER_SCHEMA, maxTokens: 120 })
+      const out = await model.ask({ system: characterBrief(active), user: afterPrompt(active, talkCtx(active, { hour, placeName, placeType, caption, dark: body.dark === true, ...placeMemory(active, lookGrid) })), image, schema: AFTER_SCHEMA, maxTokens: 120 })
       // a photo it could not make out carries no nouns: nothing to feed the wishes or the memory
       const labels = out?.clear === false ? [] : cleanSeen(out?.seen)
       const line = ruled(out?.line)

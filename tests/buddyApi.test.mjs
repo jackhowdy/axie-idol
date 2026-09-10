@@ -887,3 +887,17 @@ test('a photo the model could not make out carries no nouns, so nothing false re
   const b = buddy.getActive('device:unit-dev')
   assert.equal((b.seen || []).length, 0, 'nothing remembered from a photo it could not see')
 })
+
+
+test('look and snap carry the caption to the model', async () => {
+  const voice = fakeVoice([{ clear: true, seen: ['slide'], line: 'Sunny. Let us find shade past that slide.' }, { clear: true, seen: ['slide'], line: 'A slide. Up we go.' }])
+  const { buddy, call } = directModule({ voice })
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  const look = await call('/api/buddy/look', { method: 'POST', body: { imageBase64: PHOTO, caption: 'Sunny day' } })
+  assert.equal(look.body.line, 'Sunny. Let us find shade past that slide.')
+  assert.match(voice.calls[0].user, /your person wrote: "Sunny day"/)
+  await buddy.recordSnap({ id: 'p1' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12, image: PHOTO, caption: 'Where did Happy go?' })
+  assert.match(voice.calls[1].user, /your person wrote: "Where did Happy go\?"/, 'a post that asks for itself asks with the caption')
+})
