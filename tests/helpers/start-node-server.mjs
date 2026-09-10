@@ -40,6 +40,8 @@ export async function startNodeServer(extraEnv = {}) {
       DATA_DIR: dataDir,
       SEED_POSTS: '0',
       SKYMAVIS_API_KEY: '',
+      // never let a developer's .env key send test photos to the voice model
+      GEMINI_API_KEY: '',
       ...extraEnv,
     },
     stdio: ['ignore', 'pipe', 'pipe'],

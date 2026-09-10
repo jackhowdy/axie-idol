@@ -4,7 +4,9 @@ import {
   LADDER, LEVEL_NAMES, levelFor, nextStep, eggOdds, rollWild, rollTraits, traitsForOwned,
   wishForToday, detectMoments, MOMENTS,
 } from './buddyRules.mjs'
-import { pickLine } from './voiceLines.mjs'
+import { pickLine, checkRules } from './voiceLines.mjs'
+import { createVoiceModel, splitImage } from './voiceModel.mjs'
+import { characterBrief, afterPrompt, greetingPrompt, talkPrompt, cleanSeen, tidyLine, AFTER_SCHEMA, LINE_SCHEMA, REPLY_SCHEMA } from './voiceBrief.mjs'
 import { signInMessage, recoverAddress } from './roninSig.mjs'
 
 const NAME_RE = /^[\p{L}\p{N} '’-]{2,16}$/u
@@ -47,9 +49,11 @@ const NONCE_TTL_MS = 10 * 60_000
 const NONCES_PER_ADDRESS = 5
 const NONCE_ADDRESS_CAP = 2000
 
-export function createBuddyModule({ storage, helpers, env = {}, catalogue = catalogueJson, now = () => Date.now(), rng = Math.random }) {
+export function createBuddyModule({ storage, helpers, env = {}, catalogue = catalogueJson, now = () => Date.now(), rng = Math.random, voice = null }) {
   const { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress, checkRate, recordRate, removePost } = helpers
   const enabled = env.BUDDY !== '0'
+  // The model behind the voice (tests pass a fake; production reads GEMINI_API_KEY). Off = library only.
+  const model = voice || createVoiceModel({ env, now })
 
   const emptyStore = () => ({ accounts: {}, buddies: {}, usedRecoveryCodes: {}, pendingNonces: {} })
   const load = () => storage.get('buddies', emptyStore)
@@ -128,6 +132,8 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       wish: { day: null, id: null, text: '', bonus: 1, done: false }, firstsDone: [],
       wardrobe: { unlocked: [], worn: null }, moments: [], places: {},
       photoIds: [], photos: [], snapCount: 0, unkeptCount: 0, lastSnapAt: null, recentLines: [], hatchGrid: null, rareIds: [], mysticId: null, mystic: false,
+      // What the model saw in recent photos, the last talk exchanges, and today's greeting (one per day).
+      seen: [], talkLog: [], greeting: null,
     }
   }
 
@@ -183,6 +189,24 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     b.recentLines = [...b.recentLines.filter((l) => l !== line), line].slice(-60)
     return line
   }
+  /** A model line that passed the rules, remembered so the library never repeats it soon after. */
+  function heard(b, line) {
+    b.recentLines = [...b.recentLines.filter((l) => l !== line), line].slice(-60)
+    return line
+  }
+  /** Tidy a model line and hold it to the same ten rules as the library; null when it fails. */
+  function ruled(raw) {
+    const line = tidyLine(raw)
+    if (!line) return null
+    if (!checkRules(line)) {
+      // worth a log line: the voice bible's rules are the whole point, and a model that keeps
+      // tripping them shows up here before it shows up as silence on a phone
+      console.warn('[voice] model line failed the rules: ' + line)
+      return null
+    }
+    return line
+  }
+  const talkCtx = (b, extra = {}) => ({ dayCount: b.hatchedAt ? daysSince(b.hatchedAt) : undefined, ...extra })
 
   /**
    * A memory reply built only from `b.places` (a count) and a fixed hatch-day fact — the
@@ -245,14 +269,14 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
   }
 
   /** Called by core after a post is stored. Returns the snap result for the client or null. */
-  function recordSnap(post, ctx) {
+  async function recordSnap(post, ctx) {
     if (!enabled || !ctx.buddy) return null
     const store = load()
     const b = getActiveIn(store, ctx.ownerKey)
     if (!b || b.retiredAt) return null
     const grid = gridOf(ctx.lat, ctx.lng)
     const hour = Number(ctx.hour ?? new Date(now()).getUTCHours() + 8) % 24
-    const labels = Array.isArray(ctx.labels) ? ctx.labels.slice(0, 12).map(String) : []
+    let labels = Array.isArray(ctx.labels) ? ctx.labels.slice(0, 12).map(String) : []
     b.photoIds.push(post.id); b.snapCount += 1; b.lastSnapAt = new Date(now()).toISOString()
     // Keep the head the diary indexes into and the tail the scrapbook shows; drop the middle,
     // which nothing reads. `snapCount` stays the true total.
@@ -279,6 +303,19 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       return { kind: 'egg', snaps: e.snaps, odds: eggOdds(e.snaps, e.grids.length), canHatch: e.snaps >= 5 }
     }
 
+    // The model looks at the photo first: what it saw drives the wish, the moments and the line.
+    // Nothing here blocks the shot: a slow or failed call leaves the library to speak.
+    let modelLine = null
+    const image = model.enabled ? splitImage(ctx.image) : null
+    if (image) {
+      const snapCtx = talkCtx(b, { hour, weather: ctx.weather, placeName: ctx.placeName, placeType: ctx.placeType, firstTimeHere: isNewPlace })
+      const out = await model.ask({ system: characterBrief(b), user: afterPrompt(b, snapCtx), image, schema: AFTER_SCHEMA, maxTokens: 120 })
+      const seen = cleanSeen(out?.seen)
+      if (seen.length) labels = seen
+      modelLine = ruled(out?.line)
+    }
+    if (labels.length) b.seen = [...(b.seen || []), { day: manilaDayKey(), seen: labels.slice(0, 4), place: ctx.placeName || ctx.placeType || null }].slice(-10)
+
     const { granted, unlocks } = addBond(b, 1)
     let wishDone = null
     if (b.wish.day === manilaDayKey() && !b.wish.done && wishMatches(b.wish.id, { hour, weather: ctx.weather, placeType: ctx.placeType, labels, isNewPlace })) {
@@ -299,7 +336,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     if (labels[0]) slots.thing = labels[0]
     if (ctx.placeName) slots.place = ctx.placeName
     else if (ctx.placeType) { slots.place = `the ${ctx.placeType}`; slots.thing = slots.thing || `the ${ctx.placeType}` }
-    const line = say(b, 'after', slots)
+    const line = modelLine ? heard(b, modelLine) : say(b, 'after', slots)
     const momentLines = found.map((id) => MOMENTS.find((m) => m.id === id)).filter(Boolean)
     save(store)
     return {
@@ -327,6 +364,45 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const w = wishForToday({ weather: ctx.weather, hour, placeTypes: ctx.placeTypes || [], firstsDone: b.firstsDone, traits: b.traits, rng })
     b.wish = { day, id: w.id, text: w.text, bonus: w.bonus, done: false }
     return b.wish
+  }
+
+  /**
+   * One greeting per day per Axie: the first open of the day asks the model (or the library) and
+   * every later open that day hears the same line, so coming back to Home is not a slot machine.
+   * Two or more days away turns it into a welcome back.
+   */
+  async function greetingFor(b, weatherRaw) {
+    const day = manilaDayKey()
+    const daysAway = Math.floor(hoursSince(b.lastSnapAt) / 24)
+    const situation = daysAway >= 2 ? 'return' : 'morning'
+    if (b.greeting && b.greeting.day === day && b.greeting.situation === situation && b.greeting.line) return b.greeting.line
+    const weather = weatherRaw ? weatherWord(weatherRaw) : null
+    let line = null
+    if (model.enabled) {
+      const out = await model.ask({ system: characterBrief(b), user: greetingPrompt(b, talkCtx(b, { daysAway, weather, hour: (new Date(now()).getUTCHours() + 8) % 24 })), schema: LINE_SCHEMA, maxTokens: 100 })
+      line = ruled(out?.line)
+      if (line) heard(b, line)
+    }
+    if (!line) line = say(b, situation, { count: wordsFor(daysSince(b.hatchedAt)), days: wordsFor(daysAway), ...(weather ? { weather } : {}) })
+    b.greeting = { day, situation, line }
+    return line
+  }
+
+  /**
+   * Talk without the model: a handful of things people actually type, answered from the library
+   * and the Axie's own memory. Never a digit.
+   */
+  function libraryReply(b, text) {
+    if (/sad|tired|rough|bad day|lonely|miss/.test(text)) return say(b, 'talk-warm')
+    if (/remember|hatch|born|came out|first|where|place|park|noodle/.test(text)) return memoryLine(b, text)
+    if (/^(hi|hello|hey|yo|hiya|good morning|morning|good evening)\b/.test(text)) return say(b, 'morning')
+    if (/\b(love|like) you\b|\bcute\b|\bgood (boy|girl|axie)\b/.test(text)) return say(b, 'big')
+    if (/\b(walk|go out|outside|photo|picture|snap)\b/.test(text)) return say(b, 'before')
+    if (/\b(food|eat|hungry|lunch|dinner|snack)\b/.test(text)) return b.traits.includes('Foodie') ? say(b, 'wish') : 'Food? I only eat pictures. Take one of the food.'
+    if (/\b(bye|night|sleep|goodnight)\b/.test(text)) return say(b, 'bedtime')
+    if (/\b(wish|want|today)\b/.test(text) && b.wish?.text) return b.wish.done ? 'My wish came true today. I felt it in my horns.' : b.wish.text + '. That is my wish today.'
+    if (text.includes('?')) return say(b, 'talk-curious')
+    return say(b, 'talk')
   }
 
   /**
@@ -395,7 +471,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       if (active?.hatchedAt) { ensureWish(active, { weather: url.searchParams.get('weather'), hour: url.searchParams.get('hour') }); save(store) }
       // Numeric slots are spelled: a template line that reached a digit would break the voice rule
       // ("no numbers") the moment the trait pools ran dry and `{count}`/`{days}` were filled.
-      const greeting = active?.hatchedAt ? say(active, hoursSince(active.lastSnapAt) >= 48 ? 'return' : 'morning', { count: wordsFor(daysSince(active.hatchedAt)), days: wordsFor(Math.floor(hoursSince(active.lastSnapAt) / 24)), ...(url.searchParams.get('weather') ? { weather: weatherWord(url.searchParams.get('weather')) } : {}) }) : null
+      const greeting = active?.hatchedAt ? await greetingFor(active, url.searchParams.get('weather')) : null
       if (greeting) save(store)
       sendJson(res, 200, payload(store, ownerKey, { greeting })); return true
     }
@@ -483,12 +559,17 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     }
     if (p === '/api/buddy/talk' && req.method === 'POST') {
       if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }
-      const text = String(body.text || '').slice(0, 200).toLowerCase()
-      let reply
-      if (/sad|tired|rough|bad day|lonely/.test(text)) reply = say(active, 'talk-warm')
-      else if (/remember|hatch|first|where|place|park|noodle/.test(text)) reply = memoryLine(active, text)
-      else if (text.includes('?')) reply = say(active, 'talk-curious')
-      else reply = say(active, 'talk', { thing: 'the sky' })
+      const raw = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 200)
+      const text = raw.toLowerCase()
+      if (!raw) { sendJson(res, 400, { error: 'Say something first' }); return true }
+      let reply = null
+      if (model.enabled) {
+        const out = await model.ask({ system: characterBrief(active), user: talkPrompt(active, talkCtx(active, { hour: Number(url.searchParams.get('hour')) || undefined }), active.talkLog || [], raw), schema: REPLY_SCHEMA, maxTokens: 120 })
+        reply = ruled(out?.reply)
+        if (reply) heard(active, reply)
+      }
+      if (!reply) reply = libraryReply(active, text)
+      active.talkLog = [...(active.talkLog || []), { you: raw, reply }].slice(-12)
       save(store); sendJson(res, 200, { reply }); return true
     }
     if (p === '/api/ronin/nonce' && req.method === 'GET') {

@@ -240,7 +240,7 @@ Used when the model is slow, offline, or fails the rules. Slots are filled by th
 
 ## Brief for the model
 
-When the voice moves to the model, the prompt is this document plus one JSON object per call:
+Live since 10 September 2026: `server/voiceBrief.mjs` turns this document into the system prompt and `server/voiceModel.mjs` makes the call (Gemini flash-lite, free tier, `GEMINI_API_KEY`). The model looks at every photo after the hatch (its nouns are the chips on the after-the-shot card), answers talk mode with the last six exchanges in hand, and writes the first greeting of each day. Every line it returns is held to the ten rules by `checkRules`; a line that fails, a slow call, or a spent daily budget hands the moment to the written library below. The facts it is given per call:
 
 ```
 {

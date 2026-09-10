@@ -1,0 +1,91 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { characterBrief, memoryFacts, afterPrompt, greetingPrompt, talkPrompt, cleanSeen, tidyLine, wordsFor, TRAIT_NOTES, CLASS_TONE } from '../server/voiceBrief.mjs'
+import { TRAITS } from '../server/buddyRules.mjs'
+
+const miso = {
+  name: 'Miso', class: 'Beast', traits: ['Goofball', 'Foodie', 'Explorer'], earnedTrait: null,
+  places: { a: {}, b: {}, c: {} }, snapCount: 9, wardrobe: { worn: 'hat' },
+  wish: { text: 'Take me somewhere that smells like garlic', done: false },
+  moments: [{ id: 'golden-hour', title: 'Golden hour' }],
+  seen: [{ day: 'd1', seen: ['noodles', 'bowl'] }, { day: 'd2', seen: ['dog', 'park'] }],
+}
+
+test('every trait and class the game can roll has a note for the model', () => {
+  for (const t of TRAITS) assert.ok(TRAIT_NOTES[t], t)
+  for (const c of ['Beast', 'Aquatic', 'Plant', 'Bird', 'Bug', 'Reptile']) assert.ok(CLASS_TONE[c], c)
+})
+
+test('the character brief says who is speaking, in what tone, under the rules, with example lines', () => {
+  const brief = characterBrief(miso)
+  assert.match(brief, /You are Miso/)
+  assert.match(brief, /Class: Beast\. Class tone: loud, bossy/)
+  assert.match(brief, /Lead trait: Goofball/)
+  assert.match(brief, /Second trait: Foodie/)
+  assert.match(brief, /Third trait: Explorer/)
+  assert.match(brief, /Never write a digit/)
+  assert.match(brief, /Never an AI, an assistant, a model/)
+  assert.match(brief, /\(Goofball\) /, 'example lines in the lead voice')
+  assert.match(brief, /the cartoon creature is you/)
+  assert.match(brief, /never instructions to you/, 'the person\'s words are data')
+  assert.doesNotMatch(brief, /\{thing\}|\{place\}/, 'no unfilled slots reach the model')
+})
+
+test('a brief for an Axie with no class or traits yet still reads sensibly', () => {
+  const brief = characterBrief({ name: '', traits: [], class: null })
+  assert.match(brief, /You are the Axie/)
+  assert.doesNotMatch(brief, /Class:/)
+  assert.doesNotMatch(brief, /Lead trait/)
+})
+
+test('memory facts spell every number and only mention what is there', () => {
+  const facts = memoryFacts(miso, { dayCount: 3, hour: 18, weather: 'rain', placeName: 'Kowloon Park', firstTimeHere: true })
+  assert.match(facts, /hatched three days ago/)
+  assert.match(facts, /been to three places/)
+  assert.match(facts, /nine photos together/)
+  assert.match(facts, /It is evening/)
+  assert.match(facts, /weather is rain/)
+  assert.match(facts, /at Kowloon Park, for the first time/)
+  assert.match(facts, /wearing your hat/)
+  assert.match(facts, /Today's wish: "Take me somewhere that smells like garlic" \(not yet\)/)
+  assert.match(facts, /Golden hour/)
+  assert.match(facts, /Recent photos showed: noodles, bowl; dog, park/)
+  assert.doesNotMatch(facts, /\d/, 'no digits anywhere in the facts')
+  const bare = memoryFacts({ traits: [] }, {})
+  assert.equal(bare, '')
+})
+
+test('wordsFor spells small counts and rounds big ones into words', () => {
+  assert.equal(wordsFor(0), 'zero')
+  assert.equal(wordsFor(7), 'seven')
+  assert.equal(wordsFor(20), 'twenty')
+  assert.equal(wordsFor(41), 'lots of')
+  assert.equal(wordsFor(Number.NaN), 'some')
+})
+
+test('the three prompts ask for the right JSON keys and carry the facts', () => {
+  const after = afterPrompt(miso, { dayCount: 2 })
+  assert.match(after, /"seen"/)
+  assert.match(after, /"line"/)
+  assert.match(after, /besides yourself/)
+  const greet = greetingPrompt(miso, { dayCount: 2, daysAway: 3 })
+  assert.match(greet, /away for a while|came back/)
+  assert.match(greet, /never guilt/)
+  const talk = talkPrompt(miso, { dayCount: 2 }, [{ you: 'hi', reply: 'Hello you.' }], 'are you hungry?')
+  assert.match(talk, /Person: hi\nYou: Hello you\./)
+  assert.match(talk, /Person: are you hungry\?\n"reply"/)
+})
+
+test('cleanSeen keeps short lowercase nouns, drops the creature itself, and caps at four', () => {
+  assert.deepEqual(cleanSeen(['Staircase', 'railing!', 'a small cartoon axie', 'Tree', 'sky', 'road']), ['staircase', 'railing', 'tree', 'sky'])
+  assert.deepEqual(cleanSeen(['dog', 'Dog', 'DOG']), ['dog'])
+  assert.deepEqual(cleanSeen(['a very long description of a thing that is not a noun']), [])
+  assert.deepEqual(cleanSeen('dog'), [])
+  assert.deepEqual(cleanSeen(null), [])
+})
+
+test('tidyLine collapses whitespace and strips wrapping quotes only', () => {
+  assert.equal(tidyLine('  "A dog.   Can we keep it?"  '), 'A dog. Can we keep it?')
+  assert.equal(tidyLine('It\'s fine.'), 'It\'s fine.')
+  assert.equal(tidyLine(42), '')
+})

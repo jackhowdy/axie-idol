@@ -28,7 +28,7 @@ after(async () => {
  * that would otherwise trip an unrelated ceiling (the post rate limit, the buddy route limits)
  * before reaching the behaviour under test.
  */
-function directModule({ env = { BUDDY: '1' } } = {}) {
+function directModule({ env = { BUDDY: '1' }, voice = null } = {}) {
   const storeState = {}
   const storage = {
     get: (name, makeEmpty) => (storeState[name] ??= makeEmpty()),
@@ -45,7 +45,7 @@ function directModule({ env = { BUDDY: '1' } } = {}) {
     fetchAllOwnerAxies: async () => [],
     normalizeAddress: (a) => String(a || '').toLowerCase(),
   }
-  const buddy = createBuddyModule({ storage, helpers, env })
+  const buddy = createBuddyModule({ storage, helpers, env, voice })
   const call = async (pathname, { method = 'GET', body, device = 'unit-dev', search = '' } = {}) => {
     const req = { method, headers: { get: () => null }, _body: body, _device: device }
     const res = {}
@@ -210,7 +210,7 @@ test('daily cap holds across hatch: egg snaps and post-hatch snaps share the sam
 
   await call('/api/buddy/egg', { method: 'POST' })
   for (let i = 0; i < 6; i++) {
-    const r = snap(`egg-${i}`)
+    const r = await snap(`egg-${i}`)
     assert.equal(r.kind, 'egg')
   }
   const h = await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
@@ -219,7 +219,7 @@ test('daily cap holds across hatch: egg snaps and post-hatch snaps share the sam
   assert.equal(h.body.active.bondToday, 6, 'bondByDay carried across hatch, not reset')
 
   let last = null
-  for (let i = 0; i < 10; i++) last = snap(`post-${i}`)
+  for (let i = 0; i < 10; i++) last = await snap(`post-${i}`)
   assert.equal(last.granted, 0, 'daily cap of 10 already reached; the 10th post-hatch snap grants nothing')
   assert.equal(last.bond, 10, '6 converted + 4 more counted before the day cap of 10')
   assert.equal(last.bondToday, 10)
@@ -553,8 +553,8 @@ test('one account holds at most twenty Axies', async () => {
 
 test('photoIds keeps the first five and the last sixty; snapCount stays the true total', () => {
   const { buddy, call } = directModule()
-  return call('/api/buddy/egg', { method: 'POST' }).then(() => {
-    for (let i = 0; i < 80; i++) buddy.recordSnap({ id: `p-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  return call('/api/buddy/egg', { method: 'POST' }).then(async () => {
+    for (let i = 0; i < 80; i++) await buddy.recordSnap({ id: `p-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
     const b = buddy.getActive('device:unit-dev')
     assert.equal(b.snapCount, 80)
     assert.equal(b.photoIds.length, 65)
@@ -569,7 +569,7 @@ test('photoIds keeps the first five and the last sixty; snapCount stays the true
 async function hatchedBuddy() {
   const { buddy, call } = directModule()
   await call('/api/buddy/egg', { method: 'POST' })
-  for (let i = 0; i < 6; i++) buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
   const h = await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
   assert.equal(h.status, 200, JSON.stringify(h.body))
   return { buddy, b: buddy.getActive('device:unit-dev') }
@@ -607,13 +607,13 @@ test('the wish bonus is not burned when the daily cap leaves no room for it', as
   // 'crowd' matches any snap, so only the cap decides whether the bonus lands.
   b.wish = { day, id: 'crowd', text: 'Take me where the people are', bonus: 1, done: false }
   b.bondByDay[day] = 10 // the day is spent
-  const capped = buddy.recordSnap({ id: 'capped' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  const capped = await buddy.recordSnap({ id: 'capped' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
   assert.equal(capped.granted, 0)
   assert.equal(capped.wishDone, null, 'nothing was granted, so nothing was spent')
   assert.equal(b.wish.done, false, 'the wish is still there tomorrow')
 
   b.bondByDay[day] = 0 // a new day's worth of room
-  const open = buddy.recordSnap({ id: 'open' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  const open = await buddy.recordSnap({ id: 'open' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
   assert.ok(open.wishDone, 'now the bonus lands and the wish is spent')
   assert.equal(b.wish.done, true)
 })
@@ -655,4 +655,92 @@ test('a device redeeming its own recovery code is a no-op that does not burn the
   assert.equal(other.status, 200, 'code was not burned by the self-redeem'); assert.equal(other.json.buddies.length, 1)
   const again = await api('/api/account/recover', { method: 'POST', device: dev(), body: { code: c.json.code } })
   assert.equal(again.status, 404, 'code is burned once actually redeemed elsewhere')
+})
+
+/** A fake voice model: answers from a queue, records every prompt it was given. */
+function fakeVoice(answers) {
+  const calls = []
+  return {
+    enabled: true,
+    calls,
+    ask: async (args) => { calls.push(args); return answers.length ? answers.shift() : null },
+  }
+}
+const PHOTO = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q=='
+
+test('after a photo, the model says what it saw: its nouns become the chips and its line is the reaction', async () => {
+  const voice = fakeVoice([{ seen: ['Staircase', 'railing', 'a small cartoon axie', 'tree'], line: 'Stairs. Can we go up them? All of them.' }])
+  const { buddy, call } = directModule({ voice })
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  assert.equal(voice.calls.length, 0, 'an egg does not look at photos')
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  const r = await buddy.recordSnap({ id: 'p1' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12, image: PHOTO, placeType: 'park' })
+  assert.equal(voice.calls.length, 1)
+  assert.equal(voice.calls[0].image.mime, 'image/jpeg')
+  assert.match(voice.calls[0].system, /You are Cappy/)
+  assert.match(voice.calls[0].user, /park, for the first time|at a park/)
+  assert.deepEqual(r.labels, ['staircase', 'railing', 'tree'], 'nouns cleaned, the creature itself dropped')
+  assert.equal(r.line, 'Stairs. Can we go up them? All of them.')
+  const b = buddy.getActive('device:unit-dev')
+  assert.deepEqual(b.seen.at(-1).seen, ['staircase', 'railing', 'tree'])
+})
+
+test('a model line that breaks the rules is dropped and the library speaks instead', async () => {
+  const voice = fakeVoice([{ seen: ['dog'], line: 'Level 4 already! That is 2 dogs today!!' }, null])
+  const { buddy, call } = directModule({ voice })
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  const r = await buddy.recordSnap({ id: 'p1' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12, image: PHOTO })
+  assert.doesNotMatch(r.line, /\d/, 'never a digit on screen')
+  assert.deepEqual(r.labels, ['dog'], 'the nouns are still kept')
+  // the model failing outright (null) also leaves the library to speak
+  const r2 = await buddy.recordSnap({ id: 'p2' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12, image: PHOTO })
+  assert.ok(typeof r2.line === 'string' && r2.line.length > 0)
+  assert.doesNotMatch(r2.line, /\d/)
+})
+
+test('talk goes through the model with the conversation so far, and the log is kept', async () => {
+  const voice = fakeVoice([{ reply: 'Hello you. Where are we going first?' }, { reply: 'The park. Obviously the park.' }])
+  const { buddy, call } = directModule({ voice })
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  const a = await call('/api/buddy/talk', { method: 'POST', body: { text: 'hi there' } })
+  assert.equal(a.body.reply, 'Hello you. Where are we going first?')
+  const b2 = await call('/api/buddy/talk', { method: 'POST', body: { text: 'where do you want to go?' } })
+  assert.equal(b2.body.reply, 'The park. Obviously the park.')
+  assert.match(voice.calls[1].user, /Person: hi there\nYou: Hello you/, 'the earlier exchange is in the prompt')
+  assert.match(voice.calls[1].user, /Person: where do you want to go\?/)
+  const b = buddy.getActive('device:unit-dev')
+  assert.equal(b.talkLog.length, 2)
+  const empty = await call('/api/buddy/talk', { method: 'POST', body: { text: '   ' } })
+  assert.equal(empty.status, 400)
+})
+
+test('the greeting is asked once a day and repeated on every later open that day', async () => {
+  const voice = fakeVoice([{ line: 'Morning. Shoes on, I have a plan.' }])
+  const { buddy, call } = directModule({ voice })
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  const first = await call('/api/buddy')
+  const second = await call('/api/buddy')
+  assert.equal(first.body.greeting, 'Morning. Shoes on, I have a plan.')
+  assert.equal(second.body.greeting, first.body.greeting)
+  assert.equal(voice.calls.length, 1, 'one model call for the day')
+})
+
+test('without a model, talk still answers the things people type, in voice and without digits', async () => {
+  const { buddy, call } = directModule()
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  for (const text of ['hello!', 'I love you', 'want to go for a walk?', 'are you hungry', 'good night', 'what is your wish today', 'why is the sky blue?', 'blah']) {
+    const r = await call('/api/buddy/talk', { method: 'POST', body: { text } })
+    assert.equal(r.status, 200, text)
+    assert.ok(r.body.reply.length > 0, text)
+    assert.doesNotMatch(r.body.reply, /\d/, text)
+  }
 })

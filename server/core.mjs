@@ -3159,7 +3159,7 @@ async function handleCreatePost(req, res) {
 
   // Buddy: convert this snap into egg/bond progress before the post is persisted, so
   // any buddyId stamped on the post is saved with it. Never gates on the quest system.
-  const buddyResult = buddy.recordSnap(post, {
+  const buddyResult = await buddy.recordSnap(post, {
     buddy: isBuddyPost,
     ownerKey: buddyOwnerKey,
     lat: typeof body.lat === 'number' ? body.lat : undefined,
@@ -3170,6 +3170,8 @@ async function handleCreatePost(req, res) {
     placeName: typeof body.placeName === 'string' ? body.placeName.slice(0, 40) : undefined,
     district: typeof body.district === 'string' ? body.district.slice(0, 40) : undefined,
     labels: Array.isArray(body.labels) ? body.labels.slice(0, 12).map(String) : [],
+    // the upload itself, so the Axie can look at what it is reacting to
+    image: typeof body.imageBase64 === 'string' ? body.imageBase64 : null,
   })
   if (buddyResult) post.buddyId = buddy.getActive(buddyOwnerKey)?.id || null
 

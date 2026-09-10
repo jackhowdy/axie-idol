@@ -38,6 +38,9 @@ export class IdolStore extends DurableObject {
         // build ran with BUDDY undefined (on by default) and no admin key at all.
         BUDDY: env.BUDDY ?? '1',
         ADMIN_KEY: env.ADMIN_KEY || '',
+        // The voice model (wrangler secret put GEMINI_API_KEY); absent = written library only.
+        GEMINI_API_KEY: env.GEMINI_API_KEY || '',
+        GEMINI_MODEL: env.GEMINI_MODEL || '',
       },
       log: console,
     })

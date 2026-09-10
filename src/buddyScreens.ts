@@ -139,9 +139,25 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     const input = document.querySelector<HTMLInputElement>('#bd-talk-input')
     const text = (input?.value || '').trim()
     if (!text) return
-    const res = await fetch('/api/buddy/talk', { method: 'POST', headers: buddyHeaders(), body: JSON.stringify({ text }) })
-    const data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string }
-    if (!res.ok) throw new Error(data.error || `/api/buddy/talk ${res.status}`)
+    // The Axie is thinking (the model takes a second or two): your words go up at once, a dotted
+    // bubble holds the reply's place, and the box is closed until the answer lands.
+    const thread = document.querySelector<HTMLElement>('.bd-talk')
+    if (thread) {
+      thread.querySelector('.bd-muted')?.remove()
+      thread.insertAdjacentHTML('beforeend', `<div class="bd-talk-row bd-talk-you"><div class="bd-bubble bd-bubble-you">${esc(text)}</div></div><div class="bd-talk-row bd-talk-buddy"><div class="bd-bubble bd-bubble-buddy bd-bubble-wait" aria-label="thinking"><i></i><i></i><i></i></div></div>`)
+      const scroller = thread.closest<HTMLElement>('.bd-scroll')
+      if (scroller) scroller.scrollTop = scroller.scrollHeight
+    }
+    if (input) input.disabled = true
+    let res: Response
+    let data: { reply?: string; error?: string }
+    try {
+      res = await fetch(`/api/buddy/talk?hour=${new Date().getHours()}`, { method: 'POST', headers: buddyHeaders(), body: JSON.stringify({ text }) })
+      data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string }
+    } finally {
+      if (input) input.disabled = false
+    }
+    if (!res.ok) { await show('talk'); throw new Error(data.error || `/api/buddy/talk ${res.status}`) }
     exchanges = [...exchanges, { you: text, reply: data.reply || '' }].slice(-3)
     if (input) input.value = ''
     await show('talk')
