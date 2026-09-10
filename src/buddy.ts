@@ -43,6 +43,8 @@ export type Buddy = {
   /** Photos still in the book: counted snaps minus the ones the owner chose not to keep. */
   photoCount?: number
   bondToday: number
+  /** Photos counted today; only the first `dailyCap` of a day count for bond. */
+  snapsToday: number
   dailyCap: number
   streak: number
   ladder: { level: number; bond: number; reward: string; unlock: string | null }[]
@@ -65,6 +67,7 @@ export type SnapResult =
       unlocks: { level: number; reward: string; unlock: string | null; line: string }[]
       moments: { id: string; title: string; line: string; rarity: number }[]
       bondToday: number
+      snapsToday: number
       dailyCap: number
     }
 

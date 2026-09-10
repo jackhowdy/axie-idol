@@ -223,6 +223,7 @@ test('daily cap holds across hatch: egg snaps and post-hatch snaps share the sam
   assert.equal(last.granted, 0, 'daily cap of 10 already reached; the 10th post-hatch snap grants nothing')
   assert.equal(last.bond, 10, '6 converted + 4 more counted before the day cap of 10')
   assert.equal(last.bondToday, 10)
+  assert.equal(last.snapsToday, 10, 'six egg photos and four hatched ones: ten photos counted today')
 
   const g = await call('/api/buddy')
   assert.equal(g.body.active.bond, 10)
@@ -601,21 +602,34 @@ test('crossing to bond level 10 earns a fourth trait from how the Axie was playe
   assert.equal(wanderer.b.earnedTrait, 'Wanderer')
 })
 
-test('the wish bonus is not burned when the daily cap leaves no room for it', async () => {
+test('the ceiling is on photos: with ten counted, a photo grants nothing but a wish that came true still pays', async () => {
   const { buddy, b } = await hatchedBuddy()
   const day = new Date().toISOString().slice(0, 10)
-  // 'crowd' matches any snap, so only the cap decides whether the bonus lands.
+  // 'crowd' matches any snap, so only the ceiling decides what lands.
   b.wish = { day, id: 'crowd', text: 'Take me where the people are', bonus: 1, done: false }
-  b.bondByDay[day] = 10 // the day is spent
+  b.snapsByDay[day] = 10 // ten photos already counted today
+  const bondBefore = b.bond
+  const capped = await buddy.recordSnap({ id: 'capped' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  assert.equal(capped.granted, 0, 'the eleventh photo is not counted')
+  assert.equal(capped.snapsToday, 10)
+  assert.ok(capped.wishDone, 'the wish bonus is not subject to the photo ceiling')
+  assert.equal(b.bond, bondBefore + 1, 'only the wish bonus landed')
+  assert.equal(b.wish.done, true)
+})
+
+test('a fresh day counts photos again', async () => {
+  const { buddy, b } = await hatchedBuddy()
+  const day = new Date().toISOString().slice(0, 10)
+  b.wish = { day, id: 'crowd', text: 'Take me where the people are', bonus: 1, done: false }
+  b.snapsByDay[day] = 10
   const capped = await buddy.recordSnap({ id: 'capped' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
   assert.equal(capped.granted, 0)
-  assert.equal(capped.wishDone, null, 'nothing was granted, so nothing was spent')
-  assert.equal(b.wish.done, false, 'the wish is still there tomorrow')
+  assert.equal(b.wish.done, true, 'the wish paid even on a full day')
 
-  b.bondByDay[day] = 0 // a new day's worth of room
+  b.snapsByDay[day] = 0 // a new day's worth of room
   const open = await buddy.recordSnap({ id: 'open' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
-  assert.ok(open.wishDone, 'now the bonus lands and the wish is spent')
-  assert.equal(b.wish.done, true)
+  assert.equal(open.granted, 1, 'the photo counts again')
+  assert.equal(open.snapsToday, 1)
 })
 
 // --- the voice rule at the HTTP edge -----------------------------------------------------------

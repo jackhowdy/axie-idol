@@ -444,9 +444,9 @@ export function reactionHtml(r: Snap): string {
   const chips = r.labels.slice(0, 3).map((l) => chipHtml(l)).join('')
   const bits = [
     r.isNewPlace ? 'New place' : '',
-    r.granted ? `+${r.granted} bond` : "Today's ten are done, this one still goes in the book",
+    r.granted ? `+${r.granted} bond` : `Today's ${r.dailyCap} photos are counted, this one still goes in the book`,
     r.wishDone ? `wish done +${r.wishDone.bonus}` : '',
-    `${r.bondToday} of ${r.dailyCap} today`,
+    `${Math.min(r.snapsToday ?? r.bondToday, r.dailyCap)} of ${r.dailyCap} photos today`,
   ].filter(Boolean).join(' · ')
   return `
     <p class="bd-eyebrow">After the shot</p>
@@ -521,7 +521,7 @@ export function ladderHtml(b: Buddy): string {
       <div class="bd-steps">${rows}</div>
       <div class="bd-card">
         <div class="bd-card-head"><span class="bd-label">Rules</span></div>
-        <p class="bd-small">One snap is one bond. Wishes add one or two. Only ${b.dailyCap} snaps count each day, so nobody grinds to Idol in an afternoon.</p>
+        <p class="bd-small">One photo is one bond, and only the first ${b.dailyCap} photos of a day count, so nobody grinds to Idol in an afternoon. Wishes add one or two and moments add two, on top.</p>
         <p class="bd-small">Wallet owners skip the egg and start at Hatch with their own Axie.</p>
       </div>
     </div>

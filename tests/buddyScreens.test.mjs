@@ -98,7 +98,7 @@ test('home always offers a way to talk, greeting or not', () => {
 test('hatch and reaction render the spoken lines', () => {
   assert.match(hatchHtml({ ...egg, name: 'Miso', traits: ['Shy'] }, ['Oh. Hello.']), /Oh\. Hello\./)
   assert.match(
-    reactionHtml({ kind: 'snap', granted: 1, bond: 5, level: 1, next: null, line: 'A DOG.', labels: ['dog'], isNewPlace: true, wishDone: null, unlocks: [], moments: [], bondToday: 1, dailyCap: 10 }),
+    reactionHtml({ kind: 'snap', granted: 1, bond: 5, level: 1, next: null, line: 'A DOG.', labels: ['dog'], isNewPlace: true, wishDone: null, unlocks: [], moments: [], bondToday: 1, snapsToday: 1, dailyCap: 10 }),
     /A DOG\./,
   )
 })
@@ -186,11 +186,11 @@ test('scrapbook and diary render the stored upload path, not the post id', () =>
 test('moment and unlock sheets advance the queue instead of just closing', () => {
   assert.match(momentHtml({ id: 'dog', title: 'A dog', line: 'A DOG.', rarity: 0.4 }, miso), /data-action="sheet-next"/)
   assert.match(unlockHtml({ level: 4, reward: 'Signature pose', unlock: 'pose-1', line: 'Watch this.' }, miso), /data-action="sheet-next"/)
-  assert.match(reactionHtml({ kind: 'snap', granted: 1, bond: 5, level: 1, next: null, line: 'A DOG.', labels: [], isNewPlace: false, wishDone: null, unlocks: [], moments: [], bondToday: 1, dailyCap: 10 }), /data-action="save"/)
+  assert.match(reactionHtml({ kind: 'snap', granted: 1, bond: 5, level: 1, next: null, line: 'A DOG.', labels: [], isNewPlace: false, wishDone: null, unlocks: [], moments: [], bondToday: 1, snapsToday: 1, dailyCap: 10 }), /data-action="save"/)
 })
 
 test('keeping a photo has an opposite: the reaction sheet and every moment card offer a way out', () => {
-  const reaction = reactionHtml({ kind: 'snap', granted: 1, bond: 5, level: 1, next: null, line: 'A DOG.', labels: [], isNewPlace: false, wishDone: null, unlocks: [], moments: [], bondToday: 1, dailyCap: 10 })
+  const reaction = reactionHtml({ kind: 'snap', granted: 1, bond: 5, level: 1, next: null, line: 'A DOG.', labels: [], isNewPlace: false, wishDone: null, unlocks: [], moments: [], bondToday: 1, snapsToday: 1, dailyCap: 10 })
   assert.match(reaction, /data-action="unkeep"/)
   assert.match(reaction, /Don't keep this one/)
   const moment = momentHtml({ id: 'dog', title: 'A dog', line: 'A DOG.', rarity: 0.4 }, miso)
@@ -378,4 +378,16 @@ test('talkHtml shows an empty state with no exchanges yet', () => {
   const html = talkHtml(miso, [])
   assert.match(html, /data-action="talk-send"/)
   assert.match(html, /id="bd-talk-input"/)
+})
+
+test('the after-the-shot card counts photos, not bond, against the day', () => {
+  const base = { kind: 'snap', granted: 1, bond: 12, level: 2, next: null, line: 'A DOG.', labels: [], isNewPlace: false, wishDone: null, unlocks: [], moments: [], dailyCap: 10 }
+  // five egg photos, four since, a wish: bond says ten, photos say nine
+  const html = reactionHtml({ ...base, bondToday: 10, snapsToday: 9 })
+  assert.match(html, /9 of 10 photos today/)
+  assert.doesNotMatch(html, /10 of 10/)
+  const full = reactionHtml({ ...base, granted: 0, bondToday: 12, snapsToday: 10, wishDone: { id: 'stairs', text: 'Take me up some stairs', bonus: 1, done: true } })
+  assert.match(full, /Today&#39;s 10 photos are counted, this one still goes in the book/)
+  assert.match(full, /wish done \+1/)
+  assert.match(full, /10 of 10 photos today/)
 })

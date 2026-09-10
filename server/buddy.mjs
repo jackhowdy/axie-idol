@@ -134,6 +134,8 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       photoIds: [], photos: [], snapCount: 0, unkeptCount: 0, lastSnapAt: null, recentLines: [], hatchGrid: null, rareIds: [], mysticId: null, mystic: false,
       // What the model saw in recent photos, the last talk exchanges, and today's greeting (one per day).
       seen: [], talkLog: [], greeting: null,
+      // Photos counted per day: the ten-a-day ceiling is on photos, never on the bonuses.
+      snapsByDay: {},
     }
   }
 
@@ -156,7 +158,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       // Photos still in the book: every counted snap minus the ones the owner chose not to keep.
       photoCount: Math.max(0, b.snapCount - (b.unkeptCount || 0)),
       eggOdds: b.hatchedAt ? null : eggOdds(b.egg.snaps, b.egg.grids.length),
-      momentsTotal: MOMENTS.length, ladder: LADDER, bondToday: b.bondByDay[manilaDayKey()] || 0, dailyCap: DAILY_CAP,
+      momentsTotal: MOMENTS.length, ladder: LADDER, bondToday: b.bondByDay[manilaDayKey()] || 0, snapsToday: snapsToday(b), dailyCap: DAILY_CAP,
       streak: streakFor(b),
     }
   }
@@ -250,11 +252,23 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     else b.earnedTrait = 'Socialite'
   }
 
-  function addBond(b, amount) {
+  /** Photos counted today (the ceiling is per photo; wishes and moments land on top). */
+  function snapsToday(b, day = manilaDayKey()) {
+    return (b.snapsByDay ||= {})[day] || 0
+  }
+  /**
+   * `photo: true` is the one bond per counted photo, and only the first ten photos of a day count.
+   * Everything else (a wish, a moment) is a bonus with no ceiling of its own: a wish that came true
+   * on a day with ten photos already in the book still pays, and reads that way on the card.
+   */
+  function addBond(b, amount, { photo = false } = {}) {
     const day = manilaDayKey()
     const today = b.bondByDay[day] || 0
-    const room = Math.max(0, DAILY_CAP - today)
-    const granted = Math.min(room, amount)
+    if (photo) {
+      if (snapsToday(b, day) >= DAILY_CAP) return { granted: 0, unlocks: [] }
+      b.snapsByDay[day] = snapsToday(b, day) + 1
+    }
+    const granted = Math.max(0, Math.floor(amount))
     if (granted <= 0) return { granted: 0, unlocks: [] }
     const before = levelFor(b.bond)
     b.bond += granted
@@ -292,7 +306,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     if (!b.hatchedAt) {
       const e = b.egg
       const day = manilaDayKey(); const today = b.bondByDay[day] || 0
-      if (today < DAILY_CAP) { e.snaps += 1; b.bondByDay[day] = today + 1 }
+      if (snapsToday(b, day) < DAILY_CAP) { e.snaps += 1; b.snapsByDay[day] = snapsToday(b, day) + 1; b.bondByDay[day] = today + 1 }
       if (grid && !e.grids.includes(grid)) e.grids.push(grid)
       if (typeof ctx.lat === 'number' && typeof ctx.lng === 'number') {
         if (e.lastLatLng) e.distanceKm += kmBetween(e.lastLatLng, { lat: ctx.lat, lng: ctx.lng })
@@ -316,11 +330,10 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     }
     if (labels.length) b.seen = [...(b.seen || []), { day: manilaDayKey(), seen: labels.slice(0, 4), place: ctx.placeName || ctx.placeType || null }].slice(-10)
 
-    const { granted, unlocks } = addBond(b, 1)
+    const { granted, unlocks } = addBond(b, 1, { photo: true })
     let wishDone = null
     if (b.wish.day === manilaDayKey() && !b.wish.done && wishMatches(b.wish.id, { hour, weather: ctx.weather, placeType: ctx.placeType, labels, isNewPlace })) {
-      // Only spend the wish if the bonus actually landed: with the daily cap already full the
-      // bonus would be worth nothing, so the wish stays open for tomorrow instead of burning.
+      // The bonus has no ceiling, so a wish that came true always pays and is always spent.
       const w = addBond(b, b.wish.bonus)
       if (w.granted >= 1) {
         b.wish.done = true; b.firstsDone.push(b.wish.id); wishDone = b.wish
@@ -342,7 +355,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     return {
       kind: 'snap', granted, bond: b.bond, level: levelFor(b.bond), next: nextStep(b.bond), line, labels, isNewPlace,
       wishDone, unlocks: unlocks.map((u) => ({ level: u.level, reward: u.reward, unlock: u.unlock, line: say(b, 'big') })),
-      moments: momentLines.map((m) => ({ ...m, rarity: m.rarityHint })), bondToday: b.bondByDay[manilaDayKey()] || 0, dailyCap: DAILY_CAP,
+      moments: momentLines.map((m) => ({ ...m, rarity: m.rarityHint })), bondToday: b.bondByDay[manilaDayKey()] || 0, snapsToday: snapsToday(b), dailyCap: DAILY_CAP,
     }
   }
   function wishMatches(id, c) {
@@ -534,7 +547,6 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const w = ensureWish(active)
       if (w.done) { sendJson(res, 200, payload(store, ownerKey)); return true }
       const r = addBond(active, w.bonus)
-      // A full day must not burn the wish: leave it open so the bonus can land tomorrow.
       if (r.granted > 0) { w.done = true; active.firstsDone.push(w.id) }
       save(store); sendJson(res, 200, payload(store, ownerKey, { granted: r.granted, unlocks: r.unlocks, capped: r.granted === 0 })); return true
     }
