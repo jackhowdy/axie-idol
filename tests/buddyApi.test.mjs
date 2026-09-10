@@ -70,7 +70,7 @@ test('GET /api/buddy with no buddy returns an empty account', async () => {
   assert.deepEqual(r.json.buddies, [])
 })
 
-test('egg -> snaps -> hatch produces a named wild Axie with three traits and converted bond', async () => {
+test('egg -> snaps -> hatch produces a named wild Axie with one trait and converted bond', async () => {
   const d = dev()
   const egg = await api('/api/buddy/egg', { method: 'POST', device: d })
   assert.equal(egg.status, 201, egg.text)
@@ -95,11 +95,11 @@ test('egg -> snaps -> hatch produces a named wild Axie with three traits and con
   assert.equal(h.status, 200, h.text)
   const b = h.json.active
   assert.equal(b.name, 'Miso')
-  assert.equal(b.traits.length, 3)
+  assert.equal(b.traits.length, 1)
   assert.equal(b.descriptor.parts.length, 6)
   assert.equal(b.bond, 6, 'egg snaps converted to bond')
   assert.equal(b.level, 1)
-  assert.equal(h.json.lines.length, 3, 'three spoken lines, one per trait')
+  assert.equal(h.json.lines.length, 1, 'one spoken line, for the one trait')
   assert.ok(b.wardrobe.unlocked.includes('hat'))
 })
 
@@ -409,7 +409,7 @@ test('ronin sign-in merges the device account and claim makes an owned buddy', a
   assert.equal(c.json.active.kind, 'owned')
   assert.equal(c.json.active.axieId, '6')
   assert.equal(c.json.active.bond, 5)
-  assert.equal(c.json.active.traits.length, 3)
+  assert.equal(c.json.active.traits.length, 1)
   const bad = await api('/api/ronin/verify', { method: 'POST', device: d, body: { address: w.address, signature: w.sign('nope') } })
   assert.equal(bad.status, 401)
 })
@@ -837,4 +837,22 @@ test('typed chat is off unless TALK=1: the route is simply not there', async () 
   const res = {}
   const handled = await buddy.handle(req, res, { pathname: '/api/buddy/talk', searchParams: new URLSearchParams('') })
   assert.equal(handled, false, 'falls through to the host 404')
+})
+
+
+test('a record from before one-trait R1 is read with one current trait', async () => {
+  const { buddy, call } = directModule()
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  const b = buddy.getActive('device:unit-dev')
+  b.traits = ['Show-off', 'Athlete', 'Dreamer'] // as the store held it before the change
+  const r = await call('/api/buddy')
+  assert.deepEqual(r.body.active.traits, ['Athlete'], 'the first surviving trait')
+  b.traits = ['Dreamer', 'Brave', 'Homebody'] // all retired
+  const r2 = await call('/api/buddy')
+  assert.equal(r2.body.active.traits.length, 1)
+  assert.ok(['Explorer', 'Foodie', 'Athlete', 'Shy', 'Collector'].includes(r2.body.active.traits[0]))
+  const r3 = await call('/api/buddy')
+  assert.deepEqual(r3.body.active.traits, r2.body.active.traits, 'the same fresh trait every time')
 })

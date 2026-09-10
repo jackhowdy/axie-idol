@@ -88,19 +88,22 @@ export function rollWild(rng, snaps, places, catalogue) {
   return { descriptor: { colorVariant, body: 'normal', parts }, class: cls, rareIds, mysticId, mystic }
 }
 
-export const TRAITS = ['Explorer', 'Homebody', 'Foodie', 'Athlete', 'Goofball', 'Show-off', 'Shy', 'Brave', 'Dreamer', 'Collector']
-export const OPPOSITES = [['Explorer', 'Homebody'], ['Show-off', 'Shy']]
+/**
+ * R1 ships five traits and one per Axie (decided 11 September 2026 after the first voice tasting:
+ * the lines people liked were plain and literal, and the trait only needs to tilt what the Axie
+ * wants). Each one is legible in a photo. The other five from the voice bible wait for R2.
+ */
+export const TRAITS = ['Explorer', 'Foodie', 'Athlete', 'Shy', 'Collector']
+/** No pairs to keep apart with a single trait; kept for callers that still ask. */
+export const OPPOSITES = []
+/** The traits R1 dropped: an Axie that rolled one of these before the change is given a new one. */
+const RETIRED_TRAITS = ['Homebody', 'Goofball', 'Show-off', 'Brave', 'Dreamer']
 
-function opposite(t) {
-  for (const [a, b] of OPPOSITES) { if (t === a) return b; if (t === b) return a }
-  return null
-}
-
-function drawTraits(rng, weights) {
+function drawTraits(rng, weights, count = 1) {
   const out = []
   const pool = TRAITS.map((t) => ({ t, w: weights[t] ?? 1 }))
-  while (out.length < 3) {
-    const usable = pool.filter((p) => !out.includes(p.t) && !out.includes(opposite(p.t)))
+  while (out.length < count) {
+    const usable = pool.filter((p) => !out.includes(p.t))
     const total = usable.reduce((s, p) => s + p.w, 0)
     let r = rng() * total
     let chosen = usable[usable.length - 1].t
@@ -110,15 +113,25 @@ function drawTraits(rng, weights) {
   return out
 }
 
-/** Wild roll: egg handling nudges the lead trait. */
+/** Wild roll: one trait, nudged by how the egg was handled. */
 export function rollTraits(rng, nudges) {
   const w = {}
   if (nudges.places >= 5) w.Explorer = 6
   if (nudges.distanceKm >= 5) w.Athlete = 4
   if (nudges.foodSnaps >= 3) w.Foodie = 4
-  if (nudges.oneSpot) w.Homebody = 4
+  if (nudges.oneSpot) w.Shy = 3
   return drawTraits(rng, w)
 }
+
+/**
+ * A record from before the change (three traits, or a retired one) becomes one current trait: the
+ * first of its traits that still exists, else null so the caller rolls a fresh one.
+ */
+export function normalizeTraits(traits) {
+  const kept = (Array.isArray(traits) ? traits : []).filter((t) => TRAITS.includes(t))
+  return kept.length ? [kept[0]] : null
+}
+export const isRetiredTrait = (t) => RETIRED_TRAITS.includes(t)
 
 export function hashInt(str) {
   let h = 2166136261
@@ -149,14 +162,9 @@ const WISHES = [
 ]
 const TRAIT_WISH = {
   Explorer: { id: 'new-place', text: "Take me somewhere you've never taken me", bonus: 2 },
-  Homebody: { id: 'return', text: 'Take me back to our place', bonus: 1 },
   Foodie: { id: 'food', text: 'Get something to eat in the shot', bonus: 1 },
   Athlete: { id: 'stairs', text: 'Take me up some stairs', bonus: 1 },
-  Goofball: { id: 'silly', text: 'Take a photo of me somewhere I should not be', bonus: 1 },
-  'Show-off': { id: 'crowd', text: 'Take me where the people are', bonus: 1 },
   Shy: { id: 'quiet', text: 'Take me somewhere quiet', bonus: 1 },
-  Brave: { id: 'high', text: 'Take me somewhere high', bonus: 2 },
-  Dreamer: { id: 'sky', text: 'Show me a big sky', bonus: 1 },
   Collector: { id: 'sign', text: 'Get a sign with a number in the shot', bonus: 1 },
 }
 

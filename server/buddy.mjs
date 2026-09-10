@@ -1,7 +1,7 @@
 // One-Axie loop: egg, hatch, claim, snaps, wishes, moments, ladder, diary. Server is the authority.
 import catalogueJson from './partCatalogue.json' with { type: 'json' }
 import {
-  LADDER, LEVEL_NAMES, levelFor, nextStep, eggOdds, rollWild, rollTraits, traitsForOwned,
+  LADDER, LEVEL_NAMES, levelFor, nextStep, eggOdds, rollWild, rollTraits, traitsForOwned, normalizeTraits,
   wishForToday, detectMoments, MOMENTS,
 } from './buddyRules.mjs'
 import { pickLine, checkRules } from './voiceLines.mjs'
@@ -60,7 +60,16 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
   const model = voice || createVoiceModel({ env, now })
 
   const emptyStore = () => ({ accounts: {}, buddies: {}, usedRecoveryCodes: {}, pendingNonces: {} })
-  const load = () => storage.get('buddies', emptyStore)
+  const load = () => {
+    const s = storage.get('buddies', emptyStore)
+    // Records from before R1 settled on one trait each: keep the first trait that still exists,
+    // or give an Axie whose trait was retired a fresh one (the same one every time, from its id).
+    for (const b of Object.values(s.buddies || {})) {
+      if (!b?.hatchedAt || (Array.isArray(b.traits) && b.traits.length === 1 && normalizeTraits(b.traits))) continue
+      b.traits = normalizeTraits(b.traits) || traitsForOwned(b.id, b.class || '', [])
+    }
+    return s
+  }
   const save = (s) => storage.set('buddies', s)
   const monthKey = () => manilaDayKey().slice(0, 7)
   const uid = () => crypto.randomUUID()

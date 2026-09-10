@@ -65,13 +65,17 @@ export function characterBrief(b) {
   const traits = Array.isArray(b?.traits) ? b.traits.filter((t) => TRAIT_NOTES[t]) : []
   const cls = b?.class && CLASS_TONE[b.class] ? b.class : null
   const name = b?.name || 'the Axie'
-  const traitLines = traits.map((t, i) => `${i === 0 ? 'Lead trait' : i === 1 ? 'Second trait' : 'Third trait'}: ${t} (${TRAIT_NOTES[t]})`)
+  const traitLines = traits.length === 1
+    ? [`Your trait: ${traits[0]} (${TRAIT_NOTES[traits[0]]})`]
+    : traits.map((t, i) => `${i === 0 ? 'Lead trait' : i === 1 ? 'Second trait' : 'Third trait'}: ${t} (${TRAIT_NOTES[t]})`)
   const earned = b?.earnedTrait ? `\nEarned name: ${b.earnedTrait}.` : ''
   return [
     `You are ${name}, a small creature called an Axie who arrived in the world a few days ago and has decided your person is the best thing in it. Think of a six-year-old's curiosity with a dog's loyalty and a cat's opinions. You do not know you are in a game. You know you have a person, you go places with them, and pictures are how you keep things. You are a character with wants, not a mascot or a narrator.`,
     cls ? `Class: ${cls}. Class tone: ${CLASS_TONE[cls]}.` : '',
     traitLines.join('\n') + earned,
-    'The lead trait chooses what you notice and how you say it. The second adds a clause about a third of the time. Class changes the accent, never the meaning.',
+    traits.length === 1
+      ? 'Your trait decides what you notice and what you want. Class changes the accent a little, never the meaning.'
+      : 'The lead trait chooses what you notice and how you say it. The second adds a clause about a third of the time. Class changes the accent, never the meaning.',
     RULES,
     traits.length ? `Lines already in your voice, for the feel (do not repeat them):\n${exampleLines(traits).join('\n')}` : '',
     'In any photo your person takes, the cartoon creature is you. Talk about what else is there.',

@@ -34,12 +34,10 @@ if (!model.enabled) { console.error('GEMINI_API_KEY missing'); process.exit(2) }
 
 const CLASSES = ['Beast', 'Aquatic', 'Plant', 'Bird', 'Bug', 'Reptile']
 const NAMES = { Beast: 'Miso', Aquatic: 'Pip', Plant: 'Sprout', Bird: 'Chirp', Bug: 'Dot', Reptile: 'Sol' }
-/** Ten Axies, one per lead trait, with two supporting traits and a class spread across the six. */
+/** One Axie per trait, with a class spread across the six. */
 const AXIES = TRAITS.map((lead, i) => {
   const cls = CLASSES[i % CLASSES.length]
-  const others = TRAITS.filter((t) => t !== lead)
-  const traits = [lead, others[(i * 3) % others.length], others[(i * 3 + 4) % others.length]]
-  return { name: NAMES[cls], class: cls, traits, level: 2, wardrobe: { worn: null }, wish: { text: '' }, moments: [], seen: [], places: {}, snapCount: 3 }
+  return { name: NAMES[cls], class: cls, traits: [lead], level: 2, wardrobe: { worn: null }, wish: { text: '' }, moments: [], seen: [], places: {}, snapCount: 3 }
 })
 
 const files = fs.readdirSync(photosDir).filter((f) => /\.(jpe?g|png)$/i.test(f)).sort()

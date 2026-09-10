@@ -38,6 +38,8 @@ Class is the accent on top of the traits. Same situation, first rain, six ways.
 
 ## The ten traits
 
+> **R1 (11 September 2026):** five traits ship, one per Axie: Explorer, Foodie, Athlete, Shy, Collector. The other five below wait for R2. The first tasting showed the lines people love are plain and literal; a trait only tilts what the Axie wants.
+
 Each Axie has three. The first is the loudest and chooses the line. The second adds a clause about a third of the time. Class swaps a word or the punctuation.
 
 Every trait below has the same eight situations so the writers can see the difference: **Hatch** (first ever line), **Morning** (home screen greeting), **Wish** (what it asks for today), **Before** (on the camera), **After** (reacting to what was in the photo), **Bedtime**, **Return** (after two or more days away), **Big moment** (an unlock, a rare moment, the glow).

@@ -89,3 +89,12 @@ test('tidyLine collapses whitespace and strips wrapping quotes only', () => {
   assert.equal(tidyLine('It\'s fine.'), 'It\'s fine.')
   assert.equal(tidyLine(42), '')
 })
+
+
+test('an Axie with one trait is briefed as "your trait", with no second or third', () => {
+  const brief = characterBrief({ ...miso, traits: ['Athlete'] })
+  assert.match(brief, /Your trait: Athlete/)
+  assert.doesNotMatch(brief, /Lead trait|Second trait|Third trait/)
+  assert.match(brief, /Your trait decides what you notice/)
+  assert.match(brief, /\(Athlete\) /, 'example lines in its own voice')
+})

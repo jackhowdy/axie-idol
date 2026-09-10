@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  LADDER, levelFor, nextStep, eggOdds, rollWild, rollTraits, traitsForOwned,
+  LADDER, levelFor, nextStep, eggOdds, rollWild, rollTraits, traitsForOwned, normalizeTraits,
   TRAITS, OPPOSITES, wishForToday, detectMoments, MOMENTS, hashInt, parsePartId,
 } from '../server/buddyRules.mjs'
 import catalogue from '../server/partCatalogue.json' with { type: 'json' }
@@ -52,16 +52,26 @@ test('rollWild: Mystic is in addition to the guaranteed rares, never instead of 
   assert.equal(slotTypes.size, 3, 'two rare slots plus one distinct Mystic slot')
 })
 
-test('traits: three, no opposites, nudged by the egg', () => {
-  assert.equal(TRAITS.length, 10)
+test('traits: one of five, nudged by the egg', () => {
+  assert.deepEqual(TRAITS, ['Explorer', 'Foodie', 'Athlete', 'Shy', 'Collector'])
+  assert.equal(OPPOSITES.length, 0)
   const t = rollTraits(seq(0.01, 0.5, 0.9, 0.3, 0.7), { places: 8, distanceKm: 1, foodSnaps: 0, oneSpot: false })
-  assert.equal(t.length, 3)
-  assert.equal(new Set(t).size, 3)
-  for (const [a, b] of OPPOSITES) assert.ok(!(t.includes(a) && t.includes(b)))
+  assert.equal(t.length, 1)
   assert.equal(t[0], 'Explorer', 'many places leads Explorer')
+  const quiet = rollTraits(seq(0.99), { places: 1, distanceKm: 0, foodSnaps: 0, oneSpot: true })
+  assert.ok(TRAITS.includes(quiet[0]))
   const owned = traitsForOwned('6', 'Aquatic', ['Tricky', 'Catfish', 'Clamshell', 'Hero', 'Iguana', 'Ear Breathing'])
   assert.deepEqual(owned, traitsForOwned('6', 'Aquatic', ['Tricky', 'Catfish', 'Clamshell', 'Hero', 'Iguana', 'Ear Breathing']))
-  assert.equal(owned.length, 3)
+  assert.equal(owned.length, 1)
+  assert.ok(TRAITS.includes(owned[0]))
+})
+
+test('old three-trait records collapse to one current trait; a retired trait becomes null', () => {
+  assert.deepEqual(normalizeTraits(['Athlete', 'Explorer', 'Collector']), ['Athlete'])
+  assert.deepEqual(normalizeTraits(['Show-off', 'Goofball', 'Foodie']), ['Foodie'], 'the first surviving trait')
+  assert.equal(normalizeTraits(['Dreamer', 'Brave', 'Homebody']), null)
+  assert.equal(normalizeTraits([]), null)
+  assert.equal(normalizeTraits(undefined), null)
 })
 
 test('wish picks weather first, then place, then trait default', () => {

@@ -210,7 +210,7 @@ export function hatchHtml(b: Buddy, lines: string[]): string {
     })
     .join('')
   const speech = lines
-    .map((l, i) => `<div class="bd-speech"><span>${esc(l)}</span>${b.traits[i] ? `<span class="bd-pill bd-pill-ok">${esc(b.traits[i])} · ${i + 1} of ${lines.length}</span>` : ''}</div>`)
+    .map((l, i) => `<div class="bd-speech"><span>${esc(l)}</span>${b.traits[i] ? `<span class="bd-pill bd-pill-ok">${esc(b.traits[i])}${lines.length > 1 ? ` · ${i + 1} of ${lines.length}` : ''}</span>` : ''}</div>`)
     .join('')
   const naming = `
     <label class="bd-label" for="bd-name">Name your Axie</label>
