@@ -220,14 +220,16 @@ test('daily cap holds across hatch: egg snaps and post-hatch snaps share the sam
 
   let last = null
   for (let i = 0; i < 10; i++) last = await snap(`post-${i}`)
-  assert.equal(last.granted, 0, 'daily cap of 10 already reached; the 10th post-hatch snap grants nothing')
-  assert.equal(last.bond, 10, '6 converted + 4 more counted before the day cap of 10')
-  assert.equal(last.bondToday, 10)
+  assert.equal(last.granted, 0, 'ten photos already counted today; the 10th post-hatch snap grants nothing')
   assert.equal(last.snapsToday, 10, 'six egg photos and four hatched ones: ten photos counted today')
+  // bond is ten counted photos plus whatever bonus landed on top (a wish that matched any snap)
+  const bonus = last.bond - 10
+  assert.ok(bonus >= 0 && bonus <= 2, `bond ${last.bond} = ten photos + a small bonus`)
+  assert.equal(last.bondToday, last.bond)
 
   const g = await call('/api/buddy')
-  assert.equal(g.body.active.bond, 10)
-  assert.equal(g.body.active.bondToday, 10)
+  assert.equal(g.body.active.bond, last.bond)
+  assert.equal(g.body.active.snapsToday, 10)
 })
 
 // The legacy limit of 10 posts/hour equals the daily bond cap, so a real player who shoots
