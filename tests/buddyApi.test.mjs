@@ -744,3 +744,27 @@ test('without a model, talk still answers the things people type, in voice and w
     assert.doesNotMatch(r.body.reply, /\d/, text)
   }
 })
+
+
+test('an operator can remove any post from the feed with the admin key; without it the route does not exist', async () => {
+  const adminBase = adminServer ? adminServer.baseUrl : (adminServer = await startNodeServer({ BUDDY: '1', BUDDY_TEST_SKIP_CHAIN: '1', ADMIN_KEY: 'test-key' })).baseUrl
+  const d = dev()
+  const post = async (path, body, headers = {}) => {
+    const r = await fetch(adminBase + path, { method: 'POST', headers: { 'content-type': 'application/json', 'X-Device-Key': d, ...headers }, body: JSON.stringify(body) })
+    return { status: r.status, json: await r.json().catch(() => null) }
+  }
+  await post('/api/buddy/egg', {})
+  const made = await post('/api/posts', { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true })
+  assert.equal(made.status, 201, JSON.stringify(made.json))
+  const id = made.json.post?.id || made.json.id
+  assert.ok(id, 'post id ' + JSON.stringify(made.json).slice(0, 200))
+  const noKey = await post('/api/admin/remove-post', { id })
+  assert.equal(noKey.status, 404, 'no key: not a route')
+  const wrongKey = await post('/api/admin/remove-post', { id }, { 'X-Admin-Key': 'nope' })
+  assert.equal(wrongKey.status, 404, 'wrong key: not a route')
+  const gone = await post('/api/admin/remove-post', { id }, { 'X-Admin-Key': 'test-key' })
+  assert.equal(gone.status, 200, JSON.stringify(gone.json))
+  assert.equal(gone.json.removed, true)
+  const feed = await (await fetch(adminBase + '/api/feed')).json()
+  assert.ok(!(feed.posts || []).some((p) => p.id === id), 'the post left the feed')
+})

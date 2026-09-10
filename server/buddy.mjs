@@ -418,11 +418,29 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const adminKey = typeof env.ADMIN_KEY === 'string' ? env.ADMIN_KEY : ''
     if (!adminKey) return false
     if (req.headers?.get?.('x-admin-key') !== adminKey) return false
-    if (url.pathname !== '/api/admin/seed-bond' || req.method !== 'POST') return false
+    if (req.method !== 'POST' || !['/api/admin/seed-bond', '/api/admin/remove-post'].includes(url.pathname)) return false
 
     let body
     try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}') } catch { sendJson(res, 400, { error: 'Invalid JSON' }); return true }
     const store = load()
+    // Operator moderation for a public feed: drop one post (and its upload) wherever it came from.
+    // The buddy that took it keeps its snap count, exactly like the owner's own "don't keep".
+    if (url.pathname === '/api/admin/remove-post') {
+      const postId = String(body.id || '')
+      if (!postId) { sendJson(res, 400, { error: 'id required' }); return true }
+      for (const b of Object.values(store.buddies)) {
+        if (!b.photoIds.includes(postId) && !(b.photos || []).some((x) => x.id === postId)) continue
+        b.photoIds = b.photoIds.filter((id) => id !== postId)
+        b.photos = (b.photos || []).filter((x) => x.id !== postId)
+        b.moments = b.moments.filter((m) => m.photoId !== postId)
+        b.unkeptCount = (b.unkeptCount || 0) + 1
+      }
+      save(store)
+      let removed = false
+      if (typeof removePost === 'function') { try { removed = Boolean(await removePost(postId)) } catch { removed = false } }
+      sendJson(res, 200, { id: postId, removed })
+      return true
+    }
     // Own-property lookup only: an id of `constructor` or `__proto__` must miss, not reach up the
     // prototype chain and hand us something that is not a buddy.
     const buddyId = String(body.buddyId || '')
