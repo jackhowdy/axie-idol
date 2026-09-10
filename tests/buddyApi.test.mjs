@@ -853,3 +853,20 @@ test('a record from before one-trait R1 is read with one current trait', async (
   const r2 = await call('/api/buddy')
   assert.deepEqual(r2.body.active.traits, ['Explorer'])
 })
+
+
+test('look: a spot the Axie has stood on before reaches the model as memory, a new spot does not', async () => {
+  const voice = fakeVoice([{ seen: ['slide'], line: 'A slide. Let us go up.' }, { seen: ['slide'], line: 'That slide again. Let us go higher.' }, { seen: ['sea'], line: 'The sea. Let us go closer.' }])
+  const { buddy, call } = directModule({ voice })
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12, lat: 22.30, lng: 114.17 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  // the egg's six photos were all taken here, so the first hatched look knows the spot
+  await call('/api/buddy/look', { method: 'POST', body: { imageBase64: PHOTO, lat: 22.30, lng: 114.17 } })
+  assert.match(voice.calls[0].user, /stood on this exact spot six times before/)
+  await buddy.recordSnap({ id: 'p1' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12, image: PHOTO, lat: 22.30, lng: 114.17 })
+  assert.match(voice.calls[1].user, /stood on this exact spot six times before/, 'the photo being taken now is not counted as before')
+  await call('/api/buddy/look', { method: 'POST', body: { imageBase64: PHOTO, lat: 22.28, lng: 114.16 } })
+  assert.doesNotMatch(voice.calls[2].user, /exact spot/, 'a different spot carries no such memory')
+  assert.match(voice.calls[2].user, /Earlier today you saw slide\./, 'what the last photo showed is remembered by day')
+})

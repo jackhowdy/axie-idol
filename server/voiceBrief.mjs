@@ -105,9 +105,35 @@ export function memoryFacts(b, ctx = {}) {
   if (b?.wish?.text) facts.push(`Today's wish: "${b.wish.text}"${b.wish.done ? ' (it came true today)' : ' (not yet)'}.`)
   const moments = (b?.moments || []).slice(-3).map((m) => m.title || m.id).filter(Boolean)
   if (moments.length) facts.push(`Things that happened to you lately: ${moments.join(', ')}.`)
-  const seen = (b?.seen || []).slice(-4)
-  if (seen.length) facts.push(`Recent photos showed: ${seen.map((s) => (s.seen || []).slice(0, 3).join(', ')).filter(Boolean).join('; ')}.`)
+  if (ctx.timesHere > 0) {
+    const first = Number.isFinite(ctx.firstHereDaysAgo) && ctx.firstHereDaysAgo > 0 ? `, the first time ${wordsFor(ctx.firstHereDaysAgo)} ${ctx.firstHereDaysAgo === 1 ? 'day' : 'days'} ago` : ''
+    facts.push(`You have stood on this exact spot ${ctx.timesHere === 1 ? 'once' : `${wordsFor(ctx.timesHere)} times`} before${first}.`)
+  }
+  const seen = (b?.seen || []).slice(-5)
+  if (seen.length) {
+    const byDay = new Map()
+    for (const s of seen) {
+      const nouns = (s.seen || []).slice(0, 3)
+      if (!nouns.length) continue
+      const when = relativeDay(s.day, ctx.dayKey)
+      byDay.set(when, [...(byDay.get(when) || []), ...nouns])
+    }
+    for (const [when, nouns] of byDay) facts.push(`${when} you saw ${[...new Set(nouns)].join(', ')}.`)
+  }
   return facts.join(' ')
+}
+
+/** "Earlier today", "Yesterday", "Three days ago": what a small creature would say, never a date. */
+export function relativeDay(dayKey, todayKey) {
+  if (!dayKey || !todayKey) return 'Before'
+  const a = Date.parse(`${dayKey}T00:00:00Z`)
+  const b = Date.parse(`${todayKey}T00:00:00Z`)
+  if (Number.isNaN(a) || Number.isNaN(b)) return 'Before'
+  const days = Math.round((b - a) / 864e5)
+  if (days <= 0) return 'Earlier today'
+  if (days === 1) return 'Yesterday'
+  if (days <= 20) return `${wordsFor(days)[0].toUpperCase()}${wordsFor(days).slice(1)} days ago`
+  return 'A while ago'
 }
 
 export const AFTER_SCHEMA = {
@@ -119,7 +145,7 @@ export const LINE_SCHEMA = { type: 'OBJECT', properties: { line: { type: 'STRING
 export const REPLY_SCHEMA = { type: 'OBJECT', properties: { reply: { type: 'STRING' } }, required: ['reply'] }
 
 export function afterPrompt(b, ctx) {
-  return `${memoryFacts(b, ctx)}\nYour person just took this photo with you in it. First, "seen": up to four plain lowercase nouns for the main things in the photo besides yourself (singular, no brand names, no people's names; a person is "person"). Then "line": your reaction, one or two short sentences in your voice, about one thing that is really in the photo. Only things you can see: never add stairs, roofs or animals that are not there. Say what you noticed and what you want to do with it, in plain words. Vary the shape: sometimes a question, sometimes a plan ("Let's go up that."), sometimes just what you noticed and how it made you feel ("That slide is so red. I like it."). Not every line is a question. Spell any number as a word.`
+  return `${memoryFacts(b, ctx)}\nYour person just took this photo with you in it. First, "seen": up to four plain lowercase nouns for the main things in the photo besides yourself (singular, no brand names, no people's names; a person is "person"). Then "line": your reaction, one or two short sentences in your voice, about one thing that is really in the photo. Only things you can see: never add stairs, roofs or animals that are not there. Say what you noticed and what you want to do with it, in plain words. Memory: if something in this photo is the same thing you saw in an earlier photo, or you have stood on this spot before, you can say so ("That yellow duck again.", "These steps again. What is past them this time?"), but only when it really is the same, and not every time. Vary the shape: sometimes a question, sometimes a plan ("Let's go up that."), sometimes just what you noticed and how it made you feel ("That slide is so red. I like it."). Not every line is a question. Spell any number as a word.`
 }
 
 export function greetingPrompt(b, ctx) {

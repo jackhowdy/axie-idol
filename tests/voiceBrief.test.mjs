@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { characterBrief, memoryFacts, afterPrompt, greetingPrompt, talkPrompt, cleanSeen, tidyLine, wordsFor, TRAIT_NOTES, CLASS_TONE } from '../server/voiceBrief.mjs'
+import { characterBrief, memoryFacts, afterPrompt, greetingPrompt, talkPrompt, cleanSeen, tidyLine, wordsFor, relativeDay, TRAIT_NOTES, CLASS_TONE } from '../server/voiceBrief.mjs'
 import { TRAITS } from '../server/buddyRules.mjs'
 
 const miso = {
@@ -8,7 +8,7 @@ const miso = {
   places: { a: {}, b: {}, c: {} }, snapCount: 9, wardrobe: { worn: 'hat' },
   wish: { text: 'Take me somewhere that smells like garlic', done: false },
   moments: [{ id: 'golden-hour', title: 'Golden hour' }],
-  seen: [{ day: 'd1', seen: ['noodles', 'bowl'] }, { day: 'd2', seen: ['dog', 'park'] }],
+  seen: [{ day: '2026-09-09', seen: ['noodles', 'bowl'] }, { day: '2026-09-10', seen: ['dog', 'park'] }],
 }
 
 test('every trait and class the game can roll has a note for the model', () => {
@@ -39,7 +39,7 @@ test('a brief for an Axie with no class or traits yet still reads sensibly', () 
 })
 
 test('memory facts spell every number and only mention what is there', () => {
-  const facts = memoryFacts(miso, { dayCount: 3, hour: 18, weather: 'rain', placeName: 'Kowloon Park', firstTimeHere: true })
+  const facts = memoryFacts(miso, { dayCount: 3, hour: 18, weather: 'rain', placeName: 'Kowloon Park', firstTimeHere: true, dayKey: '2026-09-11' })
   assert.match(facts, /hatched three days ago/)
   assert.match(facts, /been to three places/)
   assert.match(facts, /nine photos together/)
@@ -49,7 +49,8 @@ test('memory facts spell every number and only mention what is there', () => {
   assert.match(facts, /wearing your hat/)
   assert.match(facts, /Today's wish: "Take me somewhere that smells like garlic" \(not yet\)/)
   assert.match(facts, /Golden hour/)
-  assert.match(facts, /Recent photos showed: noodles, bowl; dog, park/)
+  assert.match(facts, /Two days ago you saw noodles, bowl\./)
+  assert.match(facts, /Yesterday you saw dog, park\./)
   assert.doesNotMatch(facts, /\d/, 'no digits anywhere in the facts')
   const bare = memoryFacts({ traits: [] }, {})
   assert.equal(bare, '')
@@ -97,4 +98,22 @@ test('an Axie with one trait is briefed as "your trait", with no second or third
   assert.doesNotMatch(brief, /Lead trait|Second trait|Third trait/)
   assert.match(brief, /Your trait decides what you notice/)
   assert.match(brief, /\(Athlete\) /, 'example lines in its own voice')
+})
+
+
+test('memory: what it saw is told by relative day, and a spot it has stood on before is named', () => {
+  assert.equal(relativeDay('2026-09-11', '2026-09-11'), 'Earlier today')
+  assert.equal(relativeDay('2026-09-10', '2026-09-11'), 'Yesterday')
+  assert.equal(relativeDay('2026-09-08', '2026-09-11'), 'Three days ago')
+  assert.equal(relativeDay('2026-07-01', '2026-09-11'), 'A while ago')
+  assert.equal(relativeDay(undefined, '2026-09-11'), 'Before')
+  const b = { ...miso, seen: [{ day: '2026-09-11', seen: ['slide', 'spring'] }, { day: '2026-09-11', seen: ['bench'] }] }
+  const facts = memoryFacts(b, { dayKey: '2026-09-11', timesHere: 3, firstHereDaysAgo: 4 })
+  assert.match(facts, /Earlier today you saw slide, spring, bench\./, 'same day merges into one sentence')
+  assert.match(facts, /stood on this exact spot three times before, the first time four days ago\./)
+  const once = memoryFacts(b, { dayKey: '2026-09-11', timesHere: 1 })
+  assert.match(once, /stood on this exact spot once before\./)
+  assert.doesNotMatch(memoryFacts(b, { dayKey: '2026-09-11', timesHere: 0 }), /exact spot/)
+  assert.doesNotMatch(facts, /\d/)
+  assert.match(afterPrompt(b, { dayKey: '2026-09-11' }), /That yellow duck again/)
 })

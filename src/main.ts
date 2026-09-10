@@ -2205,7 +2205,7 @@ async function lookAtCapture(plain: Blob, seq: number): Promise<void> {
     const ctx = await snapContext()
     const res = await fetch('/api/buddy/look', {
       method: 'POST', headers: buddyHeaders(),
-      body: JSON.stringify({ imageBase64: await blobToDataUrl(plain), hour: ctx.hour }),
+      body: JSON.stringify({ imageBase64: await blobToDataUrl(plain), hour: ctx.hour, ...(ctx.lat !== undefined ? { lat: ctx.lat, lng: ctx.lng } : {}) }),
     })
     const data = (await res.json().catch(() => ({}))) as { id?: string | null; line?: string | null }
     if (!res.ok) return

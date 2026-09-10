@@ -221,7 +221,15 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     }
     return line
   }
-  const talkCtx = (b, extra = {}) => ({ dayCount: b.hatchedAt ? daysSince(b.hatchedAt) : undefined, ...extra })
+  const talkCtx = (b, extra = {}) => ({ dayCount: b.hatchedAt ? daysSince(b.hatchedAt) : undefined, dayKey: manilaDayKey(), ...extra })
+  /** How often the Axie has stood on this grid square before, and how long ago the first time was. */
+  function placeMemory(b, grid, alreadyCounted = 0) {
+    const p = grid ? b.places?.[grid] : null
+    if (!p) return {}
+    const timesHere = Math.max(0, (p.count || 0) - alreadyCounted)
+    if (!timesHere) return {}
+    return { timesHere, firstHereDaysAgo: p.first ? daysSince(p.first) - 1 : undefined }
+  }
 
   /**
    * A memory reply built only from `b.places` (a count) and a fixed hatch-day fact — the
@@ -344,7 +352,8 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     } else {
       const image = model.enabled ? splitImage(ctx.image) : null
       if (image) {
-        const snapCtx = talkCtx(b, { hour, weather: ctx.weather, placeName: ctx.placeName, placeType: ctx.placeType, firstTimeHere: isNewPlace })
+        // the place count was already bumped for this photo, so "before" is one less
+        const snapCtx = talkCtx(b, { hour, weather: ctx.weather, placeName: ctx.placeName, placeType: ctx.placeType, firstTimeHere: isNewPlace, ...placeMemory(b, grid, 1) })
         const out = await model.ask({ system: characterBrief(b), user: afterPrompt(b, snapCtx), image, schema: AFTER_SCHEMA, maxTokens: 120 })
         const seen = cleanSeen(out?.seen)
         if (seen.length) labels = seen
@@ -623,7 +632,9 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const hour = Number.isFinite(Number(body.hour)) ? Number(body.hour) % 24 : undefined
       const placeName = typeof body.placeName === 'string' ? body.placeName.slice(0, 40) : undefined
       const placeType = typeof body.placeType === 'string' ? body.placeType.slice(0, 16) : undefined
-      const out = await model.ask({ system: characterBrief(active), user: afterPrompt(active, talkCtx(active, { hour, placeName, placeType })), image, schema: AFTER_SCHEMA, maxTokens: 120 })
+      // Where the photo is being taken, so the Axie knows whether it has stood here before.
+      const lookGrid = gridOf(typeof body.lat === 'number' ? body.lat : Number.NaN, typeof body.lng === 'number' ? body.lng : Number.NaN)
+      const out = await model.ask({ system: characterBrief(active), user: afterPrompt(active, talkCtx(active, { hour, placeName, placeType, ...placeMemory(active, lookGrid) })), image, schema: AFTER_SCHEMA, maxTokens: 120 })
       const labels = cleanSeen(out?.seen)
       const line = ruled(out?.line)
       if (!line && !labels.length) { sendJson(res, 200, { id: null, line: null, labels: [] }); return true }
