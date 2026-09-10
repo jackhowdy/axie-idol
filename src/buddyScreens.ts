@@ -6,7 +6,7 @@
  * `.buddy` / `#buddy-sheet`, and the API calls from `src/buddy.ts`.
  */
 import {
-  buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone,
+  buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone, talkEnabled,
   roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto,
 } from './buddy'
 import {
@@ -81,13 +81,15 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (which === 'egg' && before?.hatchedAt) which = 'home'
     if ((which === 'home' || which === 'ladder' || which === 'diary' || which === 'talk') && !before?.hatchedAt) which = 'egg'
     if (which === 'hatch' && !before) which = 'egg'
+    // R1 ships without typed chat: the Axie speaks after photos instead.
+    if (which === 'talk' && !talkEnabled) which = 'home'
 
     if (which === 'egg' && !buddyState.active) await startEgg()
     const el = sections[which]
     let html = ''
     if (which === 'egg') html = eggHtml(buddyState.active!, { buddies: buddyState.buddies })
     else if (which === 'hatch') html = hatchHtml(buddyState.active!, pendingLines)
-    else if (which === 'home') html = homeHtml(buddyState.active!, buddyState.greeting, { buddies: buddyState.buddies, address: buddyState.address })
+    else if (which === 'home') html = homeHtml(buddyState.active!, buddyState.greeting, { buddies: buddyState.buddies, address: buddyState.address, talk: talkEnabled })
     else if (which === 'claim') {
       claimAxies = buddyState.address ? await ownedAxies().catch(() => []) : []
       if (claimPick && !claimAxies.some((a) => a.id === claimPick)) claimPick = null

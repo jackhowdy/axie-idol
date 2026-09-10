@@ -3172,6 +3172,8 @@ async function handleCreatePost(req, res) {
     labels: Array.isArray(body.labels) ? body.labels.slice(0, 12).map(String) : [],
     // the upload itself, so the Axie can look at what it is reacting to
     image: typeof body.imageBase64 === 'string' ? body.imageBase64 : null,
+    // the look the client already drew onto this image (see /api/buddy/look)
+    lookId: typeof body.lookId === 'string' ? body.lookId.slice(0, 64) : null,
   })
   if (buddyResult) post.buddyId = buddy.getActive(buddyOwnerKey)?.id || null
 

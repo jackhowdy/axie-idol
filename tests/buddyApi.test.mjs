@@ -12,7 +12,7 @@ secp.etc.hmacSha256Sync = (k, ...m) => hmac(sha256, k, secp.etc.concatBytes(...m
 const PNG_1x1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
 let base = process.env.BASE_URL || ''
 let server = null
-before(async () => { if (!base) { server = await startNodeServer({ BUDDY: '1', BUDDY_TEST_SKIP_CHAIN: '1' }); base = server.baseUrl } })
+before(async () => { if (!base) { server = await startNodeServer({ BUDDY: '1', BUDDY_TEST_SKIP_CHAIN: '1', TALK: '1' }); base = server.baseUrl } })
 /** Started inside the ADMIN_KEY test below — the shared server deliberately has no admin key. */
 let adminServer = null
 /** Started inside the flag-off test below — the shared server runs with BUDDY=1. */
@@ -28,7 +28,7 @@ after(async () => {
  * that would otherwise trip an unrelated ceiling (the post rate limit, the buddy route limits)
  * before reaching the behaviour under test.
  */
-function directModule({ env = { BUDDY: '1' }, voice = null } = {}) {
+function directModule({ env = { BUDDY: '1', TALK: '1' }, voice = null } = {}) {
   const storeState = {}
   const storage = {
     get: (name, makeEmpty) => (storeState[name] ??= makeEmpty()),
@@ -783,4 +783,58 @@ test('an operator can remove any post from the feed with the admin key; without 
   assert.equal(gone.json.removed, true)
   const feed = await (await fetch(adminBase + '/api/feed')).json()
   assert.ok(!(feed.posts || []).some((p) => p.id === id), 'the post left the feed')
+})
+
+
+test('look: the Axie sees the capture before the post, and the post reuses that look instead of asking twice', async () => {
+  const voice = fakeVoice([{ seen: ['stairs', 'railing'], line: 'Stairs. Up. All of them.' }, { seen: ['dog'], line: 'A dog. Can we keep it?' }])
+  const { buddy, call } = directModule({ voice })
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  const look = await call('/api/buddy/look', { method: 'POST', body: { imageBase64: PHOTO, hour: 15 } })
+  assert.equal(look.status, 200)
+  assert.ok(look.body.id, 'a look id')
+  assert.equal(look.body.line, 'Stairs. Up. All of them.')
+  assert.deepEqual(look.body.labels, ['stairs', 'railing'])
+  assert.equal(voice.calls.length, 1)
+  const r = await buddy.recordSnap({ id: 'p1' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 15, image: PHOTO, lookId: look.body.id })
+  assert.equal(voice.calls.length, 1, 'the post did not ask the model again')
+  assert.equal(r.line, 'Stairs. Up. All of them.')
+  assert.deepEqual(r.labels, ['stairs', 'railing'])
+  // a post without the id (the look never landed on the client) asks afresh and never reuses a look
+  const look2 = await call('/api/buddy/look', { method: 'POST', body: { imageBase64: PHOTO } })
+  assert.ok(look2.body.id)
+  voice.calls.length = 0
+  const answers = [{ seen: ['cat'], line: 'A cat. It looked at me first.' }]
+  voice.ask = async (args) => { voice.calls.push(args); return answers.shift() || null }
+  const r2 = await buddy.recordSnap({ id: 'p2' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 15, image: PHOTO })
+  assert.equal(voice.calls.length, 1, 'asked for this photo')
+  assert.equal(r2.line, 'A cat. It looked at me first.')
+  const b = buddy.getActive('device:unit-dev')
+  assert.equal(b.pendingLook, null, 'a stale look is dropped, never carried to a later photo')
+})
+
+test('look without a model, or before the hatch, has nothing to say', async () => {
+  const { buddy, call } = directModule()
+  await call('/api/buddy/egg', { method: 'POST' })
+  const early = await call('/api/buddy/look', { method: 'POST', body: { imageBase64: PHOTO } })
+  assert.equal(early.status, 409)
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  const none = await call('/api/buddy/look', { method: 'POST', body: { imageBase64: PHOTO } })
+  assert.equal(none.status, 200)
+  assert.equal(none.body.id, null)
+  assert.equal(none.body.line, null)
+})
+
+test('typed chat is off unless TALK=1: the route is simply not there', async () => {
+  const { buddy, call } = directModule({ env: { BUDDY: '1' } })
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  const req = { method: 'POST', headers: { get: () => null }, _body: { text: 'hi' }, _device: 'unit-dev' }
+  const res = {}
+  const handled = await buddy.handle(req, res, { pathname: '/api/buddy/talk', searchParams: new URLSearchParams('') })
+  assert.equal(handled, false, 'falls through to the host 404')
 })

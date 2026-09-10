@@ -84,10 +84,12 @@ test('camera wardrobe tray renders the five wearables only, and nothing at all w
   assert.doesNotMatch(html, /aria-pressed="true"/, 'nothing worn')
 })
 
-test('home always offers a way to talk, greeting or not', () => {
-  const withGreeting = homeHtml(miso, 'New day. New street?')
+test('home offers a way to talk only when talk mode is on (off for R1)', () => {
+  assert.doesNotMatch(homeHtml(miso, 'New day. New street?'), /data-action="talk"/, 'off by default')
+  assert.doesNotMatch(homeHtml(miso, null), /data-action="talk"/)
+  const withGreeting = homeHtml(miso, 'New day. New street?', { talk: true })
   assert.match(withGreeting, /data-action="talk"/)
-  const withoutGreeting = homeHtml(miso, null)
+  const withoutGreeting = homeHtml(miso, null, { talk: true })
   // the "Talk" control (a small bubble naming the Axie plus a "Talk to <name>" link) must
   // still be reachable even with no queued greeting, and tapping the hero box works too
   assert.match(withoutGreeting, /data-action="talk"/)

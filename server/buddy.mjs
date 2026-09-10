@@ -12,6 +12,8 @@ import { signInMessage, recoverAddress } from './roninSig.mjs'
 const NAME_RE = /^[\p{L}\p{N} '’-]{2,16}$/u
 const BAD_WORDS = ['shit', 'fuck', 'cunt', 'nigg', 'fag', 'bitch', 'dick', 'porn', 'nazi']
 const DAILY_CAP = 10
+/** A look at a capture is good for this long; after that the post asks the model itself. */
+const LOOK_TTL_MS = 10 * 60_000
 const PLACE_GRID_DEG = 0.003 // ~300 m
 /** Scrapbook keeps the last N photo records (id + upload path). */
 const PHOTO_CAP = 60
@@ -39,6 +41,8 @@ const RATE_LIMITS = {
   'POST /api/buddy/egg': 5,
   'POST /api/buddy/retire': 5,
   'POST /api/buddy/photo/unkeep': 20,
+  'POST /api/buddy/look': 40,
+  'POST /api/buddy/talk': 40,
   'POST /api/account/recover': 10,
   'POST /api/account/recovery': 10,
   'GET /api/ronin/nonce': 20,
@@ -133,7 +137,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       wardrobe: { unlocked: [], worn: null }, moments: [], places: {},
       photoIds: [], photos: [], snapCount: 0, unkeptCount: 0, lastSnapAt: null, recentLines: [], hatchGrid: null, rareIds: [], mysticId: null, mystic: false,
       // What the model saw in recent photos, the last talk exchanges, and today's greeting (one per day).
-      seen: [], talkLog: [], greeting: null,
+      seen: [], talkLog: [], greeting: null, pendingLook: null,
       // Photos counted per day: the ten-a-day ceiling is on photos, never on the bonuses.
       snapsByDay: {},
     }
@@ -318,15 +322,25 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     }
 
     // The model looks at the photo first: what it saw drives the wish, the moments and the line.
-    // Nothing here blocks the shot: a slow or failed call leaves the library to speak.
+    // Usually it already has: the client asked /api/buddy/look while the preview was open and drew
+    // the line onto the image, so the post carries that look's id and nothing is asked twice. A
+    // look for a different capture (or a stale one) is ignored. Nothing here blocks the shot: a
+    // slow or failed call leaves the library to speak.
     let modelLine = null
-    const image = model.enabled ? splitImage(ctx.image) : null
-    if (image) {
-      const snapCtx = talkCtx(b, { hour, weather: ctx.weather, placeName: ctx.placeName, placeType: ctx.placeType, firstTimeHere: isNewPlace })
-      const out = await model.ask({ system: characterBrief(b), user: afterPrompt(b, snapCtx), image, schema: AFTER_SCHEMA, maxTokens: 120 })
-      const seen = cleanSeen(out?.seen)
-      if (seen.length) labels = seen
-      modelLine = ruled(out?.line)
+    const look = b.pendingLook || null
+    b.pendingLook = null
+    if (look && ctx.lookId && look.id === ctx.lookId && now() - look.at < LOOK_TTL_MS) {
+      if (look.labels?.length) labels = look.labels
+      modelLine = look.line || null
+    } else {
+      const image = model.enabled ? splitImage(ctx.image) : null
+      if (image) {
+        const snapCtx = talkCtx(b, { hour, weather: ctx.weather, placeName: ctx.placeName, placeType: ctx.placeType, firstTimeHere: isNewPlace })
+        const out = await model.ask({ system: characterBrief(b), user: afterPrompt(b, snapCtx), image, schema: AFTER_SCHEMA, maxTokens: 120 })
+        const seen = cleanSeen(out?.seen)
+        if (seen.length) labels = seen
+        modelLine = ruled(out?.line)
+      }
     }
     if (labels.length) b.seen = [...(b.seen || []), { day: manilaDayKey(), seen: labels.slice(0, 4), place: ctx.placeName || ctx.placeType || null }].slice(-10)
 
@@ -587,7 +601,30 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const line = say(active, 'before', beforeSlots)
       save(store); sendJson(res, 200, { line }); return true
     }
+    /**
+     * The Axie looks at a capture before it is posted, so its line can be drawn onto the photo.
+     * What it said is kept on the buddy under an id; the post that follows quotes the id and the
+     * snap reuses the look instead of asking the model again. Without a model there is nothing to
+     * draw (the library line still lands on the card after the post).
+     */
+    if (p === '/api/buddy/look' && req.method === 'POST') {
+      if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }
+      const image = model.enabled ? splitImage(body.imageBase64) : null
+      if (!image) { sendJson(res, 200, { id: null, line: null, labels: [] }); return true }
+      const hour = Number.isFinite(Number(body.hour)) ? Number(body.hour) % 24 : undefined
+      const placeName = typeof body.placeName === 'string' ? body.placeName.slice(0, 40) : undefined
+      const placeType = typeof body.placeType === 'string' ? body.placeType.slice(0, 16) : undefined
+      const out = await model.ask({ system: characterBrief(active), user: afterPrompt(active, talkCtx(active, { hour, placeName, placeType })), image, schema: AFTER_SCHEMA, maxTokens: 120 })
+      const labels = cleanSeen(out?.seen)
+      const line = ruled(out?.line)
+      if (!line && !labels.length) { sendJson(res, 200, { id: null, line: null, labels: [] }); return true }
+      const id = uid()
+      active.pendingLook = { id, line, labels, at: now() }
+      save(store); sendJson(res, 200, { id, line, labels }); return true
+    }
     if (p === '/api/buddy/talk' && req.method === 'POST') {
+      // R1 ships without typed chat (TALK=1 turns the route back on); without it the route is not there.
+      if (env.TALK !== '1') return false
       if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }
       const raw = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 200)
       const text = raw.toLowerCase()

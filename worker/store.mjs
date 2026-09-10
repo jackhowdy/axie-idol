@@ -41,6 +41,8 @@ export class IdolStore extends DurableObject {
         // The voice model (wrangler secret put GEMINI_API_KEY); absent = written library only.
         GEMINI_API_KEY: env.GEMINI_API_KEY || '',
         GEMINI_MODEL: env.GEMINI_MODEL || '',
+        // typed chat, off for R1
+        TALK: env.TALK || '',
       },
       log: console,
     })

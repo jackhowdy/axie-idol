@@ -311,7 +311,7 @@ function photoPath(b: Buddy, photoId: string | null): string | null {
  * `buddies` feeds the "Resting Axies" row; `address` decides how the wallet line reads. Both are
  * optional so the renderer stays a pure string-in/string-out function for the unit test.
  */
-export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Buddy[]; address?: string | null } = {}): string {
+export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Buddy[]; address?: string | null; talk?: boolean } = {}): string {
   const filled = Math.ceil(b.level / 2)
   const hearts = Array.from({ length: 5 }, (_, i) => `<span class="bd-heart${i < filled ? ' on' : ''}">${icon(i < filled ? 'heartFilled' : 'heart', 18)}</span>`).join('')
   const floorBond = b.ladder.find((r) => r.level === b.level)?.bond ?? 0
@@ -352,12 +352,12 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
         <span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.streak}-day streak</span>
       </header>
       <div class="bd-speech-row">${greeting
-        ? `<div class="bd-speech bd-speech-home">${esc(greeting)}</div><button type="button" class="bd-link" data-action="talk">Talk</button>`
-        : `<div class="bd-speech bd-speech-home bd-speech-quiet">${esc(b.name)}</div><button type="button" class="bd-link" data-action="talk">Talk to ${esc(b.name)}</button>`
+        ? `<div class="bd-speech bd-speech-home">${esc(greeting)}</div>${opts.talk ? '<button type="button" class="bd-link" data-action="talk">Talk</button>' : ''}`
+        : `<div class="bd-speech bd-speech-home bd-speech-quiet">${esc(b.name)}</div>${opts.talk ? `<button type="button" class="bd-link" data-action="talk">Talk to ${esc(b.name)}</button>` : ''}`
       }</div>
       <div class="bd-card bd-hero">
         <div class="bd-hero-row">
-          <div class="bd-hero-3d${glow}" data-face="buddy" data-action="talk"><span class="bd-badge">${icon('star', 11)} Bond ${b.level}</span></div>
+          <div class="bd-hero-3d${glow}" data-face="buddy"${opts.talk ? ' data-action="talk"' : ''}><span class="bd-badge">${icon('star', 11)} Bond ${b.level}</span></div>
           <div class="bd-hero-text">
             <b>${esc(levelTitle(b))}</b>
             <span class="bd-muted">${who} · ${b.snapCount} snaps · ${b.moments.length} of ${b.momentsTotal} moments</span>

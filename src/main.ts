@@ -18,6 +18,7 @@ import {
   type SnapResult,
 } from './buddy'
 import { fallbackAxieSvg } from './fallbackAxie'
+import { drawSpeechBubble, type BubbleAnchor } from './speechBubble'
 import { mountBuddyScreens } from './buddyScreens'
 import { reactionHtml, momentHtml, unlockHtml, vfChipHtml, wishPillHtml, frameTrayHtml, wardrobeTrayHtml } from './buddyHtml.ts'
 import {
@@ -1728,6 +1729,8 @@ btnRetake.addEventListener('click', () => {
   if (captureUrl) URL.revokeObjectURL(captureUrl)
   captureUrl = null
   captureBlob = null
+  captureLookId = null
+  captureSeq += 1
   previewScreen.hidden = true
   previewScreen.classList.remove('active')
   viewfinder.hidden = false
@@ -2182,6 +2185,64 @@ feedList.addEventListener('submit', (e) => {
   void submitComment(form)
 })
 
+/**
+ * The line on the photo. Each capture gets a sequence number; the Axie looks at the plain capture
+ * while the preview is open, and when it answers (a second or two) its line is drawn as a speech
+ * bubble onto a copy, which becomes the capture that is previewed, downloaded and posted. A retake
+ * or a post bumps the sequence, so a late answer for an old capture is dropped. The server keeps
+ * what it said under `lookId`, and the post reuses it rather than asking twice.
+ */
+let captureSeq = 0
+let captureAnchor: BubbleAnchor | null = null
+let captureLookId: string | null = null
+
+async function lookAtCapture(plain: Blob, seq: number): Promise<void> {
+  if (!buddyEnabled || !buddyState.active?.hatchedAt || !captureAnchor) return
+  const anchor = captureAnchor
+  let line = ''
+  let lookId: string | null = null
+  try {
+    const ctx = await snapContext()
+    const res = await fetch('/api/buddy/look', {
+      method: 'POST', headers: buddyHeaders(),
+      body: JSON.stringify({ imageBase64: await blobToDataUrl(plain), hour: ctx.hour }),
+    })
+    const data = (await res.json().catch(() => ({}))) as { id?: string | null; line?: string | null }
+    if (!res.ok) return
+    line = (data.line || '').trim()
+    lookId = data.id || null
+  } catch {
+    return
+  }
+  if (!line || !lookId || seq !== captureSeq) return
+  const img = new Image()
+  const src = URL.createObjectURL(plain)
+  img.src = src
+  try {
+    await img.decode()
+  } catch {
+    URL.revokeObjectURL(src)
+    return
+  }
+  const canvas = document.createElement('canvas')
+  canvas.width = img.naturalWidth
+  canvas.height = img.naturalHeight
+  const ctx = canvas.getContext('2d')
+  if (!ctx) { URL.revokeObjectURL(src); return }
+  ctx.drawImage(img, 0, 0)
+  URL.revokeObjectURL(src)
+  const family = getComputedStyle(document.body).getPropertyValue('--font-display').trim() || 'Nunito, system-ui, sans-serif'
+  if (!drawSpeechBubble(ctx, line, anchor, family)) return
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 0.95))
+  if (!blob || seq !== captureSeq) return
+  if (captureUrl) URL.revokeObjectURL(captureUrl)
+  captureBlob = blob
+  captureUrl = URL.createObjectURL(blob)
+  captureLookId = lookId
+  previewImg.src = captureUrl
+  btnDownload.href = captureUrl
+}
+
 async function captureComposite(): Promise<void> {
   const canvas = frameCanvas
   const ctx = canvas.getContext('2d')
@@ -2250,6 +2311,7 @@ async function captureComposite(): Promise<void> {
   const scaleX = outW / vf.width
   const cx = (state.x + state.gyroX) * scaleX
   const cy = (state.y + state.gyroY) * scaleX
+  captureAnchor = null
 
   const useSpine = Boolean(spineSticker?.ready && spineSticker.canvas)
   const use3d = Boolean(sticker3d?.ready)
@@ -2259,6 +2321,9 @@ async function captureComposite(): Promise<void> {
     const mc = axie3d.canvas
     const baseW = mc.clientWidth * scaleX
     const baseH = mc.clientHeight * scaleX
+    // where the Axie is on the composite: the speech bubble points here (the character fills
+    // about four fifths of its canvas box, so the tail reaches the head, not the box)
+    captureAnchor = { x: cx, y: cy, halfW: (baseW * state.scale) / 2, halfH: (baseH * state.scale * 0.8) / 2 }
     // Mystic glow (bond level 10): the same layer drawn once behind itself with a shadow, so the
     // halo the live view shows in CSS lands in the photo too. Only the character, not the frame.
     if (buddyGlowOn()) {
@@ -2321,6 +2386,7 @@ async function captureComposite(): Promise<void> {
     const baseW = stickerImg.offsetWidth * scaleX
     const naturalAspect = stickerImg.naturalHeight / Math.max(1, stickerImg.naturalWidth)
     const baseH = baseW * naturalAspect
+    captureAnchor = { x: cx, y: cy, halfW: (baseW * state.scale) / 2, halfH: (baseH * state.scale) / 2 }
     ctx.save()
     if (leadShiny && !customAxieId) ctx.filter = SHINY_FILTER
     ctx.translate(cx, cy)
@@ -2366,9 +2432,12 @@ async function captureComposite(): Promise<void> {
   if (captureUrl) URL.revokeObjectURL(captureUrl)
   captureBlob = blob
   captureUrl = URL.createObjectURL(blob)
+  captureLookId = null
   previewImg.src = captureUrl
   btnDownload.href = captureUrl
   if (captionInput) captionInput.value = ''
+  captureSeq += 1
+  void lookAtCapture(blob, captureSeq)
 
   disposeSpineSticker()
   disposeSticker3D()
@@ -5173,6 +5242,8 @@ async function submitPost(): Promise<void> {
       const b = buddyState.active
       const ctx = await snapContext()
       Object.assign(body, { buddy: true, hour: ctx.hour, labels: [] as string[] })
+      // the look this capture already had (its line is on the image): the server reuses it
+      if (captureLookId) body.lookId = captureLookId
       if (ctx.lat !== undefined) Object.assign(body, { lat: ctx.lat, lng: ctx.lng })
       const buddyOwner = buddyState.address || roninAddress
       const buddyName = b?.name || 'Axie'
@@ -5254,6 +5325,8 @@ async function submitPost(): Promise<void> {
     if (captureUrl) URL.revokeObjectURL(captureUrl)
     captureUrl = null
     captureBlob = null
+    captureLookId = null
+    captureSeq += 1
     // One-Axie loop: never the legacy feed. Stay on the camera so Retake works, and float the
     // after-the-shot sheets over it; the last sheet lands on Home.
     if (buddyEnabled) {

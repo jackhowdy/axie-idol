@@ -2,6 +2,8 @@
 import type { AxieDescriptor } from '@jaatster/threejs-axie-mixer3d-public'
 
 export const buddyEnabled = import.meta.env.VITE_BUDDY === '1'
+/** Talk mode (typed chat) is off for R1: the Axie speaks after photos. VITE_TALK=1 brings the screen back. */
+export const talkEnabled = import.meta.env.VITE_TALK === '1'
 const SESSION_LS = 'axieIdol.buddySession'
 const ADDRESS_LS = 'axieIdol.buddyAddress'
 
