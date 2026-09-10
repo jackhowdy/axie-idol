@@ -150,7 +150,7 @@ export function afterPrompt(b, ctx) {
 
 export function greetingPrompt(b, ctx) {
   const back = ctx.daysAway >= 2 ? 'They were away for a while and just came back: be glad, never guilt them.' : 'This is the first time they open the app today.'
-  return `${memoryFacts(b, ctx)}\nYour person just opened the app. ${back} "line": greet them in one or two short sentences in your voice, with a want or a plan for today. Spell any number as a word.`
+  return `${memoryFacts(b, ctx)}\nYour person just opened the app. ${back} "line": greet them in one or two short sentences in your voice, with a want or a plan for today. If you name a thing, it must be one you actually saw (listed above); otherwise keep the plan general, like somewhere new or somewhere we have not been. Spell any number as a word.`
 }
 
 export function talkPrompt(b, ctx, history, text) {
