@@ -89,15 +89,15 @@ export function rollWild(rng, snaps, places, catalogue) {
 }
 
 /**
- * R1 ships five traits and one per Axie (decided 11 September 2026 after the first voice tasting:
- * the lines people liked were plain and literal, and the trait only needs to tilt what the Axie
- * wants). Each one is legible in a photo. The other five from the voice bible wait for R2.
+ * R1 ships one personality for every Axie: Explorer (decided 11 September 2026 after four rounds
+ * of voice tasting; it was the one that read as a real creature every time). The other traits from
+ * the voice bible wait for R2, when there is time to make each of them as good.
  */
-export const TRAITS = ['Explorer', 'Foodie', 'Athlete', 'Shy', 'Collector']
+export const TRAITS = ['Explorer']
 /** No pairs to keep apart with a single trait; kept for callers that still ask. */
 export const OPPOSITES = []
-/** The traits R1 dropped: an Axie that rolled one of these before the change is given a new one. */
-const RETIRED_TRAITS = ['Homebody', 'Goofball', 'Show-off', 'Brave', 'Dreamer']
+/** Traits from before the change: an Axie that rolled one of these is an Explorer now. */
+const RETIRED_TRAITS = ['Homebody', 'Foodie', 'Athlete', 'Goofball', 'Show-off', 'Shy', 'Brave', 'Dreamer', 'Collector']
 
 function drawTraits(rng, weights, count = 1) {
   const out = []
@@ -113,13 +113,10 @@ function drawTraits(rng, weights, count = 1) {
   return out
 }
 
-/** Wild roll: one trait, nudged by how the egg was handled. */
+/** Wild roll. With one trait in R1 the egg's handling has nothing to nudge; the shape stays for R2. */
 export function rollTraits(rng, nudges) {
   const w = {}
-  if (nudges.places >= 5) w.Explorer = 6
-  if (nudges.distanceKm >= 5) w.Athlete = 4
-  if (nudges.foodSnaps >= 3) w.Foodie = 4
-  if (nudges.oneSpot) w.Shy = 3
+  if (nudges?.places >= 5) w.Explorer = 6
   return drawTraits(rng, w)
 }
 
@@ -162,10 +159,6 @@ const WISHES = [
 ]
 const TRAIT_WISH = {
   Explorer: { id: 'new-place', text: "Take me somewhere you've never taken me", bonus: 2 },
-  Foodie: { id: 'food', text: 'Get something to eat in the shot', bonus: 1 },
-  Athlete: { id: 'stairs', text: 'Take me up some stairs', bonus: 1 },
-  Shy: { id: 'quiet', text: 'Take me somewhere quiet', bonus: 1 },
-  Collector: { id: 'sign', text: 'Get a sign with a number in the shot', bonus: 1 },
 }
 
 export function wishForToday(ctx) {

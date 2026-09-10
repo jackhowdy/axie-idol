@@ -38,7 +38,7 @@ Class is the accent on top of the traits. Same situation, first rain, six ways.
 
 ## The ten traits
 
-> **R1 (11 September 2026):** five traits ship, one per Axie: Explorer, Foodie, Athlete, Shy, Collector. The other five below wait for R2. The first tasting showed the lines people love are plain and literal; a trait only tilts what the Axie wants.
+> **R1 (11 September 2026):** every Axie is an Explorer. Four rounds of tasting on real photos showed the lines people love are plain and literal, and Explorer was the one voice that read as a real creature every time (Foodie kept eating the scenery, Collector counted the wrong things). The other traits below wait for R2, when each can be made as good.
 
 Each Axie has three. The first is the loudest and chooses the line. The second adds a clause about a third of the time. Class swaps a word or the punctuation.
 

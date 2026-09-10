@@ -52,24 +52,17 @@ test('rollWild: Mystic is in addition to the guaranteed rares, never instead of 
   assert.equal(slotTypes.size, 3, 'two rare slots plus one distinct Mystic slot')
 })
 
-test('traits: one of five, nudged by the egg', () => {
-  assert.deepEqual(TRAITS, ['Explorer', 'Foodie', 'Athlete', 'Shy', 'Collector'])
+test('traits: every Axie is an Explorer in R1', () => {
+  assert.deepEqual(TRAITS, ['Explorer'])
   assert.equal(OPPOSITES.length, 0)
-  const t = rollTraits(seq(0.01, 0.5, 0.9, 0.3, 0.7), { places: 8, distanceKm: 1, foodSnaps: 0, oneSpot: false })
-  assert.equal(t.length, 1)
-  assert.equal(t[0], 'Explorer', 'many places leads Explorer')
-  const quiet = rollTraits(seq(0.99), { places: 1, distanceKm: 0, foodSnaps: 0, oneSpot: true })
-  assert.ok(TRAITS.includes(quiet[0]))
-  const owned = traitsForOwned('6', 'Aquatic', ['Tricky', 'Catfish', 'Clamshell', 'Hero', 'Iguana', 'Ear Breathing'])
-  assert.deepEqual(owned, traitsForOwned('6', 'Aquatic', ['Tricky', 'Catfish', 'Clamshell', 'Hero', 'Iguana', 'Ear Breathing']))
-  assert.equal(owned.length, 1)
-  assert.ok(TRAITS.includes(owned[0]))
+  assert.deepEqual(rollTraits(seq(0.01, 0.5, 0.9), { places: 8, distanceKm: 1, foodSnaps: 0, oneSpot: false }), ['Explorer'])
+  assert.deepEqual(rollTraits(seq(0.99), { places: 1, distanceKm: 0, foodSnaps: 0, oneSpot: true }), ['Explorer'])
+  assert.deepEqual(traitsForOwned('6', 'Aquatic', ['Tricky', 'Catfish', 'Clamshell', 'Hero', 'Iguana', 'Ear Breathing']), ['Explorer'])
 })
 
-test('old three-trait records collapse to one current trait; a retired trait becomes null', () => {
-  assert.deepEqual(normalizeTraits(['Athlete', 'Explorer', 'Collector']), ['Athlete'])
-  assert.deepEqual(normalizeTraits(['Show-off', 'Goofball', 'Foodie']), ['Foodie'], 'the first surviving trait')
-  assert.equal(normalizeTraits(['Dreamer', 'Brave', 'Homebody']), null)
+test('records from before the change collapse to Explorer; anything else becomes null and is re-rolled', () => {
+  assert.deepEqual(normalizeTraits(['Athlete', 'Explorer', 'Collector']), ['Explorer'])
+  assert.equal(normalizeTraits(['Show-off', 'Goofball', 'Foodie']), null)
   assert.equal(normalizeTraits([]), null)
   assert.equal(normalizeTraits(undefined), null)
 })
@@ -80,8 +73,8 @@ test('wish picks weather first, then place, then trait default', () => {
   assert.equal(rain.bonus, 2)
   const harbour = wishForToday({ hour: 12, placeTypes: ['harbour'], firstsDone: [], traits: ['Foodie'], rng: () => 0 })
   assert.equal(harbour.id, 'sea')
-  const def = wishForToday({ hour: 12, placeTypes: [], firstsDone: ['sea'], traits: ['Foodie'], rng: () => 0 })
-  assert.equal(def.id, 'food')
+  const def = wishForToday({ hour: 12, placeTypes: [], firstsDone: ['sea'], traits: ['Explorer'], rng: () => 0 })
+  assert.equal(def.id, 'new-place')
 })
 
 test('moments: 24 defined, night and new place detected once', () => {

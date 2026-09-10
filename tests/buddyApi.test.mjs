@@ -848,11 +848,8 @@ test('a record from before one-trait R1 is read with one current trait', async (
   const b = buddy.getActive('device:unit-dev')
   b.traits = ['Show-off', 'Athlete', 'Dreamer'] // as the store held it before the change
   const r = await call('/api/buddy')
-  assert.deepEqual(r.body.active.traits, ['Athlete'], 'the first surviving trait')
-  b.traits = ['Dreamer', 'Brave', 'Homebody'] // all retired
+  assert.deepEqual(r.body.active.traits, ['Explorer'])
+  b.traits = ['Dreamer', 'Brave', 'Homebody']
   const r2 = await call('/api/buddy')
-  assert.equal(r2.body.active.traits.length, 1)
-  assert.ok(['Explorer', 'Foodie', 'Athlete', 'Shy', 'Collector'].includes(r2.body.active.traits[0]))
-  const r3 = await call('/api/buddy')
-  assert.deepEqual(r3.body.active.traits, r2.body.active.traits, 'the same fresh trait every time')
+  assert.deepEqual(r2.body.active.traits, ['Explorer'])
 })
