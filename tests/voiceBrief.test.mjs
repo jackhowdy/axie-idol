@@ -115,5 +115,6 @@ test('memory: what it saw is told by relative day, and a spot it has stood on be
   assert.match(once, /stood on this exact spot once before\./)
   assert.doesNotMatch(memoryFacts(b, { dayKey: '2026-09-11', timesHere: 0 }), /exact spot/)
   assert.doesNotMatch(facts, /\d/)
-  assert.match(afterPrompt(b, { dayKey: '2026-09-11' }), /That yellow duck again/)
+  assert.match(afterPrompt(b, { dayKey: '2026-09-11' }), /stood on this spot before/)
+  assert.doesNotMatch(afterPrompt(b, { dayKey: '2026-09-11' }), /again\./, 'no quotable example line for the model to copy')
 })
