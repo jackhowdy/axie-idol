@@ -245,7 +245,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       return
     }
     if (act === 'fresh-egg') {
-      if (!confirm(`${b?.name || 'Your Axie'} stays in your scrapbook. Start a fresh egg?`)) return
+      if (!confirm(`${b?.name || 'Your Axie'} will rest while you raise a new egg. You can switch back any time from Profile. Continue?`)) return
       await retire()
       await show('egg')
       return

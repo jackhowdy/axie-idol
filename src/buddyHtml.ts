@@ -86,7 +86,7 @@ export function restingRowHtml(buddies: Buddy[], activeId: string | null): strin
       <span class="bd-pill bd-pill-ok">Come back</span>
     </button>`).join('')
   return `
-      <div class="bd-card-head"><span class="bd-label">Resting Axies · ${resting.length}</span><span class="bd-link">Only one is active</span></div>
+      <div class="bd-card-head"><span class="bd-label">Resting · ${resting.length}</span><span class="bd-link">Tap one to switch</span></div>
       <div class="bd-rests">${chips}</div>`
 }
 
@@ -172,7 +172,7 @@ export function eggHtml(b: Buddy, opts: { buddies?: Buddy[] } = {}): string {
             ? 'Take it places. After five photos together it hatches into an Axie nobody else has.'
             : `${leftWord} more ${left === 1 ? 'photo' : 'photos'} together and it hatches into an Axie nobody else has.`}</p>
         </div>
-        <button type="button" class="bd-round" data-action="account" aria-label="Account">${icon('user', 18)}</button>
+        <button type="button" class="bd-pill bd-pill-btn" data-action="account" aria-label="Profile">${icon('user', 14)} Profile</button>
       </header>
       <div class="bd-egg-tile">
         <div class="bd-egg stage-${stage}"></div>
@@ -356,7 +356,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
         <div><p class="bd-eyebrow">Day ${dayCount(b)} · my Axie</p><h1>${esc(b.name)}</h1></div>
-        <span class="bd-head-actions"><span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.streak}-day streak</span><button type="button" class="bd-round" data-action="account" aria-label="Account">${icon('user', 18)}</button></span>
+        <span class="bd-head-actions"><span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.streak}-day streak</span><button type="button" class="bd-pill bd-pill-btn" data-action="account" aria-label="Profile">${icon('user', 14)} Profile</button></span>
       </header>
       <div class="bd-speech-row">${greeting
         ? `<div class="bd-speech bd-speech-home">${esc(greeting)}</div>${opts.talk ? '<button type="button" class="bd-link" data-action="talk">Talk</button>' : ''}`
@@ -380,7 +380,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
       <div class="bd-items">${wardrobe}</div>${restingRowHtml(opts.buddies || [], b.id)}
       <div class="bd-card-head"><span class="bd-label">Scrapbook · ${kept}</span><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>
       <div class="bd-book">${book}</div>
-      <p class="bd-small bd-center">Not the one? <a class="bd-link" data-action="fresh-egg">Start a fresh egg</a> · ${esc(b.name)} stays in your scrapbook · <a class="bd-link" data-action="recovery">Recovery code</a></p>
+      <p class="bd-small bd-center">Want another Axie? <a class="bd-link" data-action="fresh-egg">Hatch another egg</a> · ${esc(b.name)} rests, switch back any time in <a class="bd-link" data-action="account">Profile</a></p>
       <p class="bd-small bd-center">${wallet}</p>
     </div>
     <div class="bd-actions">
@@ -440,21 +440,25 @@ export function accountHtml(b: Buddy | null, opts: { buddies?: Buddy[]; address?
       ? `<div class="bd-row"><b>${esc(b.name)}</b><span class="bd-muted">${esc(b.kind === 'owned' ? 'owned' : `Wild ${b.class ?? 'Axie'}`)} · Bond ${b.level}</span><span class="bd-pill bd-pill-ok">Active</span></div>`
       : `<div class="bd-row"><b>Your egg</b><span class="bd-muted">${b.egg.snaps} ${b.egg.snaps === 1 ? 'snap' : 'snaps'} so far</span><span class="bd-pill bd-pill-ok">Active</span></div>`
     : '<p class="bd-small bd-muted">No Axie yet.</p>'
-  const fresh = b?.hatchedAt ? `<p class="bd-small bd-center">Not the one? <a class="bd-link" data-action="fresh-egg">Start a fresh egg</a> · ${esc(b.name)} stays in your scrapbook</p>` : ''
+  // Another Axie is an egg, not a replacement: the active one rests and comes back with one tap.
+  const another = b?.hatchedAt
+    ? `<p class="bd-small">${esc(b.name)} rests while you raise a new egg, and comes back with one tap.</p>
+      <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="fresh-egg">Hatch another egg</button></div>`
+    : b ? '<p class="bd-small bd-muted">Hatch this egg first, then you can raise another.</p>' : ''
   return `
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
         <button type="button" class="bd-round" data-action="back" aria-label="Back">${icon('back', 18)}</button>
-        <p class="bd-eyebrow">Account</p>
+        <p class="bd-eyebrow">Profile</p>
         <span class="bd-round bd-round-ghost"></span>
       </header>
-      ${identity}
       <div class="bd-card">
-        <div class="bd-card-head"><span class="bd-label">Your Axies</span><span class="bd-link">Only one is active</span></div>
+        <div class="bd-card-head"><span class="bd-label">Your Axies</span><span class="bd-link">One is active at a time</span></div>
         ${active}
         ${restingRowHtml(opts.buddies || [], b?.id || null)}
+        ${another}
       </div>
-      ${fresh}
+      ${identity}
     </div>
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="back">Back to ${b?.hatchedAt ? esc(b.name) : 'the egg'}</button></div>`
 }
