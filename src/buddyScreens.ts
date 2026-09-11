@@ -10,11 +10,11 @@ import {
   roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto,
 } from './buddy'
 import {
-  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml,
+  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml,
   bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
-export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary' | 'talk' | 'account' | 'scrapbook'
+export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary' | 'talk' | 'account' | 'scrapbook' | 'welcome'
 export type BuddyNav = {
   goSnap: () => void
   showFace: (host: HTMLElement) => Promise<void>
@@ -40,7 +40,7 @@ export type BuddyUi = {
   showBootError: () => void
 }
 
-const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary', 'talk', 'account', 'scrapbook']
+const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary', 'talk', 'account', 'scrapbook', 'welcome']
 
 export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   const sections = {} as Record<Exclude<BuddyScreen, 'auto'>, HTMLElement>
@@ -76,7 +76,8 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       }
     }
     const before = buddyState.active
-    if (which === 'auto') which = !before ? 'egg' : before.hatchedAt ? 'home' : 'egg'
+    // Nothing on this phone yet: the front door, never an egg conjured behind someone's back.
+    if (which === 'auto') which = !before ? (buddyState.buddies.length ? 'egg' : 'welcome') : before.hatchedAt ? 'home' : 'egg'
     // Never create a second egg behind an active Axie — only "fresh egg" retires one.
     if (which === 'egg' && before?.hatchedAt) which = 'home'
     if ((which === 'home' || which === 'ladder' || which === 'diary' || which === 'talk' || which === 'scrapbook') && !before?.hatchedAt) which = 'egg'
@@ -100,6 +101,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     else if (which === 'talk') html = talkHtml(buddyState.active!, exchanges)
     else if (which === 'account') html = accountHtml(buddyState.active, { buddies: buddyState.buddies, address: buddyState.address })
     else if (which === 'scrapbook') html = scrapbookHtml(buddyState.active!)
+    else if (which === 'welcome') html = welcomeHtml({ hasAxie: Boolean(buddyState.active), axieName: buddyState.active?.name, address: buddyState.address })
 
     hideSheet()
     hideAll()
@@ -233,6 +235,10 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (act === 'ronin') { await roninSignIn(); await show('claim'); return }
     if (act === 'account') { await show('account'); return }
     if (act === 'scrapbook') { await show('scrapbook'); return }
+    if (act === 'about') { await show('welcome'); return }
+    if (act === 'start-egg') { await startEgg(); await show('egg'); return }
+    // Sign in from the front door: the account may already hold an Axie, so land wherever it says.
+    if (act === 'ronin-welcome') { await roninSignIn(); await show('auto'); return }
     if (act === 'photo') { if (b) sheet(photoViewHtml(b, a.dataset.id || '')); return }
     // From the viewer: the photo leaves the book (bond and snap count stay), and the book redraws.
     if (act === 'unkeep-photo') {

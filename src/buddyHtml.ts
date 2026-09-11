@@ -460,6 +460,7 @@ export function accountHtml(b: Buddy | null, opts: { buddies?: Buddy[]; address?
       </div>
       ${identity}
     </div>
+    <p class="bd-small bd-center"><a class="bd-link" data-action="about">About Axie Idol</a></p>
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="back">Back to ${b?.hatchedAt ? esc(b.name) : 'the egg'}</button></div>`
 }
 
@@ -509,6 +510,41 @@ export function photoViewHtml(b: Buddy, photoId: string): string {
       <button type="button" class="bd-btn bd-btn-ghost" data-action="unkeep-photo" data-id="${esc(photoId)}">Don't keep</button>
       <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="close-sheet">Close</button>
     </div>`
+}
+
+/**
+ * The front door. Shown only to a phone with no egg and no Axie: what this is, the one thing to
+ * do, and the two ways a returning player gets their Axie back. Reached later from Profile as
+ * About, where the start button gives way to a way back.
+ */
+export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null; address?: string | null } = {}): string {
+  const about = Boolean(opts.hasAxie)
+  const steps = `
+      <ol class="bd-steps">
+        <li><b>Find an egg.</b> It rides along in your camera.</li>
+        <li><b>Take five pictures with it.</b> Anywhere. The longer you carry it, the rarer what hatches.</li>
+        <li><b>It hatches, and it talks.</b> One line after every photo, about what it saw and what it wants next.</li>
+      </ol>`
+  const start = about
+    ? `<div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="back">Back to ${esc(opts.axieName || 'your Axie')}</button></div>`
+    : `<div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="start-egg">Find an egg</button></div>
+    <p class="bd-small bd-center">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>`
+  return `
+    <div class="bd-scroll bd-welcome">
+      ${about ? `<header class="bd-head bd-head-row">
+        <button type="button" class="bd-round" data-action="back" aria-label="Back">${icon('back', 18)}</button>
+        <p class="bd-eyebrow">About Axie Idol</p>
+        <span class="bd-round bd-round-ghost"></span>
+      </header>` : '<p class="bd-eyebrow bd-center">Axie Vibeathon 2026</p>'}
+      <div class="bd-welcome-hero">
+        <img class="bd-welcome-egg" src="/previews/egg-1.svg" alt="" width="120" height="120">
+        <h1 class="bd-welcome-title">Axie Idol</h1>
+        <p class="bd-welcome-line">Take pictures with your Axie. It tells you what it wants to do next.</p>
+      </div>
+      <div class="bd-card">${steps}</div>
+      <p class="bd-small bd-center bd-muted">One photo is one bond. Bond opens the wardrobe and the Idol ladder. Every Axie is one of a kind.</p>
+    </div>
+    ${start}`
 }
 
 export function claimHtml(axies: OwnedAxie[], selectedId: string | null, address: string | null): string {

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -480,4 +480,23 @@ test('the scrapbook screen shows every photo it has a picture for, newest first,
   const old = photoViewHtml(b, 'p1')
   assert.match(old, /older than the book keeps/)
   assert.match(scrapbookHtml({ ...miso, photoIds: [], photos: [], snapCount: 0, photoCount: 0 }), /No photos yet/)
+})
+
+
+test('the welcome screen: find an egg, or get an Axie back; as About it only leads back', () => {
+  const fresh = welcomeHtml({})
+  assert.match(fresh, /Axie Idol/)
+  assert.match(fresh, /Take pictures with your Axie/)
+  assert.match(fresh, /data-action="start-egg">Find an egg/)
+  assert.match(fresh, /data-action="ronin-welcome"/)
+  assert.match(fresh, /data-action="recover"/)
+  assert.doesNotMatch(fresh, /data-action="back"/)
+  const signed = welcomeHtml({ address: '0xabc' })
+  assert.match(signed, /data-action="claim"/)
+  assert.doesNotMatch(signed, /ronin-welcome/)
+  const about = welcomeHtml({ hasAxie: true, axieName: 'Pip' })
+  assert.match(about, /About Axie Idol/)
+  assert.match(about, /data-action="back">Back to Pip/)
+  assert.doesNotMatch(about, /start-egg/, 'no second egg from the About page')
+  assert.match(accountHtml(miso, { buddies: [miso], address: null }), /data-action="about"/)
 })
