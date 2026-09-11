@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -454,10 +454,30 @@ test('the scrapbook shows every kept photo, newest first, numbered down from the
   const ids = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8']
   const b = { ...miso, photoIds: ids, photos: ids.map((id) => ({ id, imagePath: `/uploads/${id}.png`, at: 'x' })), snapCount: 8, photoCount: 8 }
   const html = homeHtml(b, null)
-  assert.match(html, /Scrapbook · 8/)
-  const thumbs = html.match(/class="bd-thumb"/g) || []
+  assert.match(html, /data-action="scrapbook">Scrapbook · 8/)
+  const thumbs = html.match(/class="bd-thumb" data-action="photo"/g) || []
   assert.equal(thumbs.length, 8, 'eight thumbnails for eight photos')
-  assert.ok(html.indexOf('data-photo-id="p8"') < html.indexOf('data-photo-id="p1"'), 'newest first')
-  assert.match(html, /data-photo-id="p8">[^<]*<img[^>]*><small>8<\/small>/)
-  assert.match(html, /data-photo-id="p1">[^<]*<img[^>]*><small>1<\/small>/)
+  assert.ok(html.indexOf('data-id="p8"') < html.indexOf('data-id="p1"'), 'newest first')
+  assert.match(html, /data-id="p8" aria-label="Photo 8">[^<]*<img[^>]*><small>8<\/small>/)
+  assert.match(html, /data-id="p1" aria-label="Photo 1">[^<]*<img[^>]*><small>1<\/small>/)
+})
+
+
+test('the scrapbook screen shows every photo it has a picture for, newest first, and opens one', () => {
+  const ids = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10']
+  const b = { ...miso, createdAt: '2026-09-09T02:00:00Z', photoIds: ids, photos: ids.slice(2).map((id) => ({ id, imagePath: `/uploads/${id}.png`, at: '2026-09-11T03:00:00Z' })), snapCount: 10, photoCount: 10 }
+  const html = scrapbookHtml(b)
+  assert.match(html, /Scrapbook · 10/)
+  assert.equal((html.match(/class="bd-tile"/g) || []).length, 8, 'eight have pictures')
+  assert.ok(html.indexOf('data-id="p10"') < html.indexOf('data-id="p3"'), 'newest first')
+  assert.match(html, /2 older photos are counted but not shown/)
+  assert.match(html, /data-action="snap"/)
+  const view = photoViewHtml(b, 'p10')
+  assert.match(view, /Photo 10 · Day 3/)
+  assert.match(view, /src="\/uploads\/p10\.png"/)
+  assert.match(view, /data-action="unkeep-photo" data-id="p10"/)
+  assert.match(view, /data-action="close-sheet"/)
+  const old = photoViewHtml(b, 'p1')
+  assert.match(old, /older than the book keeps/)
+  assert.match(scrapbookHtml({ ...miso, photoIds: [], photos: [], snapCount: 0, photoCount: 0 }), /No photos yet/)
 })

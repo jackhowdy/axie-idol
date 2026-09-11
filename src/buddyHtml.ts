@@ -341,7 +341,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
     .map((id, i) => {
       const path = photoPath(b, id)
       const art = path ? `<img class="bd-thumb-img" src="${esc(path)}" alt="" loading="lazy">` : ''
-      return `<span class="bd-thumb" data-photo-id="${esc(id)}">${art}<small>${kept - i}</small></span>`
+      return `<button type="button" class="bd-thumb" data-action="photo" data-id="${esc(id)}" aria-label="Photo ${kept - i}">${art}<small>${kept - i}</small></button>`
     }).join('')
     || '<span class="bd-small bd-muted">No photos yet. The first one starts the book.</span>'
   const who = b.kind === 'owned' ? `${esc(b.name)} · owned${b.axieId ? ` #${esc(b.axieId)}` : ''}` : `Wild ${esc(b.class ?? 'Axie')}`
@@ -378,7 +378,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
       ${wishPillHtml(b) || '<p class="bd-small bd-muted">A new wish arrives each morning.</p>'}
       <div class="bd-card-head"><span class="bd-label">Wardrobe · ${b.wardrobe.unlocked.filter((u) => WEARABLES.includes(u)).length} of ${WEARABLES.length}</span><a class="bd-link" data-action="ladder">Growth ladder</a></div>
       <div class="bd-items">${wardrobe}</div>${restingRowHtml(opts.buddies || [], b.id)}
-      <div class="bd-card-head"><span class="bd-label">Scrapbook · ${kept}</span><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>
+      <div class="bd-card-head"><a class="bd-label bd-link" data-action="scrapbook">Scrapbook · ${kept} ${icon('chevron', 12)}</a><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>
       <div class="bd-book">${book}</div>
       <p class="bd-small bd-center">Want another Axie? <a class="bd-link" data-action="fresh-egg">Hatch another egg</a> · ${esc(b.name)} rests, switch back any time in <a class="bd-link" data-action="account">Profile</a></p>
       <p class="bd-small bd-center">${wallet}</p>
@@ -461,6 +461,54 @@ export function accountHtml(b: Buddy | null, opts: { buddies?: Buddy[]; address?
       ${identity}
     </div>
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="back">Back to ${b?.hatchedAt ? esc(b.name) : 'the egg'}</button></div>`
+}
+
+/** A photo's place in the story: "Day 3 · Thu 11 Sep". Day 1 is the day the egg was found. */
+function photoDayLabel(b: Buddy, at: string): string {
+  const t = Date.parse(at)
+  if (Number.isNaN(t)) return ''
+  const day = dayCount(b, t)
+  const d = new Date(t)
+  return `Day ${day} · ${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}`
+}
+
+/**
+ * Every kept photo, newest first, in a grid. Photos older than the server keeps thumbnails for
+ * (sixty) are counted on the label but not shown; the count is the true size of the book.
+ */
+export function scrapbookHtml(b: Buddy): string {
+  const kept = b.photoCount ?? b.snapCount
+  const photos = (b.photos || []).slice().reverse()
+  const tiles = photos.map((p, i) => `
+      <button type="button" class="bd-tile" data-action="photo" data-id="${esc(p.id)}" aria-label="Photo ${kept - i}">
+        ${p.imagePath ? `<img class="bd-thumb-img" src="${esc(p.imagePath)}" alt="" loading="lazy">` : ''}<small>${kept - i}</small>
+      </button>`).join('')
+  const missing = kept - photos.length
+  return `
+    <div class="bd-scroll">
+      <header class="bd-head bd-head-row">
+        <button type="button" class="bd-round" data-action="home" aria-label="Back">${icon('back', 18)}</button>
+        <p class="bd-eyebrow">Scrapbook · ${kept}</p>
+        <span class="bd-round bd-round-ghost"></span>
+      </header>
+      ${tiles ? `<div class="bd-grid3">${tiles}</div>` : '<p class="bd-small bd-muted bd-center">No photos yet. The first one starts the book.</p>'}
+      ${missing > 0 ? `<p class="bd-small bd-muted bd-center">${missing} older ${missing === 1 ? 'photo is' : 'photos are'} counted but not shown here.</p>` : ''}
+    </div>
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="snap">${icon('camera', 20)} Add a photo</button></div>`
+}
+
+/** One photo, full width, with its day and the way out of the book. */
+export function photoViewHtml(b: Buddy, photoId: string): string {
+  const p = (b.photos || []).find((x) => x.id === photoId) || null
+  const index = b.photoIds.indexOf(photoId)
+  const number = index >= 0 ? (b.photoCount ?? b.snapCount) - (b.photoIds.length - 1 - index) : null
+  return `
+    <p class="bd-eyebrow">${number ? `Photo ${number}` : 'Photo'}${p ? ` · ${esc(photoDayLabel(b, p.at))}` : ''}</p>
+    ${p?.imagePath ? `<img class="bd-photo-full" src="${esc(p.imagePath)}" alt="">` : '<p class="bd-small bd-muted">This one is older than the book keeps pictures for.</p>'}
+    <div class="bd-actions">
+      <button type="button" class="bd-btn bd-btn-ghost" data-action="unkeep-photo" data-id="${esc(photoId)}">Don't keep</button>
+      <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="close-sheet">Close</button>
+    </div>`
 }
 
 export function claimHtml(axies: OwnedAxie[], selectedId: string | null, address: string | null): string {

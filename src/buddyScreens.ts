@@ -10,11 +10,11 @@ import {
   roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto,
 } from './buddy'
 import {
-  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml,
+  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml,
   bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
-export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary' | 'talk' | 'account'
+export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary' | 'talk' | 'account' | 'scrapbook'
 export type BuddyNav = {
   goSnap: () => void
   showFace: (host: HTMLElement) => Promise<void>
@@ -40,7 +40,7 @@ export type BuddyUi = {
   showBootError: () => void
 }
 
-const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary', 'talk', 'account']
+const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary', 'talk', 'account', 'scrapbook']
 
 export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   const sections = {} as Record<Exclude<BuddyScreen, 'auto'>, HTMLElement>
@@ -79,7 +79,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (which === 'auto') which = !before ? 'egg' : before.hatchedAt ? 'home' : 'egg'
     // Never create a second egg behind an active Axie — only "fresh egg" retires one.
     if (which === 'egg' && before?.hatchedAt) which = 'home'
-    if ((which === 'home' || which === 'ladder' || which === 'diary' || which === 'talk') && !before?.hatchedAt) which = 'egg'
+    if ((which === 'home' || which === 'ladder' || which === 'diary' || which === 'talk' || which === 'scrapbook') && !before?.hatchedAt) which = 'egg'
     if (which === 'hatch' && !before) which = 'egg'
     // R1 ships without typed chat: the Axie speaks after photos instead.
     if (which === 'talk' && !talkEnabled) which = 'home'
@@ -99,6 +99,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     else if (which === 'diary') html = diaryHtml(await getJson<Diary>('/api/buddy/diary'), buddyState.active!)
     else if (which === 'talk') html = talkHtml(buddyState.active!, exchanges)
     else if (which === 'account') html = accountHtml(buddyState.active, { buddies: buddyState.buddies, address: buddyState.address })
+    else if (which === 'scrapbook') html = scrapbookHtml(buddyState.active!)
 
     hideSheet()
     hideAll()
@@ -231,6 +232,17 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (act === 'claim') { await show('claim'); return }
     if (act === 'ronin') { await roninSignIn(); await show('claim'); return }
     if (act === 'account') { await show('account'); return }
+    if (act === 'scrapbook') { await show('scrapbook'); return }
+    if (act === 'photo') { if (b) sheet(photoViewHtml(b, a.dataset.id || '')); return }
+    // From the viewer: the photo leaves the book (bond and snap count stay), and the book redraws.
+    if (act === 'unkeep-photo') {
+      const id = a.dataset.id || ''
+      if (!id || !confirm('Take this photo out of the scrapbook? The snap still counts.')) return
+      hideSheet()
+      await unkeepPhoto(id)
+      await show(sections.scrapbook.hidden ? 'home' : 'scrapbook')
+      return
+    }
     // Signing in from the Account screen stays on it: the point is to keep what you have, not to pick.
     if (act === 'ronin-account') { await roninSignIn(); await show('account'); return }
     if (act === 'select-axie') { claimPick = a.dataset.id || null; await show('claim'); return }
