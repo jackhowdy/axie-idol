@@ -914,3 +914,13 @@ test('a caption that drags the line off the rules gets one more look without it'
   assert.doesNotMatch(voice.calls[1].user, /your person wrote/, 'the second look leaves the caption out')
   assert.equal(look.body.line, 'That black bag is big. Let us look inside.')
 })
+
+
+test('without a model the morning line is the wish itself', async () => {
+  const { buddy, call } = directModule()
+  await call('/api/buddy/egg', { method: 'POST' })
+  for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
+  await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
+  const r = await call('/api/buddy')
+  assert.equal(r.body.greeting, `${r.body.active.wish.text}.`)
+})

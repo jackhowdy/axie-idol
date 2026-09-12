@@ -140,3 +140,13 @@ test('the caption reaches the model as the person\'s words, tidied and bounded, 
   assert.match(long, /"x{140}"/)
   assert.doesNotMatch(long, /x{141}/)
 })
+
+
+test('the first line of the day asks for the wish in the Axie\'s own words; once it came true, a plain greeting', () => {
+  const p = greetingPrompt(miso, { dayKey: '2026-09-11' })
+  assert.match(p, /Today you want this: "Take me somewhere that smells like garlic"/)
+  assert.match(p, /asking your person for it, in your own words \(do not repeat those words\)/)
+  const done = greetingPrompt({ ...miso, wish: { ...miso.wish, done: true } }, { dayKey: '2026-09-11' })
+  assert.doesNotMatch(done, /Today you want this/)
+  assert.match(done, /greet them in one or two short sentences/)
+})

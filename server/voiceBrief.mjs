@@ -155,9 +155,15 @@ export function afterPrompt(b, ctx) {
   return `${memoryFacts(b, ctx)}${captionFact(ctx.caption)}\nYour person just took this photo with you in it. First, "clear": true only if you can plainly make out real things in it; false if it is dark, blurred, or you would be guessing. When "clear" is false, "seen" is an empty list and your line is about not seeing well, in your voice, and names no object at all, not even inside a question: it is dark, or everything went wobbly, or where are we. Otherwise "seen": up to four plain lowercase nouns for the main things in the photo besides yourself (singular, no brand names, no people's names; a person is "person"). Then "line": your reaction, one or two short sentences in your voice, about one thing that is really in the photo. Only things you can see: never add stairs, roofs or animals that are not there. Say what you noticed and what you want to do with it, in plain words. Memory: you may mention, in your own words, that you have stood on this spot before, or that a thing here is one you saw in an earlier photo, but only if that thing is listed above in what you saw; a thing you have never seen listed is new to you, even on a spot you know. Not every time. Vary the shape: sometimes a question, sometimes a plan ("Let's go up that."), sometimes just what you noticed and how it made you feel ("That slide is so red. I like it."). Not every line is a question. Spell any number as a word.`
 }
 
+/**
+ * The first line of the day is the Axie asking for today's wish, in its own words: one bubble on
+ * Home instead of a greeting and a wish card that said the same thing twice. Once the wish has
+ * come true the line is about the day instead.
+ */
 export function greetingPrompt(b, ctx) {
   const back = ctx.daysAway >= 2 ? 'They were away for a while and just came back: be glad, never guilt them.' : 'This is the first time they open the app today.'
-  return `${memoryFacts(b, ctx)}\nYour person just opened the app. ${back} "line": greet them in one or two short sentences in your voice, with a want or a plan for today. If you name a thing, it must be one you actually saw (listed above); otherwise keep the plan general, like somewhere new or somewhere we have not been. Spell any number as a word.`
+  const wish = b?.wish?.text && !b.wish.done ? ` Today you want this: "${b.wish.text}". Your line is you asking your person for it, in your own words (do not repeat those words), one or two short sentences.` : ' "line": greet them in one or two short sentences in your voice, with a want or a plan for today.'
+  return `${memoryFacts(b, ctx)}\nYour person just opened the app. ${back}${wish} If you name a thing, it must be one you actually saw (listed above); otherwise keep it general, like somewhere new or somewhere we have not been. Spell any number as a word.`
 }
 
 export function talkPrompt(b, ctx, history, text) {

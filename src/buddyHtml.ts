@@ -120,15 +120,20 @@ export function vfChipHtml(b: Buddy): string {
  * the delegated handler only runs inside `.buddy` / `#buddy-sheet`, and marking a wish
  * done mid-shot would navigate away from the viewfinder.
  */
-export function wishPillHtml(b: Buddy, opts: { interactive?: boolean } = {}): string {
+export function wishPillHtml(b: Buddy, opts: { interactive?: boolean; compact?: boolean } = {}): string {
   if (!b.wish.id) return ''
   const done = b.wish.done
   const tappable = !done && opts.interactive !== false
   const tag = tappable ? 'button' : 'div'
   const extra = tappable ? ' type="button" data-action="wish-done"' : ''
+  // compact: the bubble above already says the wish in the Axie's words, so the row is only the
+  // action and the bonus, not the wish text a second time
+  const text = opts.compact
+    ? `${done ? 'Wish done today' : 'Today\'s wish'}<small>${done ? 'It came true' : 'Tap when you have it'}</small>`
+    : `${esc(b.wish.text)}<small>${done ? 'Done today' : "Today's wish · tap when you have it"}</small>`
   return `<${tag} class="bd-row bd-wish${done ? ' done' : ''}"${extra}>
     <span class="bd-wish-dot">${icon(done ? 'star' : 'heart', 15)}</span>
-    <span class="bd-wish-text">${esc(b.wish.text)}<small>${done ? 'Done today' : "Today's wish · tap when you have it"}</small></span>
+    <span class="bd-wish-text">${text}</span>
     <b class="${done ? 'bd-ok' : 'bd-hot'}">+${b.wish.bonus} bond</b>
   </${tag}>`
 }
@@ -348,6 +353,8 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
   // The Mystic glow arrives at bond level 10 and stays on: the hero box glows in the CSS, the
   // camera layer and the capture get the same treatment from main.ts.
   const glow = b.level >= 10 ? ' bd-glow' : ''
+  // One bubble: the Axie asking for today's wish in its words (the greeting), else the wish itself.
+  const line = greeting || (b.wish.id && !b.wish.done ? `${b.wish.text}.` : '')
   // The only wallet entry point once the egg has hatched — the egg screen's version is gone by then.
   const wallet = opts.address
     ? '<a class="bd-link" data-action="claim">Wallet connected · pick another Axie</a>'
@@ -358,10 +365,13 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
         <div><p class="bd-eyebrow">Day ${dayCount(b)} · my Axie</p><h1>${esc(b.name)}</h1></div>
         <span class="bd-head-actions"><span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.streak}-day streak</span><button type="button" class="bd-pill bd-pill-btn" data-action="account" aria-label="Profile">${icon('user', 14)} Profile</button></span>
       </header>
-      <div class="bd-speech-row">${greeting
-        ? `<div class="bd-speech bd-speech-home">${esc(greeting)}</div>${opts.talk ? '<button type="button" class="bd-link" data-action="talk">Talk</button>' : ''}`
-        : `<div class="bd-speech bd-speech-home bd-speech-quiet">${esc(b.name)}</div>${opts.talk ? `<button type="button" class="bd-link" data-action="talk">Talk to ${esc(b.name)}</button>` : ''}`
-      }</div>
+      <div class="bd-card bd-ask">
+        <div class="bd-speech-row">${line
+          ? `<div class="bd-speech bd-speech-home">${esc(line)}</div>${opts.talk ? '<button type="button" class="bd-link" data-action="talk">Talk</button>' : ''}`
+          : `<div class="bd-speech bd-speech-home bd-speech-quiet">${esc(b.name)}</div>${opts.talk ? `<button type="button" class="bd-link" data-action="talk">Talk to ${esc(b.name)}</button>` : ''}`
+        }</div>
+        ${wishPillHtml(b, { compact: true })}
+      </div>
       <div class="bd-card bd-hero">
         <div class="bd-hero-row">
           <div class="bd-hero-3d${glow}" data-face="buddy"${opts.talk ? ' data-action="talk"' : ''}><span class="bd-badge">${icon('star', 11)} Bond ${b.level}</span></div>
@@ -374,8 +384,6 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
         </div>
         ${meter}
       </div>
-      <div class="bd-card-head"><span class="bd-label">${esc(b.name)}'s wishes</span><span class="bd-link">Wishes add extra bond</span></div>
-      ${wishPillHtml(b) || '<p class="bd-small bd-muted">A new wish arrives each morning.</p>'}
       <div class="bd-card-head"><span class="bd-label">Wardrobe · ${b.wardrobe.unlocked.filter((u) => WEARABLES.includes(u)).length} of ${WEARABLES.length}</span><a class="bd-link" data-action="ladder">Growth ladder</a></div>
       <div class="bd-items">${wardrobe}</div>${restingRowHtml(opts.buddies || [], b.id)}
       <div class="bd-card-head"><a class="bd-label bd-link" data-action="scrapbook">Scrapbook · ${kept} ${icon('chevron', 12)}</a><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>

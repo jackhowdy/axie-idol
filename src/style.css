@@ -3731,6 +3731,8 @@ button.id-chip {
 .bd-speech-stack { display: flex; flex-direction: column; gap: 6px; }
 .bd-speech-stack:empty { display: none; }
 .bd-speech-row { display: flex; align-items: center; gap: 8px; }
+.bd-ask { gap: 8px; padding: 10px 10px 8px; }
+.bd-ask .bd-speech-home { margin: 0; }
 .bd-speech-home { flex: 1 1 auto; }
 
 /* --- hero (home + hatch) --- */

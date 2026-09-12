@@ -428,7 +428,8 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       line = ruled(out?.line)
       if (line) heard(b, line)
     }
-    if (!line) line = say(b, situation, { count: wordsFor(daysSince(b.hatchedAt)), days: wordsFor(daysAway), ...(weather ? { weather } : {}) })
+    // Without the model, the wish itself is the line: it is already written in the Axie's voice.
+    if (!line) line = b.wish?.text && !b.wish.done && situation === 'morning' ? `${b.wish.text}.` : say(b, situation, { count: wordsFor(daysSince(b.hatchedAt)), days: wordsFor(daysAway), ...(weather ? { weather } : {}) })
     b.greeting = { day, situation, line }
     return line
   }

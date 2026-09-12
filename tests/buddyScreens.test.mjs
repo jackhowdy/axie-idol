@@ -500,3 +500,26 @@ test('the welcome screen: find an egg, or get an Axie back; as About it only lea
   assert.doesNotMatch(about, /start-egg/, 'no second egg from the About page')
   assert.match(accountHtml(miso, { buddies: [miso], address: null }), /data-action="about"/)
 })
+
+
+test('home has one ask, not two: the bubble carries the wish in the Axie\'s words and the row only the action', () => {
+  const wishing = { ...miso, wish: { id: 'new-place', text: "Take me somewhere you've never taken me", bonus: 2, done: false } }
+  const withGreeting = homeHtml(wishing, "Morning. Let's find somewhere we have never been.")
+  assert.doesNotMatch(withGreeting, /'s wishes/, 'no separate wish card')
+  assert.doesNotMatch(withGreeting, /Wishes add extra bond/)
+  assert.equal((withGreeting.match(/never taken me/g) || []).length, 0, 'the wish text is not repeated under the bubble')
+  assert.match(withGreeting, /class="bd-speech bd-speech-home">Morning\. Let&#39;s find somewhere we have never been\./)
+  assert.match(withGreeting, /data-action="wish-done"/)
+  assert.match(withGreeting, /Today's wish<small>Tap when you have it<\/small>/)
+  assert.match(withGreeting, /\+2 bond/)
+  // no greeting yet (model off, or first paint): the wish itself is the bubble
+  const plain = homeHtml(wishing, null)
+  assert.match(plain, /class="bd-speech bd-speech-home">Take me somewhere you&#39;ve never taken me\./)
+  assert.equal((plain.match(/never taken me/g) || []).length, 1, 'said once')
+  // done: the row says so and the bubble is the greeting
+  const done = homeHtml({ ...wishing, wish: { ...wishing.wish, done: true } }, 'Good one today. Somewhere new tomorrow?')
+  assert.match(done, /Wish done today<small>It came true<\/small>/)
+  assert.doesNotMatch(done, /data-action="wish-done"/)
+  // the camera HUD still shows the wish text itself
+  assert.match(wishPillHtml(wishing, { interactive: false }), /never taken me/)
+})
