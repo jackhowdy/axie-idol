@@ -29,20 +29,7 @@
     "@noble/hashes": "1.4.0",
     "@noble/secp256k1": "2.1.0",
     "@sky-mavis/waypoint": "4.2.2",
-    "pixi-spine": "4.0.3",
-    "pixi.js": "7.2.4",
     "sirv": "^2.0.4",
     "three": "0.178.0"
-  },
-  "overrides": {
-    "pixi.js": "7.2.4",
-    "@pixi/core": "7.2.4",
-    "@pixi/display": "7.2.4",
-    "@pixi/math": "7.2.4",
-    "@pixi/utils": "7.2.4",
-    "@pixi/sprite": "7.2.4",
-    "@pixi/constants": "7.2.4",
-    "@pixi/ticker": "7.2.4",
-    "@pixi/assets": "7.2.4"
   }
 }

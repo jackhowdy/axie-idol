@@ -11,7 +11,6 @@ import type { Sticker3D } from './sticker3d'
 import { createAxie3D, getAxieMixer, isAxieMixerReady, parsePartId, type Axie3D, type Axie3DSpec } from './axie3d'
 import { descriptorFor, isCustomFace } from './castDescriptors'
 import type { PropOverlay } from './propOverlay'
-import type { SpineSticker } from './spineSticker'
 import {
   buddyEnabled, bindDeviceKey, loadBuddy, buddyState, faceIdForBuddy, snapContext, beforeLine,
   wear, lsGet, lsSet, buddyHeaders,
@@ -1044,7 +1043,6 @@ async function snapshotFace(id: string): Promise<string | null> {
     return null
   }
 }
-let spineSticker: SpineSticker | null = null
 let propOverlay: PropOverlay | null = null
 let equippedProp: PropId | null = null
 let equipRequest = 0
@@ -1178,7 +1176,6 @@ function applyStickerTransform(): void {
   stickerTarget.style.top = `${state.y + gy}px`
   stickerTarget.style.transform = `translate(-50%, -50%) rotate(${state.rotation}deg) scale(${state.scale})`
   sticker3d?.setLean(gx, gy)
-  spineSticker?.setLean?.(gx, gy)
   syncLeadShinyClass()
   positionWardrobeOverlay()
 
@@ -2402,7 +2399,6 @@ async function captureComposite(): Promise<void> {
   const cy = (state.y + state.gyroY) * scaleX
   captureAnchor = null
 
-  const useSpine = Boolean(spineSticker?.ready && spineSticker.canvas)
   const use3d = Boolean(sticker3d?.ready)
   const useMixer = Boolean(axie3d?.ready)
   if (useMixer && axie3d) {
@@ -2444,18 +2440,6 @@ async function captureComposite(): Promise<void> {
       ctx.drawImage(wardrobeOverlay, -ow / 2, -oh / 2, ow, oh)
       ctx.restore()
     }
-  } else if (useSpine && spineSticker) {
-    spineSticker.renderNow()
-    const spCanvas = spineSticker.canvas
-    const baseW = spCanvas.clientWidth * scaleX
-    const baseH = spCanvas.clientHeight * scaleX
-    ctx.save()
-    if (leadShiny && !customAxieId) ctx.filter = SHINY_FILTER
-    ctx.translate(cx, cy)
-    ctx.rotate((state.rotation * Math.PI) / 180)
-    ctx.scale(state.scale, state.scale)
-    ctx.drawImage(spCanvas, -baseW / 2, -baseH / 2, baseW, baseH)
-    ctx.restore()
   } else if (use3d && sticker3d) {
     sticker3d.renderNow()
     const glCanvas = sticker3d.canvas
@@ -2531,7 +2515,6 @@ async function captureComposite(): Promise<void> {
   if (buddyEnabled && buddyState.active && !buddyState.active.hatchedAt) void stampEggLine(blob, captureSeq)
   else void lookAtCapture(blob, captureSeq)
 
-  disposeSpineSticker()
   disposeSticker3D()
   disposeAxie3D()
   disposePropOverlay()
@@ -2913,23 +2896,6 @@ frameTray?.addEventListener('click', (e) => {
 })
 
 
-function disposeSpineSticker(): void {
-  if (!spineSticker) return
-  const wasTarget = stickerTarget === spineSticker.canvas
-  try {
-    spineSticker.dispose()
-  } catch (err) {
-    console.warn('[axie-idol] Spine dispose failed', err)
-  }
-  spineSticker = null
-  if (wasTarget) {
-    stickerImg.hidden = false
-    stickerImg.style.pointerEvents = 'auto'
-    bindStickerPointers(stickerImg)
-    applyStickerTransform()
-  }
-}
-
 function disposeSticker3D(): void {
   if (!sticker3d) return
   if (stickerTarget === sticker3d.canvas) stickerTarget = stickerImg
@@ -2989,7 +2955,6 @@ function hideBuddyStandIn(): void {
 }
 
 async function initSticker3D(): Promise<void> {
-  disposeSpineSticker()
   const cast = activeCast
   const req = ++castRequest
   const url = mascotGlbUrl(cast)
@@ -3101,8 +3066,6 @@ async function selectCast(id: FaceId): Promise<void> {
     showLiveToast('Keep questing to unlock this cast', 1800)
     return
   }
-  // Returning to kit cast clears any CDN Axie ID sticker / Spine
-  disposeSpineSticker()
   const wasCustom = customAxieId !== null
   customAxieId = null
   ownedAuthorLabel = null
@@ -3193,7 +3156,6 @@ async function loadAxieIdSticker(
   }
   // Cancel in-flight GLB / cast loads
   const req = ++castRequest
-  disposeSpineSticker()
   disposeSticker3D()
   disposeAxie3D()
   syncCastTrayUI()

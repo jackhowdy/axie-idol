@@ -404,7 +404,8 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       if (grid && !e.grids.includes(grid)) e.grids.push(grid)
       if (typeof ctx.lat === 'number' && typeof ctx.lng === 'number') {
         if (e.lastLatLng) e.distanceKm += kmBetween(e.lastLatLng, { lat: ctx.lat, lng: ctx.lng })
-        e.lastLatLng = { lat: ctx.lat, lng: ctx.lng }
+        // kept to about a hundred metres: enough to measure a walk, not enough to find a door
+        e.lastLatLng = { lat: Math.round(ctx.lat * 1000) / 1000, lng: Math.round(ctx.lng * 1000) / 1000 }
       }
       if (labels.some((l) => /noodle|food|tart|bun|rice|coffee|tea|cake/i.test(l))) e.foodSnaps += 1
       save(store)
