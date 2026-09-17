@@ -3799,7 +3799,7 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 /* hero */
 .lp-hero { display: flex; flex-direction: column; gap: 18px; padding: 22px 16px 8px; }
 .lp-hero-copy { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
-.lp-h1 { font-size: 34px; line-height: 1.06; margin: 0; letter-spacing: -0.015em; text-wrap: balance; }
+.buddy .lp-h1 { font-size: 34px; line-height: 1.06; margin: 0; letter-spacing: -0.015em; text-wrap: balance; }
 .lp-lede { font-size: 15px; font-weight: 700; color: var(--muted); margin: 0; max-width: 40ch; line-height: 1.45; }
 .lp-cta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; width: 100%; padding-top: 4px; }
 .lp-cta .bd-btn { font-size: 17px; padding: 15px 28px; flex: 1 1 auto; }
@@ -3819,7 +3819,7 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 /* sections */
 .lp-section { display: flex; flex-direction: column; gap: 10px; padding: 26px 16px 6px; }
 .lp-section + .lp-section { border-top: 1px solid var(--border); margin-top: 18px; }
-.lp-h2 { font-size: 22px; line-height: 1.15; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.buddy .lp-h2 { font-size: 22px; line-height: 1.15; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
 .lp-sub { margin: 0; font-size: 14px; font-weight: 700; color: var(--muted); line-height: 1.45; max-width: 60ch; }
 .lp-steps { list-style: none; counter-reset: step; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .lp-steps li { counter-increment: step; display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto auto; column-gap: 12px; row-gap: 2px; padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px; }
@@ -3866,7 +3866,7 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
   .lp-nav a:hover { color: var(--text); }
   .lp-hero { flex-direction: row; align-items: center; gap: 56px; width: min(100% - 48px, 1120px); margin: 0 auto; padding: 64px 0 40px; }
   .lp-hero-copy { flex: 1 1 0; gap: 16px; }
-  .lp-h1 { font-size: 56px; max-width: 13ch; }
+  .buddy .lp-h1 { font-size: 56px; max-width: 13ch; }
   .lp-lede { font-size: 18px; max-width: 44ch; }
   .lp-cta .bd-btn { flex: 0 0 auto; padding: 16px 40px; }
   .lp-hero-shot { flex: 0 0 420px; height: auto; aspect-ratio: 3 / 4; }
@@ -3875,7 +3875,7 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
   .lp-hero-shot .bd-w-bubble { font-size: 17px; max-width: 340px; }
   .lp-section { width: min(100% - 48px, 1120px); margin: 0 auto; padding: 56px 0 8px; gap: 12px; }
   .lp-section + .lp-section { margin-top: 32px; }
-  .lp-h2 { font-size: 34px; }
+  .buddy .lp-h2 { font-size: 34px; }
   .lp-sub { font-size: 16px; }
   .lp-steps { flex-direction: row; gap: 16px; }
   .lp-steps li { flex: 1 1 0; grid-template-columns: 1fr; grid-template-rows: auto auto auto; row-gap: 8px; padding: 22px; }
