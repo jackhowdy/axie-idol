@@ -119,8 +119,7 @@ Create the repository (it can stay private) and paste its address here:
 
 If it stays private, add the judges' GitHub accounts as collaborators when the organisers name them.
 
-## Also required by the rules (section 4), in case the form asks
+## Also in the repository, in case the form asks
 
-- **Fallback demonstration video:** not recorded yet.
 - **Known issues, AI and asset disclosures, pre-existing work, dependencies:** in `README.md`.
 - **Supported devices:** in `README.md` under "Controls and supported devices".
