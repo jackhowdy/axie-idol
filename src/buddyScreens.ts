@@ -10,7 +10,7 @@ import {
   roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto, pet, treat, playResult, visitAxie, type HappyChange,
 } from './buddy'
 import {
-  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml,
+  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml, topBarHtml,
   bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
@@ -159,6 +159,10 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     else if (which === 'account') html = accountHtml(buddyState.active, { buddies: buddyState.buddies, address: buddyState.address })
     else if (which === 'scrapbook') html = scrapbookHtml(buddyState.active!)
     else if (which === 'welcome') html = welcomeHtml({ hasAxie: Boolean(buddyState.active), axieName: buddyState.active?.name, address: buddyState.address })
+
+    // Every game screen carries the top bar. Home and the egg draw their own (they are rendered
+    // without this module in tests); the homepage has its own header.
+    if (which !== 'welcome' && which !== 'home' && which !== 'egg') html = topBarHtml(which, Boolean(buddyState.active?.hatchedAt)) + html
 
     hideSheet()
     hideAll()

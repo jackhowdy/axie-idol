@@ -4199,3 +4199,4 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
   .bd-top .lp-mark { width: 38px; height: 38px; }
   .buddy .bd-top + .bd-scroll:not(.lp) { padding-top: 24px; }
 }
+.bd-top .bd-pill-btn.on { border-color: var(--accent-hot); color: var(--accent-hot); }

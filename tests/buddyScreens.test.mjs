@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml, topBarHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -105,6 +105,12 @@ test('the hub screens carry a top bar: the logo and a Homepage button lead to th
   assert.match(home, /data-action="account"[^>]*>.*Profile/s)
   assert.match(home, /class="bd-top-link on" data-action="home">My Axie/)
   for (const where of ['scrapbook', 'ladder', 'monthly']) assert.match(home, new RegExp(`bd-top-link" data-action="${where}"`), where)
+  // the other screens get the same bar from the screen mounter, with their own link lit
+  assert.match(topBarHtml('scrapbook', true), /class="bd-top-link on" data-action="scrapbook"/)
+  assert.match(topBarHtml('ladder', true), /class="bd-top-link on" data-action="ladder">Growth/)
+  assert.match(topBarHtml('monthly', false), /class="bd-top-link on" data-action="monthly"/)
+  assert.doesNotMatch(topBarHtml('diary', true), /bd-top-link on/, 'a screen with no link of its own lights none')
+  assert.match(topBarHtml('account', true), /bd-pill-btn on" data-action="account"/)
   const eggScreen = eggHtml(egg)
   assert.match(eggScreen, /<header class="bd-top">/); assert.match(eggScreen, /My egg/)
   assert.doesNotMatch(eggScreen, /data-action="scrapbook"/, 'an egg has no scrapbook to link to')

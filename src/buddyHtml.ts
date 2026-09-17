@@ -267,23 +267,24 @@ export function hatchHtml(b: Buddy, lines: string[]): string {
 const WEARABLES = ['hat', 'scarf', 'shades', 'cape', 'crown']
 
 /**
- * The bar across the top of the game's hub screens (the egg, Home): the logo, which leads to the
+ * The bar across the top of every game screen (not the camera, not the homepage, which has its
+ * own): the logo, which leads to the
  * homepage like any site's logo, the places you can go from here, and an explicit Homepage button
  * for anyone who does not think to press a logo. On a phone the links fold away and the name
  * shrinks to the star, so the bar stays one line.
  */
-export function topBarHtml(current: 'home' | 'egg', hatched: boolean): string {
+export function topBarHtml(current: string, hatched: boolean): string {
   const link = (action: string, label: string, on = false) => `<a class="bd-top-link${on ? ' on' : ''}" data-action="${action}">${label}</a>`
   const nav = hatched
-    ? `${link('home', 'My Axie', current === 'home')}${link('scrapbook', 'Scrapbook')}${link('ladder', 'Growth')}${link('monthly', 'Idol ladder')}`
-    : `${link('back', 'My egg', current === 'egg')}${link('monthly', 'Idol ladder')}`
+    ? `${link('home', 'My Axie', current === 'home')}${link('scrapbook', 'Scrapbook', current === 'scrapbook')}${link('ladder', 'Growth', current === 'ladder')}${link('monthly', 'Idol ladder', current === 'monthly')}`
+    : `${link('back', 'My egg', current === 'egg')}${link('monthly', 'Idol ladder', current === 'monthly')}`
   return `
     <header class="bd-top">
       <a class="lp-brand bd-top-brand" data-action="about" title="Axie Idol homepage">${logoSvg(30)}${wordmarkSvg(20)}</a>
       <nav class="bd-top-nav" aria-label="Game">${nav}</nav>
       <span class="bd-top-actions">
         <button type="button" class="bd-pill bd-pill-btn" data-action="about">${icon('home', 14)} Homepage</button>
-        <button type="button" class="bd-pill bd-pill-btn" data-action="account" aria-label="Profile">${icon('user', 14)} Profile</button>
+        <button type="button" class="bd-pill bd-pill-btn${current === 'account' ? ' on' : ''}" data-action="account" aria-label="Profile">${icon('user', 14)} Profile</button>
       </span>
     </header>`
 }
