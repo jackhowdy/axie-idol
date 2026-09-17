@@ -4074,3 +4074,52 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 .bd-play-dots i.done { background: var(--accent-hot); }
 .bd-play-star svg { fill: currentColor; }
 .bd-play-btn { width: 100%; padding-top: 18px; padding-bottom: 18px; font-size: 18px; touch-action: manipulation; }
+
+/* ---- Landing: the happiness section ---- */
+.lp-hero-happy { position: absolute; right: 12px; top: 12px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 900; color: #E0355A; background: rgba(255, 255, 255, 0.95); border-radius: 999px; padding: 5px 10px; }
+.lp-happy { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.lp-happy-demo { gap: 8px; padding: 14px; border: 2px solid #FF5A7A; box-shadow: 0 0 0 3px rgba(255, 90, 122, 0.12); }
+.lp-happy-demo .bd-meter-row span { font-weight: 700; color: var(--muted); }
+.lp-moods { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
+.lp-mood { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border-radius: 10px; background: var(--bg); text-align: center; }
+.lp-mood b { font-size: 10.5px; }
+.lp-mood small { font-size: 9.5px; font-weight: 800; color: var(--muted); }
+.lp-mood-bored { background: #E3E9EF; }
+.lp-mood-restless { background: #FFE9CF; }
+.lp-mood-happy { background: #FFDDE4; }
+.lp-mood-overjoyed { background: #FF5A7A; }
+.lp-mood-overjoyed b, .lp-mood-overjoyed small { color: #FFFFFF; }
+.lp-happy-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.lp-happy-acts span { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: var(--accent); background: var(--bg); border-radius: 999px; padding: 6px 10px; }
+.lp-happy-list { gap: 8px; padding: 14px; }
+.lp-happy-list > b { font-size: 15px; }
+.lp-happy-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.lp-happy-list li { display: grid; grid-template-columns: 44px 1fr; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.lp-happy-list li b { font-family: var(--font-display); font-size: 15px; color: #E0355A; font-variant-numeric: tabular-nums; }
+.lp-happy-ends { display: flex; flex-direction: column; gap: 10px; }
+.lp-end { gap: 4px; padding: 14px; border-top: 4px solid var(--border); }
+.lp-end b { font-size: 15px; }
+.lp-end span { font-size: 13px; font-weight: 700; color: var(--muted); line-height: 1.4; }
+.lp-end-win { border-top-color: #FF5A7A; }
+.lp-end-lose { border-top-color: #9FB0C2; }
+.lp-real { display: flex; flex-direction: column; gap: 10px; padding: 14px; margin-top: 6px; border-top: 4px solid #1E90FF; }
+.lp-real b { display: block; font-size: 15px; margin-bottom: 3px; }
+.lp-real span { font-size: 13px; font-weight: 700; color: var(--muted); line-height: 1.4; }
+.lp-real .bd-btn { align-self: flex-start; }
+
+@media (min-width: 900px) {
+  .lp-hero-happy { font-size: 14px; right: 16px; top: 16px; padding: 7px 13px; }
+  .lp-happy { display: grid; grid-template-columns: 1.15fr 1fr; grid-template-areas: "demo list" "ends list"; gap: 16px; align-items: start; }
+  .lp-happy-demo { grid-area: demo; padding: 22px; }
+  .lp-happy-list { grid-area: list; padding: 22px; align-self: stretch; }
+  .lp-happy-ends { grid-area: ends; flex-direction: row; gap: 16px; }
+  .lp-end { flex: 1 1 0; padding: 20px; }
+  .lp-mood b { font-size: 13px; }
+  .lp-mood small { font-size: 11px; }
+  .lp-happy-list li { font-size: 15px; grid-template-columns: 52px 1fr; }
+  .lp-happy-list li b { font-size: 18px; }
+  .lp-end span, .lp-real span { font-size: 14px; }
+  .lp-real { flex-direction: row; align-items: center; justify-content: space-between; gap: 24px; padding: 22px; }
+  .lp-real .bd-btn { flex: 0 0 auto; align-self: center; }
+}
+.lp-happy-list > b, .lp-end b, .lp-real b { font-family: var(--font-display); font-weight: 900; }

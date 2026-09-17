@@ -754,12 +754,18 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
             </div>
           </li>`).join('')
   const oddsRow = odds.map(([n, unit, what]) => `<div class="lp-odd"><b>${n}</b><small>${unit}</small><span>${what}</span></div>`).join('')
+  // The game in one glance: the same five moods and the same numbers the server plays by.
+  const moods: Array<[string, string, string]> = [['bored', 'Bored', '0'], ['restless', 'Restless', '20'], ['content', 'Content', '45'], ['happy', 'Happy', '70'], ['overjoyed', 'Overjoyed', '90']]
+  const moodRow = moods.map(([id, label, from]) => `<span class="lp-mood lp-mood-${id}"><b>${label}</b><small>from ${from}</small></span>`).join('')
+  const lifts: Array<[string, string]> = [['+10', 'A photo together'], ['+5', 'Something it has not seen lately'], ['+10', 'A place it has never been'], ['+20', 'Today\'s wish comes true'], ['+3', 'A caption: you told it about the photo'], ['+2', 'A pat, five a day'], ['+8', 'A treat, two a day'], ['+3', 'Each star caught in a game of catch'], ['+3', 'Dressing it up']]
+  const liftRows = lifts.map(([n, what]) => `<li><b>${n}</b><span>${esc(what)}</span></li>`).join('')
+  const heartsDemo = Array.from({ length: 5 }, (_, i) => `<span class="bd-heart${i < 4 ? ' on' : ''}">${icon(i < 4 ? 'heartFilled' : 'heart', 18)}</span>`).join('')
   return `
     <div class="bd-scroll bd-welcome lp">
       <header class="lp-header">
         <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(34)}${wordmarkSvg(24)}</a>
         <nav class="lp-nav" aria-label="Sections">
-          <a href="#lp-how">How it works</a><a href="#lp-voice">The voice</a><a href="#lp-grow">Grow</a><a href="#lp-road">Roadmap</a><a href="#lp-faq">Questions</a>
+          <a href="#lp-how">How it works</a><a href="#lp-happy">Happiness</a><a href="#lp-voice">The voice</a><a href="#lp-grow">Grow</a><a href="#lp-road">Roadmap</a><a href="#lp-faq">Questions</a>
         </nav>
         <div class="lp-header-cta">${primary}</div>
       </header>
@@ -768,7 +774,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <div class="lp-hero-copy">
           <p class="bd-eyebrow">Axie Vibeathon 2026 · Round one</p>
           <h1 class="lp-h1">Your Axie. In your camera. With opinions.</h1>
-          <p class="lp-lede">Find an egg and take it places. When it hatches, it talks: one line after every photo, about what it actually sees, and where it wants to go next.</p>
+          <p class="lp-lede">Hatch an Axie, take it everywhere, and keep it happy. It talks about every photo you take together, and it gets bored if you leave it alone.</p>
           <div class="lp-cta">${primary}${about ? '' : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
           ${about ? '' : `<p class="bd-small lp-alt">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
           <p class="bd-small lp-alt"><b>Have a favourite Axie?</b> <a class="bd-link" data-action="visit">Play as any real Axie by its number</a>. No wallet.</p>`}
@@ -778,6 +784,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <div class="bd-w-bubbles">${bubbles}</div>
           <img class="bd-w-axie" src="/stickers/kotaro.png" alt="">
           <span class="bd-w-tag">A real photo, a real line</span>
+          <span class="lp-hero-happy">${icon('heartFilled', 14)} +15 happy · Happy</span>
         </div>
       </section>
 
@@ -788,8 +795,37 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <li><b>Find an egg</b><span>It rides along in your camera, in every photo you take.</span></li>
           <li><b>Take it places</b><span>Five photos and it can hatch. Carry it further for a rarer Axie.</span></li>
           <li><b>It hatches, and it talks</b><span>A one-of-a-kind Axie with a voice. It says one line after every photo, and its words go on the picture.</span></li>
-          <li><b>Keep it happy</b><span>That is the game. Photos, new places, a caption, a pat, a treat and a game of catch make it happier. Get it to Overjoyed for a joy day. Leave it alone and it gets bored.</span></li>
+          <li><b>Keep it happy</b><span>That is the game. Everything you do together makes it happier. Get it to Overjoyed and the day is won. Leave it alone and it gets bored.</span></li>
         </ol>
+      </section>
+
+      <section class="lp-section" id="lp-happy">
+        <p class="bd-eyebrow">The game</p>
+        <h2 class="lp-h2">Keep it happy. Win the day.</h2>
+        <p class="lp-sub">Your Axie has a happiness score from nothing to a hundred. What you do together pushes it up. Time apart pulls it down. Reach Overjoyed and today is a joy day.</p>
+        <div class="lp-happy">
+          <div class="bd-card lp-happy-demo" aria-hidden="true">
+            <div class="bd-happy-head"><span class="bd-label">Happiness</span><span class="bd-hearts">${heartsDemo}</span></div>
+            <div class="bd-meter-row"><b>Happy · 78</b><span>Get to 90 for a joy day</span></div>
+            <div class="bd-meter bd-meter-happy"><i style="width:78%"></i><u style="left:90%"></u></div>
+            <div class="lp-moods">${moodRow}</div>
+            <div class="lp-happy-acts"><span>${icon('heartFilled', 15)} Pat</span><span>${icon('star', 15)} Treat</span><span>${icon('trophy', 15)} Play catch</span><span>${icon('camera', 15)} Snap</span></div>
+          </div>
+          <div class="bd-card lp-happy-list">
+            <b>What makes it happier</b>
+            <ul>${liftRows}</ul>
+          </div>
+          <div class="lp-happy-ends">
+            <div class="bd-card lp-end lp-end-win">
+              <b>Win: a joy day</b>
+              <span>Get happiness to 90. Your Axie is overjoyed, you earn bond, and the day goes on your streak. Do it again tomorrow and the streak grows.</span>
+            </div>
+            <div class="bd-card lp-end lp-end-lose">
+              <b>Lose: a bored Axie</b>
+              <span>Happiness falls a little every hour you are apart. A day away and it is still fine. Two days and it is bored, and the streak is gone. It never blames you. It just wants to go out.</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="lp-section" id="lp-voice">
@@ -820,6 +856,11 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <h2 class="lp-h2">The longer you carry the egg, the rarer the Axie</h2>
         <div class="lp-odds">${oddsRow}</div>
         <p class="lp-sub">No two hatched Axies share the same parts. Already own one on Ronin? Sign in and bring it instead of an egg.</p>
+        <div class="bd-card lp-real">
+          <div><b>Already love an Axie? Play as it.</b>
+          <span>Type any real Axie's number. It arrives in 3D with its real parts, its class and its Axie Core level, and it knows them. No wallet. If it is yours, sign in with Ronin later and it becomes your owned Axie with everything it earned.</span></div>
+          ${about ? '' : '<button type="button" class="bd-btn bd-btn-ghost" data-action="visit">Play as a real Axie</button>'}
+        </div>
       </section>
 
       <section class="lp-section" id="lp-road">
@@ -837,6 +878,8 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <dl class="lp-faq">
           <div><dt>Is it free?</dt><dd>Yes. There is nothing to buy and no ads.</dd></div>
           <div><dt>Do I need a wallet?</dt><dd>No. A wallet only matters if you want to bring an Axie you already own, or keep your Axies on an account across phones.</dd></div>
+          <div><dt>How do I win?</dt><dd>Get your Axie's happiness to 90 in a day. That is a joy day. Joy days in a row are a streak.</dd></div>
+          <div><dt>What if I stop playing?</dt><dd>It gets bored, never sad, and the streak lapses. Nothing else is lost: its bond, its wardrobe and its photos stay. One good day and it is happy again.</dd></div>
           <div><dt>How many photos count?</dt><dd>Ten a day build bond. Wishes and moments add a little on top. The rest still go in the book.</dd></div>
           <div><dt>Where do my photos go?</dt><dd>Into your Axie's scrapbook. To find its line, each photo is looked at once by an AI model (Google Gemini). If you allow location, we keep roughly where a photo was taken, so your Axie knows when it is back somewhere. Nothing is sold and there are no ads.</dd></div>
         </dl>
