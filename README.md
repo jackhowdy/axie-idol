@@ -6,7 +6,7 @@ Play it: **https://axieidol.com** (phone or desktop, no wallet, no account)
 
 Axie Idol is a pet game. You hatch an Axie (or bring a real one), it rides along in your camera,
 and it talks: one line on every photo, about what it actually sees. The game is to **keep it
-happy**. Photos, new places, a wish come true, a talk and a pat lift its happiness; time alone
+happy**. Photos, new places, new things, a wish come true and a pat lift its happiness; time alone
 wears it down. Get it to Overjoyed and the day is won. Leave it and it gets bored.
 
 ---
@@ -22,7 +22,7 @@ You do not need a phone, a camera or a wallet.
    camera: pick one, drag the Axie where you want it, press the shutter, then **Post**.
 3. Five photos hatch the egg. Name it. From then on every photo comes back with the Axie's line
    drawn on it, and the sheet says what the photo did for its happiness.
-4. On Home, watch the **Happiness** card. Pat it, talk to it, take photos of different things.
+4. On Home, watch the **Happiness** card. Pat it, and take photos of different things.
    Reaching 90 is the win for the day: a joy day, +3 bond, and the start of a streak.
 5. Losing is slow on purpose: happiness falls 1.5 points an hour, so an Axie left alone is Content
    after a day and Bored after about two. `tests/happy.test.mjs` shows the whole curve in a second.
@@ -43,7 +43,7 @@ phone. Ronin sign-in is optional and only adds: bring an Axie you own, keep your
 
 - **Happiness, 0 to 100.** Five moods: Bored, Restless, Content, Happy, Overjoyed.
 - **What lifts it:** a photo (+10), new things in it (+5), a new place (+10), today's wish come
-  true (+20), a talk (+4, five a day), a pat (+2, five a day), dressing up (+3, once a day).
+  true (+20), a pat (+2, five a day), dressing up (+3, once a day).
   The same things photographed again are worth +3; a photo it cannot make out, +2.
 - **What wears it down:** time alone, 1.5 an hour.
 - **Win:** reach Overjoyed (90). Once a day that pays +3 bond and counts a **joy day**; joy days on
@@ -79,8 +79,8 @@ gets stronger the more it is cared for. Axie Idol is built on that and nothing e
 
 | Stage | What |
 |---|---|
-| **Round 1 (live)** | Egg and hatch, the voice on every photo, memory, happiness, talk and pats, wishes, growth ladder, scrapbook, monthly Idol ladder, real Axies by number, Ronin sign-in. |
-| **Round 2** | Longer talks that remember yesterday, duo photos with a friend, part evolution that follows Axie Core (the same stage two parts, earned by bond), your whole Ronin collection playable, a morning nudge. |
+| **Round 1 (live)** | Egg and hatch, the voice on every photo, memory, happiness and pats, wishes, growth ladder, scrapbook, monthly Idol ladder, real Axies by number, Ronin sign-in. |
+| **Round 2** | More ways to keep it happy (treats and play), duo photos with a friend, part evolution that follows Axie Core (the same stage two parts, earned by bond), your whole Ronin collection playable, a morning nudge. |
 | **After** | Axies that stand higher in Axie Core come first: special props only they can wear, chat that opens up for them, a better place on the social wall. The social wall itself. Ladder seasons. Work with Sky Mavis so time spent here counts for the Axie, the way AXP does. |
 
 The same roadmap is on the front page of the site.
@@ -146,7 +146,7 @@ fall back to a 2D stand-in and the game still plays. More in `docs/DEVELOPMENT.m
   site copy and this README, directed and reviewed by the entrant. It also drew the logo and icons
   as hand-written SVG (`public/icon.svg`, `scripts/build-icons.mjs`).
 - **Google Gemini 3.5 Flash-Lite** runs inside the live game: it looks at each photo and writes the
-  Axie's line, and answers in talk mode. Every line is checked against written rules in code
+  Axie's line. Every line is checked against written rules in code
   before it is shown.
 - **Grok (xAI)** produced an earlier prototype of the camera compositor before 5 September 2026
   (see Pre-existing work).
@@ -156,7 +156,7 @@ fall back to a 2D stand-in and the game still plays. More in `docs/DEVELOPMENT.m
 **Pre-existing work.** Before the submission window the entrant had a prototype camera compositor
 (an Axie sticker over a camera view, a photo feed, quests). It was handed over on 5 September 2026
 and is documented in `docs/AUDIT-2026-09-05.md`. The Round 1 game (egg, hatch, voice, memory,
-happiness, talk, growth, ladder, real Axies, landing page, Worker hosting) was built after that.
+happiness, growth, ladder, real Axies, landing page, Worker hosting) was built after that.
 Git history shows all of it.
 
 **Starters and dependencies.** Vite, TypeScript, three.js, `@sky-mavis/waypoint` (Ronin sign-in),

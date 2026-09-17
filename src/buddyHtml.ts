@@ -300,7 +300,7 @@ export function happyCardHtml(b: Buddy, opts: { talk?: boolean } = {}): string {
           <button type="button" class="bd-btn bd-btn-ghost" data-action="pet">${icon('heartFilled', 16)} Pat ${name}${h.petsLeft ? '' : ' (no more points today)'}</button>
           ${opts.talk ? `<button type="button" class="bd-btn bd-btn-ghost" data-action="talk">${icon('comment', 16)} Talk</button>` : ''}
         </div>
-        <p class="bd-small bd-muted">Photos, new places, new things, a wish come true, a talk and a pat make it happier. Time alone wears it down.</p>
+        <p class="bd-small bd-muted">Photos, new places, new things, a wish come true${opts.talk ? ', a talk' : ''} and a pat make it happier. Time alone wears it down.</p>
       </div>`
 }
 
@@ -678,7 +678,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'A voice that looks at each photo and writes its line on the picture',
       'Memory: it knows when you are back somewhere, and it answers your caption',
       'Ten steps of growth: hat, scarf, shades, cape, crown, the Mystic glow',
-      'A happiness score: photos, talks and pats keep it happy, time alone bores it',
+      'A happiness score: photos, new places and pats keep it happy, time alone bores it',
       'A wish every day, a scrapbook, and the monthly Idol ladder',
       'Play as any real Axie by its number, or sign in with Ronin and bring your own',
     ], core: [
@@ -687,7 +687,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'Nothing to buy and nothing minted: the Axie is the point, not a token',
     ] },
     { when: 'Next', title: 'Round two', state: 'Next stage of the Vibeathon', items: [
-      'Longer talks: it remembers what you said yesterday',
+      'More ways to keep it happy: treats and play',
       'Duo photos: pair with a friend and both Axies are in the frame',
       'Parts that evolve as bond grows: horn, then back, then tail',
       'A morning nudge, when your Axie wants to go out',
@@ -753,7 +753,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <li><b>Find an egg</b><span>It rides along in your camera, in every photo you take.</span></li>
           <li><b>Take it places</b><span>Five photos and it can hatch. Carry it further for a rarer Axie.</span></li>
           <li><b>It hatches, and it talks</b><span>A one-of-a-kind Axie with a voice. It says one line after every photo, and its words go on the picture.</span></li>
-          <li><b>Keep it happy</b><span>That is the game. Photos, new places, a wish come true, a talk and a pat make it happier. Get it to Overjoyed for a joy day. Leave it alone and it gets bored.</span></li>
+          <li><b>Keep it happy</b><span>That is the game. Photos, new places, new things, a wish come true and a pat make it happier. Get it to Overjoyed for a joy day. Leave it alone and it gets bored.</span></li>
         </ol>
       </section>
 
