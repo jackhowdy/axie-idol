@@ -4181,3 +4181,21 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 #viewfinder.vf-whole #upload-preview { object-fit: contain; background: transparent; }
 #sticker.sticker-2d { z-index: 1; }
 .wardrobe-overlay.behind { z-index: 0; }
+
+/* ---- The game's top bar: logo (to the homepage), where you can go, Homepage and Profile ---- */
+.bd-top { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: calc(8px + var(--safe-top)) 12px 8px; background: color-mix(in srgb, var(--bg) 90%, transparent); border-bottom: 1px solid var(--border); position: relative; z-index: 3; }
+.bd-top + .bd-scroll { padding-top: 12px; }
+.bd-top-brand { flex: 0 0 auto; }
+.bd-top-nav { display: none; }
+.bd-top-actions { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.bd-top-link { font-weight: 800; font-size: 14px; color: var(--muted); text-decoration: none; cursor: pointer; padding: 6px 2px; border-bottom: 3px solid transparent; }
+.bd-top-link:hover { color: var(--text); }
+.bd-top-link.on { color: var(--text); border-bottom-color: var(--accent-hot); }
+@media (max-width: 419px) { .bd-top-brand .lp-wordmark { display: none; } }
+@media (min-width: 768px) {
+  .bd-top { padding: 12px max(32px, calc((100% - 1040px) / 2)); gap: 28px; }
+  .bd-top-nav { display: flex; gap: 22px; }
+  .bd-top .lp-wordmark { height: 26px; width: auto; }
+  .bd-top .lp-mark { width: 38px; height: 38px; }
+  .buddy .bd-top + .bd-scroll:not(.lp) { padding-top: 24px; }
+}

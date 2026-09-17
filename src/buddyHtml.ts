@@ -183,7 +183,7 @@ export function eggHtml(b: Buddy, opts: { buddies?: Buddy[] } = {}): string {
   const left = Math.max(0, 5 - snaps)
   const leftWord = ['', 'One', 'Two', 'Three', 'Four', 'Five'][left] || String(left)
   const stage = snaps >= 20 ? 3 : snaps >= 5 ? 2 : 1
-  return `
+  return `${topBarHtml('egg', false)}
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
         <span class="bd-round bd-round-ghost"></span>
@@ -265,6 +265,28 @@ export function hatchHtml(b: Buddy, lines: string[]): string {
 }
 
 const WEARABLES = ['hat', 'scarf', 'shades', 'cape', 'crown']
+
+/**
+ * The bar across the top of the game's hub screens (the egg, Home): the logo, which leads to the
+ * homepage like any site's logo, the places you can go from here, and an explicit Homepage button
+ * for anyone who does not think to press a logo. On a phone the links fold away and the name
+ * shrinks to the star, so the bar stays one line.
+ */
+export function topBarHtml(current: 'home' | 'egg', hatched: boolean): string {
+  const link = (action: string, label: string, on = false) => `<a class="bd-top-link${on ? ' on' : ''}" data-action="${action}">${label}</a>`
+  const nav = hatched
+    ? `${link('home', 'My Axie', current === 'home')}${link('scrapbook', 'Scrapbook')}${link('ladder', 'Growth')}${link('monthly', 'Idol ladder')}`
+    : `${link('back', 'My egg', current === 'egg')}${link('monthly', 'Idol ladder')}`
+  return `
+    <header class="bd-top">
+      <a class="lp-brand bd-top-brand" data-action="about" title="Axie Idol homepage">${logoSvg(30)}${wordmarkSvg(20)}</a>
+      <nav class="bd-top-nav" aria-label="Game">${nav}</nav>
+      <span class="bd-top-actions">
+        <button type="button" class="bd-pill bd-pill-btn" data-action="about">${icon('home', 14)} Homepage</button>
+        <button type="button" class="bd-pill bd-pill-btn" data-action="account" aria-label="Profile">${icon('user', 14)} Profile</button>
+      </span>
+    </header>`
+}
 
 /** " · Axie Core level 60" for a real Axie whose level we know, else nothing. */
 function coreLevel(b: Buddy): string {
@@ -476,11 +498,11 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
   const wallet = opts.address
     ? '<a class="bd-link" data-action="claim">Wallet connected · pick another Axie</a>'
     : 'Own an Axie on Ronin? <a class="bd-link" data-action="claim">Bring it</a> · <a class="bd-link" data-action="visit">Play as any real Axie</a>'
-  return `
+  return `${topBarHtml('home', true)}
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
         <div><p class="bd-eyebrow">Day ${dayCount(b)} · my Axie</p><h1>${esc(b.name)}</h1></div>
-        <span class="bd-head-actions"><span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.streak}-day streak</span><button type="button" class="bd-pill bd-pill-btn" data-action="account" aria-label="Profile">${icon('user', 14)} Profile</button></span>
+        <span class="bd-head-actions"><span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.streak}-day streak</span></span>
       </header>
       <div class="bd-cols"><div class="bd-col">
       <div class="bd-card bd-ask">
@@ -653,12 +675,17 @@ export function photoViewHtml(b: Buddy, photoId: string): string {
 const MARK_STAR = 'M46 5 56 3 64 33 95 33 97 42 72 60 82 88 74 95 50 76 25 95 17 89 28 59 3 43 5 34 37 33Z'
 const MARK_FADE = '<stop offset="0" stop-color="#FF5A5F"/><stop offset=".55" stop-color="#FF9A3C"/><stop offset="1" stop-color="#FFDD3B"/>'
 
+/** Every drawn mark gets its own gradient id: a screen that is hidden keeps its markup, and a
+ * gradient inside a hidden subtree does not paint for a visible mark that points at it. */
+let markSerial = 0
+
 export function logoSvg(size = 28): string {
+  const fade = `lp-fade-m${++markSerial}`
   return `<svg class="lp-mark" width="${size}" height="${size}" viewBox="-10 -10 124 124" aria-hidden="true">
-    <defs><linearGradient id="lp-fade-m" x1="0" y1="0" x2="0" y2="1">${MARK_FADE}</linearGradient></defs>
+    <defs><linearGradient id="${fade}" x1="0" y1="0" x2="0" y2="1">${MARK_FADE}</linearGradient></defs>
     <g fill="#fff" stroke="#fff" stroke-width="14" stroke-linejoin="round"><path d="${MARK_STAR}"/><path transform="translate(4 6)" d="${MARK_STAR}"/></g>
     <path transform="translate(4 6)" d="${MARK_STAR}" fill="#B5213B"/>
-    <path d="${MARK_STAR}" fill="url(#lp-fade-m)"/>
+    <path d="${MARK_STAR}" fill="url(#${fade})"/>
   </svg>`
 }
 
@@ -673,11 +700,12 @@ export function wordmarkSvg(height = 22): string {
       <path transform="translate(56 0)" d="M8 0H24L32 8V26L24 34H8L0 26V8ZM12 10 10 12V22L12 24H20L22 22V12L20 10Z"/>
       <path transform="translate(96 0)" d="M0 0H10V24H26V34H0Z"/></g>`
   const width = Math.round(height * (650 / 132))
+  const fade = `lp-fade-w${++markSerial}`
   return `<svg class="lp-wordmark" width="${width}" height="${height}" viewBox="-12 -12 650 132" role="img" aria-label="Axie Idol">
-    <defs><linearGradient id="lp-fade-w" x1="0" y1="0" x2="0" y2="1">${MARK_FADE}</linearGradient></defs>
+    <defs><linearGradient id="${fade}" x1="0" y1="0" x2="0" y2="1">${MARK_FADE}</linearGradient></defs>
     <g fill="#fff" stroke="#fff" stroke-width="16" stroke-linejoin="round">${axie}<g transform="translate(4 6)">${axie}</g>${idol}</g>
     <g transform="translate(4 6)" fill="#B5213B">${axie}</g>
-    <g fill="url(#lp-fade-w)">${axie}</g>
+    <g fill="url(#${fade})">${axie}</g>
     <g fill="#1E90FF">${idol}</g>
   </svg>`
 }

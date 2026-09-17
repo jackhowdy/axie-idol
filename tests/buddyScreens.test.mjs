@@ -97,6 +97,19 @@ test('home offers a way to talk only when talk mode is on', () => {
   assert.match(withoutGreeting, /<div class="bd-hero-3d" data-face="buddy" data-action="pet"/)
 })
 
+test('the hub screens carry a top bar: the logo and a Homepage button lead to the homepage, Profile is there', () => {
+  const home = homeHtml(miso, null)
+  assert.match(home, /<header class="bd-top">/)
+  assert.match(home, /class="lp-brand bd-top-brand" data-action="about"/, 'the logo goes to the homepage')
+  assert.match(home, /data-action="about">.*Homepage<\/button>/s, 'and so does an explicit button')
+  assert.match(home, /data-action="account"[^>]*>.*Profile/s)
+  assert.match(home, /class="bd-top-link on" data-action="home">My Axie/)
+  for (const where of ['scrapbook', 'ladder', 'monthly']) assert.match(home, new RegExp(`bd-top-link" data-action="${where}"`), where)
+  const eggScreen = eggHtml(egg)
+  assert.match(eggScreen, /<header class="bd-top">/); assert.match(eggScreen, /My egg/)
+  assert.doesNotMatch(eggScreen, /data-action="scrapbook"/, 'an egg has no scrapbook to link to')
+})
+
 test('happiness is the game on Home: hearts, the mood, the goal, a pat and what moves it', () => {
   const happy = { value: 62, mood: 'Content', moodId: 'content', talksLeft: 5, petsLeft: 5, overjoyedToday: false }
   const html = homeHtml({ ...miso, happy, joy: { days: 2, streak: 2, best: 2 } }, null, { talk: true })

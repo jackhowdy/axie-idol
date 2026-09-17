@@ -3019,7 +3019,9 @@ frameTray?.addEventListener('click', (e) => {
 
 function disposeSticker3D(): void {
   if (!sticker3d) return
-  if (stickerTarget === sticker3d.canvas) stickerTarget = stickerImg
+  // stickerTarget is left alone: bindStickerPointers() below moves the drag handlers itself, and
+  // re-pointing it first made that bind a no-op, leaving them on the canvas being thrown away
+  // (a 2D Axie or an egg that followed a kit model could then not be dragged at all).
   sticker3d.dispose()
   sticker3d = null
   stickerImg.hidden = false
@@ -3500,7 +3502,8 @@ async function showRealBuddyIn(host: HTMLElement, axieId: string, req: number): 
   const left = (boxW - w) / 2, top = (boxH - h) / 2 + boxH * 0.07
   img.src = art.src
   img.className = 'bd-hero-2d'
-  img.style.cssText = `left:${left}px;top:${top}px;width:${w}px;height:${h}px`
+  // percentages, so the picture keeps its place when the box changes size (rotation, a resized window)
+  img.style.cssText = `left:${(left / boxW) * 100}%;top:${(top / boxH) * 100}%;width:${(w / boxW) * 100}%;height:${(h / boxH) * 100}%`
   host.append(img)
   const worn = buddyState.active?.wardrobe.worn ?? null
   if (!worn) return

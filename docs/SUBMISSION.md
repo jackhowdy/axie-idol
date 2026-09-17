@@ -67,7 +67,7 @@ world; ladder seasons; and work with Sky Mavis so time spent here counts for the
 does. The roadmap is on the front page of the site.
 
 **Built with.** Vite, TypeScript and three.js in the browser; a Cloudflare Worker with one Durable
-Object behind it; 196 automated tests. Built by one person with Claude Code; Google Gemini looks at
+Object behind it; 197 automated tests. Built by one person with Claude Code; Google Gemini looks at
 the photos at run time. Full disclosures, known issues and run instructions are in the README.
 
 ## Thumbnail
