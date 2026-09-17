@@ -2,6 +2,12 @@ name = "axie-idol"
 main = "worker/index.mjs"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
+# The game lives at axieidol.com; the workers.dev address keeps working as a fallback.
+routes = [
+  { pattern = "axieidol.com", custom_domain = true },
+  { pattern = "www.axieidol.com", custom_domain = true },
+]
+
 
 [assets]
 directory = "./dist"
