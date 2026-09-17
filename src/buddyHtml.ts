@@ -545,12 +545,21 @@ export function photoViewHtml(b: Buddy, photoId: string): string {
  * do, and the two ways a returning player gets their Axie back. Reached later from Profile as
  * About, where the start button gives way to a way back.
  */
-/** The mark: an egg that speaks. Inline so it inherits the text colour and needs no request. */
+/**
+ * The mark: an Axie in front of a gold star. The game is about raising one into a star, so the
+ * mark is where it ends up, not the egg it starts from. The star holds the silhouette at favicon
+ * size; the face keeps it this game. Same drawing as public/icon.svg.
+ */
 export function logoSvg(size = 28): string {
   return `<svg class="lp-mark" width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true">
-    <path d="M16 3c5.6 0 10 6.1 10 13.2S21.6 28 16 28 6 23.3 6 16.2 10.4 3 16 3z" fill="#FFD166" stroke="#1A2B3C" stroke-width="2"/>
-    <ellipse cx="12.5" cy="12" rx="2.4" ry="1.7" fill="#7FB7E6"/><ellipse cx="19" cy="18.5" rx="2" ry="1.4" fill="#7FB7E6"/>
-    <path d="M22 5.5h7a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 29 12.5h-3l-2.5 2.5v-2.5H22A1.5 1.5 0 0 1 20.5 11V7A1.5 1.5 0 0 1 22 5.5z" fill="#FFFFFF" stroke="#1A2B3C" stroke-width="1.6"/>
+    <path d="M16 0.8l4.6 9.3 10.3 1.5-7.4 7.2 1.7 10.2L16 24.2l-9.2 4.8 1.7-10.2L1.1 11.6l10.3-1.5z" fill="#FFD166" stroke="#1A2B3C" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M8.6 17.2 6.4 12.6l4.6 1.2z" fill="#FFB066" stroke="#1A2B3C" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M23.4 17.2l2.2-4.6-4.6 1.2z" fill="#FFB066" stroke="#1A2B3C" stroke-width="1.6" stroke-linejoin="round"/>
+    <ellipse cx="16" cy="20.4" rx="8.6" ry="7.2" fill="#FF8A3D" stroke="#1A2B3C" stroke-width="2"/>
+    <ellipse cx="16" cy="24" rx="5" ry="2.6" fill="#FFC999"/>
+    <ellipse cx="12.6" cy="19.6" rx="1.5" ry="2" fill="#1A2B3C"/><ellipse cx="19.4" cy="19.6" rx="1.5" ry="2" fill="#1A2B3C"/>
+    <circle cx="13.1" cy="18.8" r="0.65" fill="#fff"/><circle cx="19.9" cy="18.8" r="0.65" fill="#fff"/>
+    <path d="M14.4 22.9q1.6 1.3 3.2 0" fill="none" stroke="#1A2B3C" stroke-width="1.4" stroke-linecap="round"/>
   </svg>`
 }
 
