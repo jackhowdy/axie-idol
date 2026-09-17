@@ -236,7 +236,7 @@ Secrets and variables:
 - `.dev.vars` (git-ignored) — `SKYMAVIS_API_KEY` for `wrangler dev`.
 - Production — `npx wrangler secret put SKYMAVIS_API_KEY`; `SEED_POSTS` lives in `wrangler.toml` `[vars]`.
 
-First deploy: `npx wrangler r2 bucket create axie-idol-uploads`, then `npm run deploy`. Add the deployed origin (workers.dev and later the custom domain) to the Ronin Waypoint allowlist in the Ronin Developer Console or Connect will fail.
+First deploy: `npx wrangler r2 bucket create axie-idol-uploads`, then `npm run deploy`. The game lives at https://axieidol.com (custom domains on the Worker via `routes` in wrangler.toml; the workers.dev address still answers). Both origins are on the Ronin Waypoint allowlist in the Ronin Developer Console; a new origin must be added there or Connect will fail.
 
 ## Screens (field revamp, September 2026)
 
