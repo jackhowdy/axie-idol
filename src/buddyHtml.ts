@@ -546,20 +546,40 @@ export function photoViewHtml(b: Buddy, photoId: string): string {
  * About, where the start button gives way to a way back.
  */
 /**
- * The mark: an Axie in front of a gold star. The game is about raising one into a star, so the
- * mark is where it ends up, not the egg it starts from. The star holds the silhouette at favicon
- * size; the face keeps it this game. Same drawing as public/icon.svg.
+ * The mark: a star cut from paper, in the hand of the Axie logo it sits beside: a coral to yellow
+ * fade, a dark red edge below and to the right, a white sticker border. No face. The game is
+ * about raising an Axie into a star, so the mark is where it ends up. Same drawing as
+ * public/icon.svg. Drawn from scratch; none of the Axie Infinity letterforms are reused.
  */
+const MARK_STAR = 'M46 5 56 3 64 33 95 33 97 42 72 60 82 88 74 95 50 76 25 95 17 89 28 59 3 43 5 34 37 33Z'
+const MARK_FADE = '<stop offset="0" stop-color="#FF5A5F"/><stop offset=".55" stop-color="#FF9A3C"/><stop offset="1" stop-color="#FFDD3B"/>'
+
 export function logoSvg(size = 28): string {
-  return `<svg class="lp-mark" width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true">
-    <path d="M16 0.8l4.6 9.3 10.3 1.5-7.4 7.2 1.7 10.2L16 24.2l-9.2 4.8 1.7-10.2L1.1 11.6l10.3-1.5z" fill="#FFD166" stroke="#1A2B3C" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M8.6 17.2 6.4 12.6l4.6 1.2z" fill="#FFB066" stroke="#1A2B3C" stroke-width="1.6" stroke-linejoin="round"/>
-    <path d="M23.4 17.2l2.2-4.6-4.6 1.2z" fill="#FFB066" stroke="#1A2B3C" stroke-width="1.6" stroke-linejoin="round"/>
-    <ellipse cx="16" cy="20.4" rx="8.6" ry="7.2" fill="#FF8A3D" stroke="#1A2B3C" stroke-width="2"/>
-    <ellipse cx="16" cy="24" rx="5" ry="2.6" fill="#FFC999"/>
-    <ellipse cx="12.6" cy="19.6" rx="1.5" ry="2" fill="#1A2B3C"/><ellipse cx="19.4" cy="19.6" rx="1.5" ry="2" fill="#1A2B3C"/>
-    <circle cx="13.1" cy="18.8" r="0.65" fill="#fff"/><circle cx="19.9" cy="18.8" r="0.65" fill="#fff"/>
-    <path d="M14.4 22.9q1.6 1.3 3.2 0" fill="none" stroke="#1A2B3C" stroke-width="1.4" stroke-linecap="round"/>
+  return `<svg class="lp-mark" width="${size}" height="${size}" viewBox="-10 -10 124 124" aria-hidden="true">
+    <defs><linearGradient id="lp-fade-m" x1="0" y1="0" x2="0" y2="1">${MARK_FADE}</linearGradient></defs>
+    <g fill="#fff" stroke="#fff" stroke-width="14" stroke-linejoin="round"><path d="${MARK_STAR}"/><path transform="translate(4 6)" d="${MARK_STAR}"/></g>
+    <path transform="translate(4 6)" d="${MARK_STAR}" fill="#B5213B"/>
+    <path d="${MARK_STAR}" fill="url(#lp-fade-m)"/>
+  </svg>`
+}
+
+/** The name, set in the same cut-paper hand: AXIE in the fade, IDOL in blue blocks beside it. */
+export function wordmarkSvg(height = 22): string {
+  const axie = `<path transform="rotate(-3 36 50)" fill-rule="evenodd" d="M0 100 22 0 50 4 72 100 48 100 44 78 26 80 22 100ZM30 60 40 59 35 32Z"/>
+      <path transform="translate(80 0) rotate(2 36 50)" d="M0 4 24 0 36 30 50 2 72 6 50 50 74 98 48 100 36 68 22 100-2 96 22 50Z"/>
+      <path transform="translate(162 0) rotate(-2 14 50)" d="M2 2 28 0 26 100 0 98Z"/>
+      <path transform="translate(198 0) rotate(3 28 50)" d="M0 0 56 4 54 26 26 24 26 40 48 40 47 60 26 59 26 76 58 78 56 100 0 98Z"/>`
+  const idol = `<g transform="translate(284 8) scale(2.7)" fill-rule="evenodd"><path d="M0 0H10V34H0Z"/>
+      <path transform="translate(18 0)" d="M0 0H20L30 8V26L20 34H0ZM10 9V25H17L20 22V12L17 9Z"/>
+      <path transform="translate(56 0)" d="M8 0H24L32 8V26L24 34H8L0 26V8ZM12 10 10 12V22L12 24H20L22 22V12L20 10Z"/>
+      <path transform="translate(96 0)" d="M0 0H10V24H26V34H0Z"/></g>`
+  const width = Math.round(height * (650 / 132))
+  return `<svg class="lp-wordmark" width="${width}" height="${height}" viewBox="-12 -12 650 132" role="img" aria-label="Axie Idol">
+    <defs><linearGradient id="lp-fade-w" x1="0" y1="0" x2="0" y2="1">${MARK_FADE}</linearGradient></defs>
+    <g fill="#fff" stroke="#fff" stroke-width="16" stroke-linejoin="round">${axie}<g transform="translate(4 6)">${axie}</g>${idol}</g>
+    <g transform="translate(4 6)" fill="#B5213B">${axie}</g>
+    <g fill="url(#lp-fade-w)">${axie}</g>
+    <g fill="#1E90FF">${idol}</g>
   </svg>`
 }
 
@@ -590,13 +610,45 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
   const wardrobe: Array<[string, string]> = [['hat', 'Party hat'], ['scarf', 'Scarf'], ['shades', 'Shades'], ['cape', 'Cape'], ['crown', 'Crown']]
   const wearRow = wardrobe.map(([id, label]) => `<span class="lp-wear">${icon(id, 22)}<small>${label}</small></span>`).join('')
   const odds = [['5', 'photos', 'A common Axie, any class'], ['20', 'photos', 'One rare part, guaranteed'], ['50', 'photos', 'Two rare parts'], ['100', 'photos', 'A shot at Mystic']]
+  // Three parts, in the order people ask: what is real today, what the next round adds, what comes after.
+  const road: Array<{ when: string; title: string; state: string; items: string[] }> = [
+    { when: 'Done', title: 'Round one', state: 'Live now', items: [
+      'An egg that rides in your camera and hatches an Axie nobody else has',
+      'A voice that looks at each photo and writes its line on the picture',
+      'Memory: it knows when you are back somewhere, and it answers your caption',
+      'Ten steps of growth: hat, scarf, shades, cape, crown, the Mystic glow',
+      'A wish every day, a scrapbook, and the monthly Idol ladder',
+      'Ronin sign-in: bring an Axie you own, and keep more than one',
+    ] },
+    { when: 'Next', title: 'Round two', state: 'Next stage of the Vibeathon', items: [
+      'Talk back: a real conversation with your Axie, not only one line',
+      'Duo photos: pair with a friend and both Axies are in the frame',
+      'Parts that evolve as bond grows: horn, then back, then tail',
+      'A feed to share photos and cheer for other Axies',
+      'A morning nudge, when your Axie wants to go out',
+    ] },
+    { when: 'After', title: 'After the Vibeathon', state: 'Planned', items: [
+      'Seasons on the Idol ladder, with something to win',
+      'A collectible card for every Axie that reaches Idol',
+      'More to wear, more tricks, more moments to find',
+      'An app you can install, with notifications',
+      'Closer ties to Ronin for players who own their Axies',
+    ] },
+  ]
+  const roadCards = road.map((r, i) => `
+          <li class="lp-road-card${i === 0 ? ' lp-road-done' : ''}">
+            <span class="lp-road-when">${r.when}</span>
+            <b>${r.title}</b>
+            <span class="lp-road-state">${r.state}</span>
+            <ul>${r.items.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+          </li>`).join('')
   const oddsRow = odds.map(([n, unit, what]) => `<div class="lp-odd"><b>${n}</b><small>${unit}</small><span>${what}</span></div>`).join('')
   return `
     <div class="bd-scroll bd-welcome lp">
       <header class="lp-header">
-        <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(30)}<span>Axie Idol</span></a>
+        <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(34)}${wordmarkSvg(24)}</a>
         <nav class="lp-nav" aria-label="Sections">
-          <a href="#lp-how">How it works</a><a href="#lp-voice">The voice</a><a href="#lp-grow">Grow</a><a href="#lp-faq">Questions</a>
+          <a href="#lp-how">How it works</a><a href="#lp-voice">The voice</a><a href="#lp-grow">Grow</a><a href="#lp-road">Roadmap</a><a href="#lp-faq">Questions</a>
         </nav>
         <div class="lp-header-cta">${primary}</div>
       </header>
@@ -657,6 +709,14 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <p class="lp-sub">No two hatched Axies share the same parts. Already own one on Ronin? Sign in and bring it instead of an egg.</p>
       </section>
 
+      <section class="lp-section" id="lp-road">
+        <p class="bd-eyebrow">Roadmap</p>
+        <h2 class="lp-h2">What is done, what is next, what comes after</h2>
+        <ol class="lp-road">${roadCards}
+        </ol>
+        <p class="lp-sub">Round one is what you can play today. The rest are plans, in the order we mean to build them.</p>
+      </section>
+
       <section class="lp-section" id="lp-faq">
         <p class="bd-eyebrow">Questions</p>
         <h2 class="lp-h2">The honest rules</h2>
@@ -669,7 +729,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       </section>
 
       <footer class="lp-footer">
-        <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(22)}<span>Axie Idol</span></a>
+        <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(26)}${wordmarkSvg(18)}</a>
         <span class="bd-muted">Built for the Axie Vibeathon 2026 · axieidol.com</span>
         <div class="lp-footer-cta">${primary}</div>
       </footer>

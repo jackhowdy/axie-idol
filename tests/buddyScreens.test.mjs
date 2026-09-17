@@ -486,6 +486,11 @@ test('the scrapbook screen shows every photo it has a picture for, newest first,
 test('the front door: header with the mark, hero with a real photo and line, sections, honest rules; as About it only leads back', () => {
   const fresh = welcomeHtml({})
   assert.match(fresh, /class="lp-mark"/, 'the logo mark')
+  assert.match(fresh, /class="lp-wordmark"[^>]*aria-label="Axie Idol"/, 'the name, drawn, still readable to a screen reader')
+  assert.doesNotMatch(fresh.slice(0, fresh.indexOf('lp-hero')), /ellipse/, 'the mark has no face')
+  assert.match(fresh, /id="lp-road"/, 'the roadmap')
+  for (const part of ['Round one', 'Round two', 'Next stage of the Vibeathon', 'After the Vibeathon']) assert.match(fresh, new RegExp(part), part)
+  assert.equal((fresh.match(/class="lp-road-card/g) || []).length, 3, 'three parts')
   assert.match(fresh, /class="lp-header"/)
   assert.match(fresh, /Your Axie\. In your camera\. With opinions\./)
   assert.match(fresh, /welcome\/stairs\.jpg/, 'a real photo in the hero')
