@@ -545,55 +545,125 @@ export function photoViewHtml(b: Buddy, photoId: string): string {
  * do, and the two ways a returning player gets their Axie back. Reached later from Profile as
  * About, where the start button gives way to a way back.
  */
+/** The mark: an egg that speaks. Inline so it inherits the text colour and needs no request. */
+export function logoSvg(size = 28): string {
+  return `<svg class="lp-mark" width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M16 3c5.6 0 10 6.1 10 13.2S21.6 28 16 28 6 23.3 6 16.2 10.4 3 16 3z" fill="#FFD166" stroke="#1A2B3C" stroke-width="2"/>
+    <ellipse cx="12.5" cy="12" rx="2.4" ry="1.7" fill="#7FB7E6"/><ellipse cx="19" cy="18.5" rx="2" ry="1.4" fill="#7FB7E6"/>
+    <path d="M22 5.5h7a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 29 12.5h-3l-2.5 2.5v-2.5H22A1.5 1.5 0 0 1 20.5 11V7A1.5 1.5 0 0 1 22 5.5z" fill="#FFFFFF" stroke="#1A2B3C" stroke-width="1.6"/>
+  </svg>`
+}
+
+/**
+ * The front door, as a landing page: a header with the mark, a hero with a real photo and real
+ * lines, then the sections a stranger needs in the order they ask them: how it works, what it
+ * says, how it grows, what hatches, the honest rules. On a phone it is one clean column inside
+ * the frame; on a wide screen the frame opens and it is a page. As About it leads back instead.
+ */
 export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null; address?: string | null } = {}): string {
   const about = Boolean(opts.hasAxie)
-  // A real photo from the field (the stairs) with real lines from the live voice: the page shows
-  // the game instead of describing it. The lines cycle in one bubble.
-  const lines = ['That bench is far. Let us climb all those stairs to get to it.', 'We were right here before. What is past the top this time?', 'Grey steps go up. Can we climb every single one?']
-  const bubbles = lines.map((l, i) => `<div class="bd-w-bubble" style="--i:${i}">${esc(l)}</div>`).join('')
-  const cta = about
-    ? `<div class="bd-w-cta"><button type="button" class="bd-btn bd-btn-primary" data-action="back">Back to ${esc(opts.axieName || 'your Axie')}</button></div>`
-    : `<div class="bd-w-cta">
-        <button type="button" class="bd-btn bd-btn-primary" data-action="start-egg">Find an egg</button>
-        <p class="bd-small">Free. No wallet needed. Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">Recovery code</a></p>
-      </div>`
+  const name = esc(opts.axieName || 'your Axie')
+  const primary = about
+    ? `<button type="button" class="bd-btn bd-btn-primary" data-action="back">Back to ${name}</button>`
+    : `<button type="button" class="bd-btn bd-btn-primary" data-action="start-egg">Find an egg</button>`
+  const heroLines = ['That bench is far. Let us climb all those stairs to get to it.', 'We were right here before. What is past the top this time?', 'Grey steps go up. Can we climb every single one?']
+  const bubbles = heroLines.map((l, i) => `<div class="bd-w-bubble" style="--i:${i}">${esc(l)}</div>`).join('')
+  const said = [
+    { photo: '/welcome/playground.jpg', who: 'The egg, photo two', line: 'Something moved in there.' },
+    { photo: '/welcome/rug.jpg', who: 'Happy, at home', line: 'That white shoe is neat. Can I poke it?' },
+    { photo: '/welcome/aisle.jpg', who: 'In a shop', line: 'So many yellow bags. Can we open one?' },
+  ]
+  const saidCards = said.map((c) => `
+        <figure class="lp-said">
+          <img src="${c.photo}" alt="" loading="lazy">
+          <figcaption><span class="lp-said-line">${esc(c.line)}</span><span class="lp-said-who">${esc(c.who)}</span></figcaption>
+        </figure>`).join('')
+  const wardrobe: Array<[string, string]> = [['hat', 'Party hat'], ['scarf', 'Scarf'], ['shades', 'Shades'], ['cape', 'Cape'], ['crown', 'Crown']]
+  const wearRow = wardrobe.map(([id, label]) => `<span class="lp-wear">${icon(id, 22)}<small>${label}</small></span>`).join('')
+  const odds = [['5', 'photos', 'A common Axie, any class'], ['20', 'photos', 'One rare part, guaranteed'], ['50', 'photos', 'Two rare parts'], ['100', 'photos', 'A shot at Mystic']]
+  const oddsRow = odds.map(([n, unit, what]) => `<div class="lp-odd"><b>${n}</b><small>${unit}</small><span>${what}</span></div>`).join('')
   return `
-    <div class="bd-scroll bd-welcome">
-      ${about ? `<header class="bd-head bd-head-row bd-w-head">
-        <button type="button" class="bd-round" data-action="back" aria-label="Back">${icon('back', 18)}</button>
-        <p class="bd-eyebrow">About Axie Idol</p>
-        <span class="bd-round bd-round-ghost"></span>
-      </header>` : ''}
-      <div class="bd-w-shot" aria-hidden="true">
-        <img class="bd-w-photo" src="/welcome/stairs.jpg" alt="">
-        <div class="bd-w-bubbles">${bubbles}</div>
-        <img class="bd-w-axie" src="/stickers/kotaro.png" alt="">
-        <span class="bd-w-tag">A real photo, a real line</span>
-      </div>
-      <div class="bd-w-copy">
-        <p class="bd-eyebrow">Axie Idol</p>
-        <h1 class="bd-welcome-title">Your Axie. In your camera. With opinions.</h1>
-        <p class="bd-welcome-line">Find an egg and take it places. When it hatches, it talks: one line after every photo, about what it actually sees, and where it wants to go next.</p>
-        ${cta}
-      </div>
-      <div class="bd-w-grid">
-        <div class="bd-card bd-w-tile">
-          <img class="bd-w-icon" src="/previews/egg-2.svg" alt="">
-          <b>Hatch one nobody else has</b>
-          <span>Five photos and it hatches. Carry it longer for a rarer Axie: twenty photos guarantees a rare part, a hundred gives a shot at Mystic.</span>
+    <div class="bd-scroll bd-welcome lp">
+      <header class="lp-header">
+        <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(30)}<span>Axie Idol</span></a>
+        <nav class="lp-nav" aria-label="Sections">
+          <a href="#lp-how">How it works</a><a href="#lp-voice">The voice</a><a href="#lp-grow">Grow</a><a href="#lp-faq">Questions</a>
+        </nav>
+        <div class="lp-header-cta">${primary}</div>
+      </header>
+
+      <section class="lp-hero">
+        <div class="lp-hero-copy">
+          <p class="bd-eyebrow">Axie Vibeathon 2026 · Round one</p>
+          <h1 class="lp-h1">Your Axie. In your camera. With opinions.</h1>
+          <p class="lp-lede">Find an egg and take it places. When it hatches, it talks: one line after every photo, about what it actually sees, and where it wants to go next.</p>
+          <div class="lp-cta">${primary}${about ? '' : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
+          ${about ? '' : `<p class="bd-small lp-alt">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>`}
         </div>
-        <div class="bd-card bd-w-tile">
-          <span class="bd-w-icon bd-w-icon-talk">${icon('comment', 26)}</span>
-          <b>It sees. It remembers. It wants things.</b>
-          <span>It names what is in your photo, notices when you are back somewhere, and asks for the next place. Its words go on the picture.</span>
+        <div class="bd-w-shot lp-hero-shot" aria-hidden="true">
+          <img class="bd-w-photo" src="/welcome/stairs.jpg" alt="">
+          <div class="bd-w-bubbles">${bubbles}</div>
+          <img class="bd-w-axie" src="/stickers/kotaro.png" alt="">
+          <span class="bd-w-tag">A real photo, a real line</span>
         </div>
-        <div class="bd-card bd-w-tile">
-          <span class="bd-w-icon bd-w-icon-hat">${icon('hat', 26)}</span>
-          <b>Grow it, dress it, climb the ladder</b>
-          <span>Every photo builds bond. Bond unlocks the hat, the scarf, the shades, the crown, and a place on the monthly Idol ladder.</span>
+      </section>
+
+      <section class="lp-section" id="lp-how">
+        <p class="bd-eyebrow">How it works</p>
+        <h2 class="lp-h2">Three steps, and the third one talks back</h2>
+        <ol class="lp-steps">
+          <li><b>Find an egg</b><span>It rides along in your camera, in every photo you take.</span></li>
+          <li><b>Take it places</b><span>Five photos and it can hatch. Carry it further for a rarer Axie.</span></li>
+          <li><b>It hatches, and it talks</b><span>A one-of-a-kind Axie with a voice. It says one line after every photo, and its words go on the picture.</span></li>
+        </ol>
+      </section>
+
+      <section class="lp-section" id="lp-voice">
+        <p class="bd-eyebrow">The voice</p>
+        <h2 class="lp-h2">It sees. It remembers. It wants things.</h2>
+        <p class="lp-sub">Every line is about the photo it is on. It names what it can see, notices when you are somewhere again, and asks for the next place. Write a caption and it answers that too.</p>
+        <div class="lp-said-row">${saidCards}</div>
+      </section>
+
+      <section class="lp-section" id="lp-grow">
+        <p class="bd-eyebrow">Grow</p>
+        <h2 class="lp-h2">Every photo builds bond. Bond opens the wardrobe.</h2>
+        <div class="lp-grow">
+          <div class="bd-card lp-grow-card">
+            <b>Ten steps on the growth ladder</b>
+            <div class="lp-wear-row">${wearRow}</div>
+            <span>A name and a voice first. Then the hat, the scarf, the shades, a signature pose, the cape, a trick, the crown, another trick, and the Mystic glow at the top.</span>
+          </div>
+          <div class="bd-card lp-grow-card">
+            <b>The Idol ladder</b>
+            <span>Bond earned this month ranks every Axie in the game. The crown rotates monthly, so a new Axie is never out of the race.</span>
+          </div>
         </div>
-      </div>
-      <p class="bd-small bd-w-foot">Ten photos a day count, wishes add extra, nothing to buy. Own an Axie on Ronin? Bring it instead of an egg.</p>
+      </section>
+
+      <section class="lp-section" id="lp-hatch">
+        <p class="bd-eyebrow">What hatches</p>
+        <h2 class="lp-h2">The longer you carry the egg, the rarer the Axie</h2>
+        <div class="lp-odds">${oddsRow}</div>
+        <p class="lp-sub">No two hatched Axies share the same parts. Already own one on Ronin? Sign in and bring it instead of an egg.</p>
+      </section>
+
+      <section class="lp-section" id="lp-faq">
+        <p class="bd-eyebrow">Questions</p>
+        <h2 class="lp-h2">The honest rules</h2>
+        <dl class="lp-faq">
+          <div><dt>Is it free?</dt><dd>Yes. There is nothing to buy and no ads.</dd></div>
+          <div><dt>Do I need a wallet?</dt><dd>No. A wallet only matters if you want to bring an Axie you already own, or keep your Axies on an account across phones.</dd></div>
+          <div><dt>How many photos count?</dt><dd>Ten a day build bond. Wishes and moments add a little on top. The rest still go in the book.</dd></div>
+          <div><dt>Where do my photos go?</dt><dd>Into your Axie's scrapbook. Your Axie looks at each one to find its line. Nothing is sold.</dd></div>
+        </dl>
+      </section>
+
+      <footer class="lp-footer">
+        <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(22)}<span>Axie Idol</span></a>
+        <span class="bd-muted">Built for the Axie Vibeathon 2026 · axieidol.com</span>
+        <div class="lp-footer-cta">${primary}</div>
+      </footer>
     </div>`
 }
 

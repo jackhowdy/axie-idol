@@ -483,15 +483,18 @@ test('the scrapbook screen shows every photo it has a picture for, newest first,
 })
 
 
-test('the welcome screen: find an egg, or get an Axie back; as About it only leads back', () => {
+test('the front door: header with the mark, hero with a real photo and line, sections, honest rules; as About it only leads back', () => {
   const fresh = welcomeHtml({})
-  assert.match(fresh, /Axie Idol/)
+  assert.match(fresh, /class="lp-mark"/, 'the logo mark')
+  assert.match(fresh, /class="lp-header"/)
   assert.match(fresh, /Your Axie\. In your camera\. With opinions\./)
-  assert.match(fresh, /That bench is far/, 'a real line on the sample shot')
-  assert.match(fresh, /welcome\/stairs\.jpg/, 'a real photo')
-  assert.match(fresh, /twenty photos guarantees a rare part/)
-  assert.match(fresh, /Free\. No wallet needed\./)
-  assert.match(fresh, /data-action="start-egg">Find an egg/)
+  assert.match(fresh, /welcome\/stairs\.jpg/, 'a real photo in the hero')
+  assert.match(fresh, /That bench is far/, 'a real line on it')
+  for (const id of ['lp-how', 'lp-voice', 'lp-grow', 'lp-hatch', 'lp-faq']) assert.match(fresh, new RegExp(`id="${id}"`), id)
+  assert.match(fresh, /Something moved in there\./, 'the egg voice on a real photo')
+  assert.match(fresh, /Is it free\?/)
+  assert.match(fresh, /Ten a day build bond/)
+  assert.equal((fresh.match(/data-action="start-egg"/g) || []).length, 3, 'header, hero and footer all start an egg')
   assert.match(fresh, /data-action="ronin-welcome"/)
   assert.match(fresh, /data-action="recover"/)
   assert.doesNotMatch(fresh, /data-action="back"/)
@@ -499,9 +502,9 @@ test('the welcome screen: find an egg, or get an Axie back; as About it only lea
   assert.match(signed, /data-action="claim"/)
   assert.doesNotMatch(signed, /ronin-welcome/)
   const about = welcomeHtml({ hasAxie: true, axieName: 'Pip' })
-  assert.match(about, /About Axie Idol/)
   assert.match(about, /data-action="back">Back to Pip/)
   assert.doesNotMatch(about, /start-egg/, 'no second egg from the About page')
+  assert.doesNotMatch(about, /ronin-welcome|data-action="recover"/)
   assert.match(accountHtml(miso, { buddies: [miso], address: null }), /data-action="about"/)
 })
 
