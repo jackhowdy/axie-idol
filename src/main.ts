@@ -2235,7 +2235,7 @@ async function darkness(blob: Blob): Promise<boolean> {
 }
 
 async function lookAtCapture(plain: Blob, seq: number, caption = ''): Promise<void> {
-  if (!buddyEnabled || !buddyState.active?.hatchedAt || !captureAnchor) return
+  if (!buddyEnabled || !buddyState.active?.hatchedAt) return
   const anchor = captureAnchor
   const mine = ++lookSeq
   let line = ''
@@ -2266,8 +2266,12 @@ async function lookAtCapture(plain: Blob, seq: number, caption = ''): Promise<vo
   btnDownload.href = captureUrl
 }
 
-/** A fresh copy of the plain capture with a speech bubble drawn on it, or null if that failed. */
-async function bubbleOnto(plain: Blob, line: string, anchor: BubbleAnchor): Promise<Blob | null> {
+/**
+ * A fresh copy of the plain capture with a speech bubble drawn on it, or null if that failed.
+ * Without an anchor (a capture path that did not measure the character) the bubble sits over the
+ * middle of the frame rather than not at all: a photo without its line reads as a bug.
+ */
+async function bubbleOnto(plain: Blob, line: string, anchor: BubbleAnchor | null): Promise<Blob | null> {
   const img = new Image()
   const src = URL.createObjectURL(plain)
   img.src = src
@@ -2285,7 +2289,8 @@ async function bubbleOnto(plain: Blob, line: string, anchor: BubbleAnchor): Prom
   ctx.drawImage(img, 0, 0)
   URL.revokeObjectURL(src)
   const family = getComputedStyle(document.body).getPropertyValue('--font-display').trim() || 'Nunito, system-ui, sans-serif'
-  if (!drawSpeechBubble(ctx, line, anchor, family)) return null
+  const at = anchor || { x: canvas.width / 2, y: canvas.height * 0.52, halfW: canvas.width * 0.15, halfH: canvas.height * 0.08 }
+  if (!drawSpeechBubble(ctx, line, at, family)) return null
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 0.95))
 }
 
@@ -2295,7 +2300,7 @@ async function bubbleOnto(plain: Blob, line: string, anchor: BubbleAnchor): Prom
  */
 async function stampEggLine(plain: Blob, seq: number): Promise<void> {
   const b = buddyState.active
-  if (!buddyEnabled || !b || b.hatchedAt || !captureAnchor) return
+  if (!buddyEnabled || !b || b.hatchedAt) return
   const blob = await bubbleOnto(plain, eggLine(b.egg.snaps + 1), captureAnchor)
   if (!blob || seq !== captureSeq) return
   if (captureUrl) URL.revokeObjectURL(captureUrl)
