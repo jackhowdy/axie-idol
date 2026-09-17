@@ -2,11 +2,10 @@ name = "axie-idol"
 main = "worker/index.mjs"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
-# The game lives at axieidol.com; the workers.dev address keeps working as a fallback.
-routes = [
-  { pattern = "axieidol.com", custom_domain = true },
-  { pattern = "www.axieidol.com", custom_domain = true },
-]
+# The game lives at axieidol.com (+ www): both are attached to this Worker as custom domains on
+# the Cloudflare account and persist across deploys. They are NOT listed here as `routes` because
+# the deploy token cannot read Workers routes on that zone, and wrangler refuses to deploy when it
+# cannot reconcile them. Re-attach in the dashboard (Worker > Settings > Domains & Routes) if ever lost.
 
 
 [assets]
