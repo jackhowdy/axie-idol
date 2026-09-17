@@ -2,7 +2,7 @@
 // Rules (checkRules): no digits, no game words, no emoji, at most three short sentences, one loud word.
 // Lines with {slots} are used only when the app has a real noun for the slot; everything else works
 // anywhere, so an Axie on a staircase never talks about waves.
-export const SITUATIONS = ['hatch', 'morning', 'wish', 'before', 'after', 'bedtime', 'return', 'big', 'moment', 'unlock', 'talk', 'talk-warm', 'talk-curious', 'pet']
+export const SITUATIONS = ['hatch', 'morning', 'wish', 'before', 'after', 'bedtime', 'return', 'big', 'moment', 'unlock', 'talk', 'talk-warm', 'talk-curious', 'pet', 'treat', 'play-win', 'play-miss']
 
 export const LINES = {
   Explorer: {
@@ -378,6 +378,30 @@ export const LINES = {
 
 /** Trait-neutral lines for each situation. Used when every trait line is spent or needs a slot we do not have. */
 export const GENERIC = {
+  // A treat on Home, twice a day.
+  treat: [
+    'A treat. For me? Yes.',
+    'Mmm. That was the good kind.',
+    'I saved half. No I did not.',
+    'Crunchy. Again tomorrow?',
+    'You remembered. I like you best.',
+    'That was sweet. My tail is going.',
+  ],
+  // The catching game: most of the stars caught, or most of them missed.
+  'play-win': [
+    'Got it! Did you see that? Again!',
+    'I am very fast. You are very fast. We are fast.',
+    'That star had no chance.',
+    'Caught. Can we keep them?',
+    'My horn helped. A bit.',
+  ],
+  'play-miss': [
+    'It went past my ear. Again?',
+    'That star cheated. One more go?',
+    'Too quick. I blinked.',
+    'Nearly. My tail was in the way.',
+    'I was not ready. Now I am ready.',
+  ],
   // A pat on the head, on Home. Small and glad, and often it turns into wanting to go out.
   pet: [
     'Oh. Do that again.',
@@ -446,6 +470,9 @@ export const GENERIC = {
 
 /** Lines with slots, used only when the app has a real noun for every slot. */
 export const TEMPLATES = {
+  treat: ['A treat. For me? Yes.'],
+  'play-win': ['Got it! Again!'],
+  'play-miss': ['Nearly. Again?'],
   pet: ['Oh. Do that again.'],
   hatch: ['Hello. You\'re my person now. Where are we?'],
   morning: ['It\'s {weather}. Good. Let\'s go anyway.', 'Day {count}. What\'s the plan?'],

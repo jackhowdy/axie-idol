@@ -150,3 +150,38 @@ test('a real Axie brief names its parts and its training without a digit; a wild
   assert.equal(coreFacts({ name: 'Wild', core: null }), '')
   assert.match(coreFacts({ core: { level: 1, parts: [{ type: 'horn', name: 'Imp' }] } }), /never trained/)
 })
+
+test('a caption is worth a little: you told it about the photo', () => {
+  const plain = photoJoy({ labels: ['slide'] }).delta
+  const told = photoJoy({ labels: ['slide'], caption: 'on a boat' })
+  assert.equal(told.delta, plain + HAPPY.caption); assert.ok(told.reasons.includes('you told it about the photo'))
+  assert.equal(photoJoy({ labels: ['slide'], caption: ' a ' }).delta, plain, 'two letters are not a sentence')
+})
+
+test('a treat is a bigger lift than a pat, twice a day, and the jar refills tomorrow', async () => {
+  const r = rig()
+  await r.hatch()
+  for (let i = 0; i < HAPPY.treatsPerDay; i++) {
+    const t = await r.call('/api/buddy/treat')
+    assert.equal(t.status, 200); assert.equal(t.body.happy.delta, HAPPY.treat); assert.ok(t.body.line)
+    assert.equal(t.body.active.happy.treatsLeft, HAPPY.treatsPerDay - i - 1)
+  }
+  assert.equal((await r.call('/api/buddy/treat')).status, 409)
+  r.clock.t += 24 * HOUR
+  assert.equal((await r.call('/api/buddy/treat')).status, 200)
+})
+
+test('the catching game pays per star, three games a day, and never more than three stars', async () => {
+  const r = rig()
+  await r.hatch()
+  const a = await r.call('/api/buddy/play', { body: { catches: 2 } })
+  assert.equal(a.body.happy.delta, 2 * HAPPY.playCatch); assert.equal(a.body.counted, true); assert.ok(a.body.line)
+  const cheat = await r.call('/api/buddy/play', { body: { catches: 99 } })
+  assert.equal(cheat.body.catches, HAPPY.playRounds); assert.equal(cheat.body.happy.delta, HAPPY.playRounds * HAPPY.playCatch)
+  const none = await r.call('/api/buddy/play', { body: { catches: 0 } })
+  assert.equal(none.body.happy.delta, 0)
+  const fourth = await r.call('/api/buddy/play', { body: { catches: 3 } })
+  assert.equal(fourth.body.counted, false); assert.equal(fourth.body.happy.delta, 0); assert.equal(fourth.body.active.happy.playsLeft, 0)
+  const egg = rig(); await egg.call('/api/buddy/egg')
+  assert.equal((await egg.call('/api/buddy/play', { body: { catches: 3 } })).status, 409)
+})

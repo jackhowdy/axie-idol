@@ -7,10 +7,10 @@
  */
 import {
   buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone, talkEnabled,
-  roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto, pet, visitAxie, type HappyChange,
+  roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto, pet, treat, playResult, visitAxie, type HappyChange,
 } from './buddy'
 import {
-  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml,
+  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml,
   bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
@@ -52,6 +52,63 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   let claimPick: string | null = null
   let exchanges: TalkExchange[] = []
   let busy = false
+
+  /**
+   * The catching game lives here because it is the only thing on these screens that moves. The
+   * star's place is a function of time (a sine sweep), so where it was when Catch went down is
+   * computed, not read back from the DOM; each star is faster than the last.
+   */
+  const PLAY_ROUNDS = 3
+  const PLAY_ZONE = 0.13 // half-width of the catching zone, as a share of the track
+  let play: { round: number; caught: number; t0: number; raf: number; locked: boolean; flip: boolean } | null = null
+  const playPos = (now: number): number => {
+    if (!play) return 0.5
+    const period = 2600 - play.round * 450 // ms for a full sweep there and back
+    // every star sets off from an edge (never from the middle, where a blind tap would score)
+    const at = 0.5 - 0.5 * Math.cos(((now - play.t0) / period) * Math.PI * 2)
+    return play.flip ? 1 - at : at
+  }
+  function playFrame(now: number): void {
+    const star = sheetEl.querySelector<HTMLElement>('[data-play-star]')
+    if (!play || !star) { play = null; return }
+    if (!play.locked) star.style.left = `${playPos(now) * 100}%`
+    play.raf = requestAnimationFrame(playFrame)
+  }
+  function playStart(): void {
+    const b = buddyState.active
+    if (!b) return
+    if (play) cancelAnimationFrame(play.raf)
+    play = { round: 0, caught: 0, t0: performance.now(), raf: 0, locked: false, flip: Math.random() < 0.5 }
+    sheet(playHtml(b, 0, PLAY_ROUNDS, 0))
+    play.raf = requestAnimationFrame(playFrame)
+  }
+  /** Catch went down: hit or miss, a beat to see it, then the next star or the result. */
+  async function playTap(): Promise<void> {
+    const b = buddyState.active
+    if (!play || !b || play.locked) return
+    const at = playPos(performance.now())
+    const hit = Math.abs(at - 0.5) <= PLAY_ZONE
+    if (hit) play.caught += 1
+    play.round += 1
+    play.locked = true
+    sheet(playHtml(b, play.round, PLAY_ROUNDS, play.caught, hit ? 'hit' : 'miss'))
+    const frozen = sheetEl.querySelector<HTMLElement>('[data-play-star]')
+    if (frozen) frozen.style.left = `${at * 100}%`
+    await new Promise((r) => window.setTimeout(r, 650))
+    if (!play) return // stopped while the beat played
+    if (play.round < PLAY_ROUNDS) {
+      play.locked = false; play.t0 = performance.now(); play.flip = Math.random() < 0.5
+      sheet(playHtml(b, play.round, PLAY_ROUNDS, play.caught))
+      return
+    }
+    const caught = play.caught
+    cancelAnimationFrame(play.raf); play = null
+    const r = await playResult(caught)
+    sheet(playResultHtml(buddyState.active || b, r))
+    if (r.happy.overjoyed) pendingJoy = r.happy
+  }
+  /** A win that happened inside the game waits for the result card to close. */
+  let pendingJoy: HappyChange | null = null
 
   /**
    * `hidden` alone is not enough for the legacy screens: `.screen.active { display: block }` is an
@@ -244,6 +301,23 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       if (r.happy.overjoyed && buddyState.active) sheet(joyHtml(r.happy, buddyState.active))
       return
     }
+    if (act === 'treat') {
+      const r = await treat()
+      await show('home')
+      const bubble = document.querySelector<HTMLElement>('#buddy-home .bd-speech-home')
+      if (bubble) { bubble.textContent = r.line; bubble.classList.remove('bd-speech-quiet') }
+      nav.toast(`+${r.happy.delta} happy · ${r.happy.mood} ${r.happy.value}`)
+      if (r.happy.overjoyed && buddyState.active) sheet(joyHtml(r.happy, buddyState.active))
+      return
+    }
+    if (act === 'play') { playStart(); return }
+    if (act === 'play-tap') { await playTap(); return }
+    if (act === 'play-done') {
+      const joy = pendingJoy; pendingJoy = null
+      await show('home')
+      if (joy && buddyState.active) sheet(joyHtml(joy, buddyState.active))
+      return
+    }
     if (act === 'visit') { sheet(visitHtml()); document.querySelector<HTMLInputElement>('#bd-visit-id')?.focus(); return }
     if (act === 'visit-go') {
       const id = (a.dataset.id || document.querySelector<HTMLInputElement>('#bd-visit-id')?.value || '').replace(/[^0-9]/g, '')
@@ -339,7 +413,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       nav.toast('Not kept')
       return
     }
-    if (act === 'close-sheet') { hideSheet(); return }
+    if (act === 'close-sheet') { if (play) { cancelAnimationFrame(play.raf); play = null } hideSheet(); return }
     // The retry on the boot-failure card: the same two steps boot itself runs, and if they fail
     // again the card comes straight back rather than an alert over a blank page.
     if (act === 'retry-boot') {

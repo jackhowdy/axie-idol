@@ -4057,3 +4057,20 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 .sample-chip { flex: 0 0 auto; width: 56px; height: 56px; padding: 0; border-radius: 12px; border: 2px solid #FFFFFF; overflow: hidden; background: #000; cursor: pointer; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); }
 .sample-chip img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sample-chip:hover, .sample-chip:focus-visible { border-color: var(--accent-hot); }
+
+/* ---- Care buttons and the catching game ---- */
+.bd-happy-acts { flex-wrap: wrap; }
+.bd-happy-acts .bd-btn { flex: 1 1 28%; white-space: nowrap; }
+.bd-happy-acts .bd-btn small { font-size: 10px; font-weight: 800; opacity: 0.7; margin-left: 2px; }
+.bd-happy-acts .bd-btn[disabled] { opacity: 0.45; cursor: default; }
+.bd-play { position: relative; height: 84px; margin: 10px 0 6px; border-radius: 18px; background: linear-gradient(180deg, #CFE9FF 0%, #E8F6FF 100%); border: 2px solid var(--border); overflow: hidden; touch-action: manipulation; }
+.bd-play-zone { position: absolute; left: 50%; top: 0; bottom: 0; width: 26%; transform: translateX(-50%); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; color: var(--accent-hot); background: rgba(255, 255, 255, 0.75); border-left: 2px dashed var(--accent-hot); border-right: 2px dashed var(--accent-hot); }
+.bd-play-star { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); color: #F5A700; filter: drop-shadow(0 2px 3px rgba(26, 43, 60, 0.3)); will-change: left; }
+.bd-play-hit { border-color: #2FB36B; background: linear-gradient(180deg, #C9F3DC 0%, #E9FBF1 100%); }
+.bd-play-miss { border-color: #E0355A; }
+.bd-play-score { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.bd-play-dots { display: inline-flex; gap: 6px; }
+.bd-play-dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+.bd-play-dots i.done { background: var(--accent-hot); }
+.bd-play-star svg { fill: currentColor; }
+.bd-play-btn { width: 100%; padding-top: 18px; padding-bottom: 18px; font-size: 18px; touch-action: manipulation; }

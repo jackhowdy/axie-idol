@@ -60,7 +60,7 @@ export type Buddy = {
   /** A real Axie's facts from Sky Mavis. */
   core?: { level: number | null; birthYear: number | null; breedCount: number | null; parts: { type: string; name: string; class: string | null; special: string | null }[] } | null
 }
-export type Happy = { value: number; mood: string; moodId: string; talksLeft: number; petsLeft: number; overjoyedToday: boolean }
+export type Happy = { value: number; mood: string; moodId: string; talksLeft: number; petsLeft: number; treatsLeft?: number; playsLeft?: number; overjoyedToday: boolean }
 /** What one action did to its happiness. `overjoyed` is the win: the first time in a day it gets there. */
 export type HappyChange = { delta: number; value: number; mood: string; reasons: string[]; overjoyed: boolean; joyBonus: number; joyStreak: number }
 export type SnapResult =
@@ -118,6 +118,13 @@ export async function wear(item: string | null): Promise<void> { apply(await cal
 export async function wishDone(): Promise<void> { apply(await call<Payload>('/api/buddy/wish/done', {})) }
 /** A pat on the head: a line back, and a little happiness (five times a day). */
 export async function pet(): Promise<{ line: string; happy: HappyChange }> { const p = await call<Payload & { line: string; happy: HappyChange }>('/api/buddy/pet', {}); apply(p); return { line: p.line, happy: p.happy } }
+/** A treat from the jar: twice a day. */
+export async function treat(): Promise<{ line: string; happy: HappyChange }> { const p = await call<Payload & { line: string; happy: HappyChange }>('/api/buddy/treat', {}); apply(p); return { line: p.line, happy: p.happy } }
+/** The catching game is played on the phone; the server hears how many stars were caught. */
+export async function playResult(catches: number): Promise<{ line: string; happy: HappyChange; catches: number; rounds: number; counted: boolean }> {
+  const p = await call<Payload & { line: string; happy: HappyChange; catches: number; rounds: number; counted: boolean }>('/api/buddy/play', { catches }); apply(p)
+  return { line: p.line, happy: p.happy, catches: p.catches, rounds: p.rounds, counted: p.counted }
+}
 /** Play as any real Axie by its number. No wallet: it is a visit until a Ronin sign-in proves it is yours. */
 export async function visitAxie(axieId: string): Promise<{ lines: string[] }> { const p = await call<Payload>('/api/buddy/visit', { axieId }); apply(p); return { lines: p.lines || [] } }
 /** The opposite of keeping it: drops the photo from the scrapbook and the feed. Bond already earned stays. */

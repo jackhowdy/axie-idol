@@ -43,6 +43,8 @@ const RATE_LIMITS = {
   'POST /api/buddy/photo/unkeep': 20,
   'POST /api/buddy/look': 40,
   'POST /api/buddy/pet': 60,
+  'POST /api/buddy/treat': 20,
+  'POST /api/buddy/play': 60,
   'POST /api/buddy/visit': 10,
   'POST /api/buddy/talk': 40,
   'POST /api/account/recover': 10,
@@ -164,10 +166,10 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
    */
   function happyOf(b) {
     const day = manilaDayKey()
-    if (!b.happy) b.happy = { value: HAPPY_START, at: now(), day, talks: 0, pets: 0, dressed: false, joyPaid: false }
+    if (!b.happy) b.happy = { value: HAPPY_START, at: now(), day, talks: 0, pets: 0, treats: 0, plays: 0, dressed: false, joyPaid: false }
     const h = b.happy
     h.value = decayed(h.value, (now() - h.at) / 36e5); h.at = now()
-    if (h.day !== day) { h.day = day; h.talks = 0; h.pets = 0; h.dressed = false; h.joyPaid = false }
+    if (h.day !== day) { h.day = day; h.talks = 0; h.pets = 0; h.treats = 0; h.plays = 0; h.dressed = false; h.joyPaid = false }
     b.joy ||= { days: 0, streak: 0, best: 0, lastDay: null }
     return h
   }
@@ -195,7 +197,8 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const value = Math.round(decayed(h.value, (now() - h.at) / 36e5))
     const today = h.day === manilaDayKey()
     const m = moodFor(value)
-    return { value, mood: m.name, moodId: m.id, talksLeft: Math.max(0, HAPPY.talksPerDay - (today ? h.talks : 0)), petsLeft: Math.max(0, HAPPY.petsPerDay - (today ? h.pets : 0)), overjoyedToday: today && Boolean(h.joyPaid) }
+    const left = (cap, used) => Math.max(0, cap - (today ? used || 0 : 0))
+    return { value, mood: m.name, moodId: m.id, talksLeft: left(HAPPY.talksPerDay, h.talks), petsLeft: left(HAPPY.petsPerDay, h.pets), treatsLeft: left(HAPPY.treatsPerDay, h.treats), playsLeft: left(HAPPY.playsPerDay, h.plays), overjoyedToday: today && Boolean(h.joyPaid) }
   }
   function publicJoy(b) {
     const j = b.joy || { days: 0, streak: 0, best: 0, lastDay: null }
@@ -455,7 +458,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const districtsToday = new Set(Object.values(b.places).filter((p) => p.district && p.count).map((p) => p.district)).size
     const found = detectMoments({ hour, weather: ctx.weather, placeType: ctx.placeType, labels, isNewPlace, isNewDistrict: Boolean(ctx.district), districtsToday, snapCount: b.snapCount, hatchGrid: b.hatchGrid, grid }, b.moments.map((m) => m.id))
     for (const id of found) { b.moments.push({ id, at: b.lastSnapAt, photoId: post.id }); const m = addBond(b, 2); unlocks.push(...m.unlocks) }
-    const joyOf = photoJoy({ labels, previous: previousSeen, recent: recentSeen, isNewPlace, wishDone: Boolean(wishDone), judged })
+    const joyOf = photoJoy({ labels, previous: previousSeen, recent: recentSeen, isNewPlace, wishDone: Boolean(wishDone), judged, caption: ctx.caption })
     const happy = addHappy(b, joyOf.delta, joyOf.reasons)
     unlocks.push(...happy.unlocks)
     // Only real nouns go into slots. With nothing seen or named, lines that need {thing} or
@@ -714,6 +717,30 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       h.pets += 1
       const happy = addHappy(active, counts ? HAPPY.pet : 0, counts ? ['a pat'] : [])
       save(store); sendJson(res, 200, payload(store, ownerKey, { happy, line: say(active, 'pet') })); return true
+    }
+    /** A treat: a bigger lift than a pat, twice a day. After that the jar is empty until tomorrow. */
+    if (p === '/api/buddy/treat' && req.method === 'POST') {
+      if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }
+      const h = happyOf(active)
+      if ((h.treats || 0) >= HAPPY.treatsPerDay) { sendJson(res, 409, { error: 'No more treats today. The jar fills up again tomorrow.' }); return true }
+      h.treats = (h.treats || 0) + 1
+      const happy = addHappy(active, HAPPY.treat, ['a treat'])
+      save(store); sendJson(res, 200, payload(store, ownerKey, { happy, line: say(active, 'treat') })); return true
+    }
+    /**
+     * The catching game: three stars fly past, the player says how many were caught. The score
+     * comes from the client, so all it can ever move is happiness, and only three games a day
+     * count; after that it is still a game, just not points.
+     */
+    if (p === '/api/buddy/play' && req.method === 'POST') {
+      if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }
+      const catches = Math.max(0, Math.min(HAPPY.playRounds, Math.floor(Number(body.catches) || 0)))
+      const h = happyOf(active)
+      const counts = (h.plays || 0) < HAPPY.playsPerDay
+      h.plays = (h.plays || 0) + 1
+      const happy = addHappy(active, counts ? catches * HAPPY.playCatch : 0, counts && catches ? ['a game together'] : [])
+      const line = say(active, catches * 2 >= HAPPY.playRounds ? 'play-win' : 'play-miss')
+      save(store); sendJson(res, 200, payload(store, ownerKey, { happy, line, catches, rounds: HAPPY.playRounds, counted: counts })); return true
     }
     /**
      * Play as a real Axie without a wallet: any Axie, by its number, read from Sky Mavis. It is a

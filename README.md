@@ -6,7 +6,7 @@ Play it: **https://axieidol.com** (phone or desktop, no wallet, no account)
 
 Axie Idol is a pet game. You hatch an Axie (or bring a real one), it rides along in your camera,
 and it talks: one line on every photo, about what it actually sees. The game is to **keep it
-happy**. Photos, new places, new things, a wish come true and a pat lift its happiness; time alone
+happy**. Photos, new places, a caption, a pat, a treat and a game of catch lift its happiness; time alone
 wears it down. Get it to Overjoyed and the day is won. Leave it and it gets bored.
 
 ---
@@ -22,7 +22,8 @@ You do not need a phone, a camera or a wallet.
    camera: pick one, drag the Axie where you want it, press the shutter, then **Post**.
 3. Five photos hatch the egg. Name it. From then on every photo comes back with the Axie's line
    drawn on it, and the sheet says what the photo did for its happiness.
-4. On Home, watch the **Happiness** card. Pat it, and take photos of different things.
+4. On Home, watch the **Happiness** card. Pat it, give it a treat, play catch (tap when the star
+   is over your Axie), and take photos of different things.
    Reaching 90 is the win for the day: a joy day, +3 bond, and the start of a streak.
 5. Losing is slow on purpose: happiness falls 1.5 points an hour, so an Axie left alone is Content
    after a day and Bored after about two. `tests/happy.test.mjs` shows the whole curve in a second.
@@ -43,7 +44,8 @@ phone. Ronin sign-in is optional and only adds: bring an Axie you own, keep your
 
 - **Happiness, 0 to 100.** Five moods: Bored, Restless, Content, Happy, Overjoyed.
 - **What lifts it:** a photo (+10), new things in it (+5), a new place (+10), today's wish come
-  true (+20), a pat (+2, five a day), dressing up (+3, once a day).
+  true (+20), a caption on the photo (+3), a pat (+2, five a day), a treat (+8, twice a day), the
+  catching game (+3 a star, three stars a game, three games a day), dressing up (+3, once a day).
   The same things photographed again are worth +3; a photo it cannot make out, +2.
 - **What wears it down:** time alone, 1.5 an hour.
 - **Win:** reach Overjoyed (90). Once a day that pays +3 bond and counts a **joy day**; joy days on
@@ -79,8 +81,8 @@ gets stronger the more it is cared for. Axie Idol is built on that and nothing e
 
 | Stage | What |
 |---|---|
-| **Round 1 (live)** | Egg and hatch, the voice on every photo, memory, happiness and pats, wishes, growth ladder, scrapbook, monthly Idol ladder, real Axies by number, Ronin sign-in. |
-| **Round 2** | More ways to keep it happy (treats and play), duo photos with a friend, part evolution that follows Axie Core (the same stage two parts, earned by bond), your whole Ronin collection playable, a morning nudge. |
+| **Round 1 (live)** | Egg and hatch, the voice on every photo, memory, happiness (pats, treats, a catching game), wishes, growth ladder, scrapbook, monthly Idol ladder, real Axies by number, Ronin sign-in. |
+| **Round 2** | New games to play together, duo photos with a friend, part evolution that follows Axie Core (the same stage two parts, earned by bond), your whole Ronin collection playable, a morning nudge. |
 | **After** | Axies that stand higher in Axie Core come first: special props only they can wear, chat that opens up for them, a better place on the social wall. The social wall itself. Ladder seasons. Work with Sky Mavis so time spent here counts for the Axie, the way AXP does. |
 
 The same roadmap is on the front page of the site.
@@ -107,7 +109,7 @@ npm install
 cp .env.example .env        # add your own keys; every key is optional
 npm run build
 npm start                   # http://localhost:5174
-npm test                    # 189 tests, no network needed
+npm test                    # 193 tests, no network needed
 ```
 
 Keys (all optional, all in `.env`, never committed): `GEMINI_API_KEY` for the voice (without it the

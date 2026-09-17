@@ -297,10 +297,12 @@ export function happyCardHtml(b: Buddy, opts: { talk?: boolean } = {}): string {
         <div class="bd-meter bd-meter-happy"><i style="width:${Math.max(3, h.value)}%"></i><u style="left:90%"></u></div>
         <p class="bd-small">${say[h.moodId] || ''} ${streak}</p>
         <div class="bd-happy-acts">
-          <button type="button" class="bd-btn bd-btn-ghost" data-action="pet">${icon('heartFilled', 16)} Pat ${name}${h.petsLeft ? '' : ' (no more points today)'}</button>
+          <button type="button" class="bd-btn bd-btn-ghost" data-action="pet" title="Pat ${name}">${icon('heartFilled', 16)} Pat${h.petsLeft ? '' : ' <small>done</small>'}</button>
+          <button type="button" class="bd-btn bd-btn-ghost" data-action="treat"${(h.treatsLeft ?? 2) > 0 ? '' : ' disabled'}>${icon('star', 16)} Treat <small>${h.treatsLeft ?? 2} left</small></button>
+          <button type="button" class="bd-btn bd-btn-ghost" data-action="play">${icon('trophy', 16)} Play${(h.playsLeft ?? 3) > 0 ? '' : ' <small>for fun</small>'}</button>
           ${opts.talk ? `<button type="button" class="bd-btn bd-btn-ghost" data-action="talk">${icon('comment', 16)} Talk</button>` : ''}
         </div>
-        <p class="bd-small bd-muted">Photos, new places, new things, a wish come true${opts.talk ? ', a talk' : ''} and a pat make it happier. Time alone wears it down.</p>
+        <p class="bd-small bd-muted">Photos, new places, new things, a caption, a wish come true${opts.talk ? ', a talk' : ''}, a pat, a treat and a game of catch make it happier. Time alone wears it down.</p>
       </div>`
 }
 
@@ -316,6 +318,39 @@ export function joyHtml(h: { joyBonus: number; joyStreak: number }, b: Buddy): s
       </div>
     </div>
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="sheet-next">Lovely</button></div>`
+}
+
+/**
+ * The catching game. A star flies back and forth over a track; the Axie waits in the middle. Tap
+ * Catch when the star is over it. Three stars, each faster than the last. `buddyScreens` moves the
+ * star and reads where it was when the button went down.
+ */
+export function playHtml(b: Buddy, round: number, rounds: number, caught: number, flash: '' | 'hit' | 'miss' = ''): string {
+  const dots = Array.from({ length: rounds }, (_, i) => `<i class="${i < round ? 'done' : ''}"></i>`).join('')
+  return `
+    <p class="bd-eyebrow">Catch with ${esc(b.name)} · star ${Math.min(round + 1, rounds)} of ${rounds}</p>
+    <h2>${flash === 'hit' ? 'Caught!' : flash === 'miss' ? 'Missed!' : 'Tap when the star is over ' + esc(b.name)}</h2>
+    <div class="bd-play${flash ? ` bd-play-${flash}` : ''}" data-play-track>
+      <span class="bd-play-zone">${icon('heartFilled', 22)}</span>
+      <span class="bd-play-star" data-play-star style="left:-10%">${icon('star', 26)}</span>
+    </div>
+    <div class="bd-play-score"><span class="bd-play-dots">${dots}</span><b>${caught} caught</b></div>
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow bd-play-btn" data-action="play-tap">Catch!</button></div>
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="close-sheet">Stop</button></div>`
+}
+
+/** How the game went: the Axie's line, the score, and what it did for its happiness. */
+export function playResultHtml(b: Buddy, r: { line: string; catches: number; rounds: number; counted: boolean; happy: { delta: number; value: number; mood: string } }): string {
+  const what = r.happy.delta > 0 ? `+${r.happy.delta} happy · ${esc(r.happy.mood)} ${r.happy.value}` : r.counted ? `No stars, no points. ${esc(r.happy.mood)} ${r.happy.value}` : `Three games a day count. This one was for fun. ${esc(r.happy.mood)} ${r.happy.value}`
+  return `
+    <p class="bd-eyebrow">Catch with ${esc(b.name)} · ${r.catches} of ${r.rounds} caught</p>
+    <div class="bd-speech">${esc(r.line)}</div>
+    <div class="bd-happy-line"><b>${icon('heartFilled', 14)} ${what}</b></div>
+    <div class="bd-meter bd-meter-happy"><i style="width:${Math.max(3, r.happy.value)}%"></i><u style="left:90%"></u></div>
+    <div class="bd-actions">
+      <button type="button" class="bd-btn bd-btn-ghost" data-action="play">Again</button>
+      <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="play-done">Done</button>
+    </div>`
 }
 
 /** Play as a real Axie: a number box, and three real ones to try. No wallet. */
@@ -678,7 +713,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'A voice that looks at each photo and writes its line on the picture',
       'Memory: it knows when you are back somewhere, and it answers your caption',
       'Ten steps of growth: hat, scarf, shades, cape, crown, the Mystic glow',
-      'A happiness score: photos, new places and pats keep it happy, time alone bores it',
+      'A happiness score: photos, pats, treats and a game of catch keep it happy; time alone bores it',
       'A wish every day, a scrapbook, and the monthly Idol ladder',
       'Play as any real Axie by its number, or sign in with Ronin and bring your own',
     ], core: [
@@ -687,7 +722,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'Nothing to buy and nothing minted: the Axie is the point, not a token',
     ] },
     { when: 'Next', title: 'Round two', state: 'Next stage of the Vibeathon', items: [
-      'More ways to keep it happy: treats and play',
+      'New games to play together, and treats it has favourites among',
       'Duo photos: pair with a friend and both Axies are in the frame',
       'Parts that evolve as bond grows: horn, then back, then tail',
       'A morning nudge, when your Axie wants to go out',
@@ -753,7 +788,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <li><b>Find an egg</b><span>It rides along in your camera, in every photo you take.</span></li>
           <li><b>Take it places</b><span>Five photos and it can hatch. Carry it further for a rarer Axie.</span></li>
           <li><b>It hatches, and it talks</b><span>A one-of-a-kind Axie with a voice. It says one line after every photo, and its words go on the picture.</span></li>
-          <li><b>Keep it happy</b><span>That is the game. Photos, new places, new things, a wish come true and a pat make it happier. Get it to Overjoyed for a joy day. Leave it alone and it gets bored.</span></li>
+          <li><b>Keep it happy</b><span>That is the game. Photos, new places, a caption, a pat, a treat and a game of catch make it happier. Get it to Overjoyed for a joy day. Leave it alone and it gets bored.</span></li>
         </ol>
       </section>
 

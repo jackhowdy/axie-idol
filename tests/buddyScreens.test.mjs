@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -108,7 +108,11 @@ test('happiness is the game on Home: hearts, the mood, the goal, a pat and what 
   assert.match(html, /Time alone wears it down/)
   assert.equal((html.match(/bd-heart on/g) || []).length, 3, 'sixty-two is three hearts of five')
   const won = homeHtml({ ...miso, happy: { ...happy, value: 95, mood: 'Overjoyed', moodId: 'overjoyed', overjoyedToday: true, petsLeft: 0 } }, null)
-  assert.match(won, /Joy day won/); assert.match(won, /no more points today/)
+  assert.match(won, /Joy day won/); assert.match(won, /Pat <small>done<\/small>/)
+  const care = homeHtml({ ...miso, happy: { ...happy, treatsLeft: 0, playsLeft: 0 } }, null)
+  assert.match(care, /data-action="treat" disabled/, 'the jar is empty')
+  assert.match(care, /data-action="play"[^>]*>.*for fun/s, 'the game still plays, without points')
+  assert.match(html, /data-action="treat">.*2 left/s); assert.match(html, /a treat and a game of catch/)
   assert.doesNotMatch(homeHtml(miso, null), /bd-happy /, 'an older payload without the score still renders')
 })
 
@@ -119,6 +123,16 @@ test('the after-the-shot sheet says what the photo did for its happiness, and th
   assert.match(html, /\+25 happy/); assert.match(html, /Overjoyed · 91 · a photo together, something new, a new place/)
   const joy = joyHtml(snap.happy, miso)
   assert.match(joy, /Miso is overjoyed/); assert.match(joy, /\+3 bond · 2 joy days in a row/); assert.match(joy, /data-action="sheet-next"/)
+})
+
+test('the catching game: a track, a star, a Catch button, and a result that says what it did', () => {
+  const g = playHtml(miso, 1, 3, 1)
+  assert.match(g, /star 2 of 3/); assert.match(g, /data-play-star/); assert.match(g, /data-action="play-tap"/); assert.match(g, /1 caught/)
+  assert.equal((g.match(/<i class="done">/g) || []).length, 1)
+  assert.match(playHtml(miso, 1, 3, 1, 'hit'), /Caught!/); assert.match(playHtml(miso, 1, 3, 0, 'miss'), /Missed!/)
+  const r = playResultHtml(miso, { line: 'That star had no chance.', catches: 2, rounds: 3, counted: true, happy: { delta: 6, value: 76, mood: 'Happy' } })
+  assert.match(r, /2 of 3 caught/); assert.match(r, /That star had no chance/); assert.match(r, /\+6 happy · Happy 76/); assert.match(r, /data-action="play-done"/)
+  assert.match(playResultHtml(miso, { line: 'x', catches: 3, rounds: 3, counted: false, happy: { delta: 0, value: 50, mood: 'Content' } }), /for fun/)
 })
 
 test('a real Axie played by its number says so, with its Axie Core level; the visit sheet needs no wallet', () => {

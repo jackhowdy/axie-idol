@@ -237,6 +237,8 @@ export const HAPPY_DECAY_PER_HOUR = 1.5
 export const HAPPY = {
   photo: 10, sameAgain: 3, unclear: 2, newThings: 5, newPlace: 10, wish: 20,
   talk: 4, talksPerDay: 5, pet: 2, petsPerDay: 5, dressUp: 3,
+  // telling it about the photo (a caption), a treat, and the catching game
+  caption: 3, treat: 8, treatsPerDay: 2, playCatch: 3, playRounds: 3, playsPerDay: 3,
   overjoyedAt: 90, joyBonus: 3,
 }
 export const MOODS = [
@@ -256,7 +258,7 @@ export function decayed(value, hours) {
   return Math.max(0, Math.min(100, value - Math.max(0, hours) * HAPPY_DECAY_PER_HOUR))
 }
 /** What one photo is worth, and why, from what the Axie saw in it. */
-export function photoJoy({ labels = [], previous = [], recent = [], isNewPlace = false, wishDone = false, judged = true }) {
+export function photoJoy({ labels = [], previous = [], recent = [], isNewPlace = false, wishDone = false, judged = true, caption = '' }) {
   const reasons = []
   let delta
   if (judged && !labels.length) { delta = HAPPY.unclear; reasons.push('could not see much') }
@@ -267,5 +269,7 @@ export function photoJoy({ labels = [], previous = [], recent = [], isNewPlace =
   }
   if (isNewPlace) { delta += HAPPY.newPlace; reasons.push('a new place') }
   if (wishDone) { delta += HAPPY.wish; reasons.push('its wish came true') }
+  // A caption is you telling it about the photo; two letters are not a sentence.
+  if (String(caption || '').trim().length >= 3) { delta += HAPPY.caption; reasons.push('you told it about the photo') }
   return { delta, reasons }
 }
