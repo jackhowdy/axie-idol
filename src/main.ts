@@ -17,6 +17,7 @@ import {
   type SnapResult,
 } from './buddy'
 import { fallbackAxieSvg } from './fallbackAxie'
+import { loadAxieArt, jointsFor2D, type Art2D } from './axie2d.ts'
 import { drawSpeechBubble, type BubbleAnchor } from './speechBubble'
 import { mountBuddyScreens } from './buddyScreens'
 import { reactionHtml, momentHtml, unlockHtml, joyHtml, vfChipHtml, wishPillHtml, frameTrayHtml, wardrobeTrayHtml, eggLine } from './buddyHtml.ts'
@@ -707,8 +708,21 @@ let axie3d: Axie3D | null = null
 const snapshotCache = new Map<string, string>()
 
 function is3DMixerFace(id: string): boolean {
+  if (id === 'buddy' && realBuddyAxieId()) return false
   return /^\d+$/.test(id) || id === 'buddy' || isCustomFace(id) || (isDevMode() && id.startsWith('dev:'))
 }
+
+/**
+ * A real Axie (played by its number, or owned) is shown as its official 2D art: its owner knows
+ * that picture by heart, and the 3D rig is an approximation. Hatched Axies have no official art
+ * and stay in 3D. Returns the Axie number, or null for an egg or a hatched Axie.
+ */
+function realBuddyAxieId(): string | null {
+  const b = buddyState.active
+  return b?.hatchedAt && b.kind !== 'wild' && b.axieId ? b.axieId : null
+}
+/** The cropped art on the camera layer right now, when the live face is a real Axie. */
+let art2d: Art2D | null = null
 
 async function specForFace(id: string): Promise<Axie3DSpec | null> {
   // The one-Axie buddy: a wild Axie carries its own generated descriptor, an owned one
@@ -904,10 +918,42 @@ function setWardrobeOverlayShown(show: boolean): boolean {
   return show
 }
 
+/**
+ * The same overlay over a 2D Axie: the joints are fractions of the picture as it is laid out, and
+ * the overlay's backing store follows the screen's pixel density instead of a WebGL canvas's.
+ */
+function drawWardrobeOverlay2D(worn: string, art: Art2D): void {
+  if (!wardrobeOverlay) return
+  if (setWardrobeOverlayShown(true)) positionWardrobeOverlay()
+  const cw = wardrobeOverlay.clientWidth, ch = wardrobeOverlay.clientHeight
+  const iw = stickerImg.clientWidth, ih = stickerImg.clientHeight
+  if (cw < 8 || ch < 8 || iw < 8 || ih < 8) return
+  const density = Math.min(2, window.devicePixelRatio || 1)
+  const w = Math.round(cw * density), h = Math.round(ch * density)
+  if (wardrobeOverlay.width !== w) wardrobeOverlay.width = w
+  if (wardrobeOverlay.height !== h) wardrobeOverlay.height = h
+  if (!wardrobeCtx || wardrobeCtx.canvas !== wardrobeOverlay) wardrobeCtx = wardrobeOverlay.getContext('2d')
+  if (!wardrobeCtx) return
+  const joints = jointsFor2D(iw * density, ih * density, art.topMid)
+  drawWardrobe(wardrobeCtx, worn, offsetJoints(joints, (w - iw * density) / 2, (h - ih * density) / 2))
+}
+/** A still picture has no frame loop of its own: this one runs only while a 2D Axie is on the layer. */
+let art2dLoop = 0
+function runArt2DLoop(): void {
+  cancelAnimationFrame(art2dLoop)
+  const step = (): void => {
+    if (!art2d) return
+    drawWardrobeOverlay()
+    art2dLoop = requestAnimationFrame(step)
+  }
+  art2dLoop = requestAnimationFrame(step)
+}
+
 /** Runs on every 3D frame: clear the overlay and stamp the worn sprite on its joint. */
 function drawWardrobeOverlay(): void {
   if (!wardrobeOverlay) return
   const worn = wornItem()
+  if (worn && art2d && !stickerImg.hidden) { drawWardrobeOverlay2D(worn, art2d); return }
   if (!worn || !axie3d?.ready) {
     setWardrobeOverlayShown(false)
     return
@@ -2460,6 +2506,18 @@ async function captureComposite(): Promise<void> {
     const naturalAspect = stickerImg.naturalHeight / Math.max(1, stickerImg.naturalWidth)
     const baseH = baseW * naturalAspect
     captureAnchor = { x: cx, y: cy, halfW: (baseW * state.scale) / 2, halfH: (baseH * state.scale) / 2 }
+    // headwear stands above the picture: the speech bubble's tail starts above it, not inside it
+    if (art2d && ['hat', 'crown'].includes(wornItem() || '')) captureAnchor.halfH += baseW * state.scale * 0.42
+    if (art2d && buddyGlowOn()) {
+      ctx.save()
+      ctx.shadowColor = 'rgba(255, 209, 102, 0.9)'
+      ctx.shadowBlur = 26 * scaleX
+      ctx.translate(cx, cy)
+      ctx.rotate((state.rotation * Math.PI) / 180)
+      ctx.scale(state.scale, state.scale)
+      ctx.drawImage(stickerImg, -baseW / 2, -baseH / 2, baseW, baseH)
+      ctx.restore()
+    }
     ctx.save()
     if (leadShiny && !customAxieId) ctx.filter = SHINY_FILTER
     ctx.translate(cx, cy)
@@ -2467,6 +2525,18 @@ async function captureComposite(): Promise<void> {
     ctx.scale(state.scale, state.scale)
     ctx.drawImage(stickerImg, -baseW / 2, -baseH / 2, baseW, baseH)
     ctx.restore()
+    // a real Axie's worn item, from the same overlay the live view shows
+    if (art2d && wardrobeOverlay && wardrobeOverlayShown && wardrobeOverlay.clientWidth > 0) {
+      drawWardrobeOverlay()
+      const ow = wardrobeOverlay.clientWidth * scaleX
+      const oh = wardrobeOverlay.clientHeight * scaleX
+      ctx.save()
+      ctx.translate(cx, cy)
+      ctx.rotate((state.rotation * Math.PI) / 180)
+      ctx.scale(state.scale, state.scale)
+      ctx.drawImage(wardrobeOverlay, -ow / 2, -oh / 2, ow, oh)
+      ctx.restore()
+    }
   }
 
   if (leadShiny && !customAxieId && leadGlint) {
@@ -2944,7 +3014,7 @@ function showBuddyStandIn(): void {
   applyStickerTransform()
   buddyStandInShown = true
   setMascotLoading(false)
-  showLiveToast("3D Axie couldn't load on this phone, using a stand-in", 3200)
+  showLiveToast(realBuddyAxieId() ? "Your Axie's picture couldn't load, using a stand-in" : "3D Axie couldn't load on this phone, using a stand-in", 3200)
 }
 
 /** The real character arrived after all — take the stand-in back off the layer. */
@@ -2967,6 +3037,31 @@ async function initSticker3D(): Promise<void> {
       : meta?.label || cast
   setMascotLoading(true, heavy ? `Loading ${label}… (~7MB)` : `Loading ${label}…`)
   applyPngFallback(cast)
+
+  // A real Axie: its official art, cropped, on the ordinary sticker layer. No rig to warm up.
+  const realId = cast === 'buddy' ? realBuddyAxieId() : null
+  if (art2d) setWardrobeOverlayShown(false)
+  art2d = null
+  stickerImg.classList.remove('sticker-2d')
+  if (realId) {
+    disposeSticker3D()
+    disposeAxie3D()
+    const art = await loadAxieArt(realId)
+    if (req !== castRequest) return
+    setMascotLoading(false)
+    if (!art) { showBuddyStandIn(); return }
+    buddyStandInShown = false
+    art2d = art
+    stickerImg.src = art.src
+    stickerImg.alt = buddyState.active?.name || `Axie #${realId}`
+    stickerImg.classList.add('sticker-2d')
+    stickerImg.hidden = false
+    stickerImg.style.pointerEvents = 'auto'
+    bindStickerPointers(stickerImg)
+    applyStickerTransform()
+    runArt2DLoop()
+    return
+  }
 
   // Mixer-backed faces: numeric cast, Olek, Agonia Echo, Golden
   if (!url && is3DMixerFace(cast)) {
@@ -3327,9 +3422,63 @@ function drawBuddyHeroWardrobe(): void {
   drawWardrobe(buddyHeroCtx, worn, offsetJoints(hero.jointScreenPositions(), pad.dx, pad.dy))
 }
 
+/**
+ * A real Axie in a hero box: its cropped art, sized to sit inside the box with room for a hat,
+ * breathing gently, with the worn item drawn on a canvas twice the box's size around it (the same
+ * geometry the 3D hero uses).
+ */
+async function showRealBuddyIn(host: HTMLElement, axieId: string, req: number): Promise<void> {
+  buddyHero?.pause()
+  setBuddyHeroOverlayShown(false)
+  const art = await loadAxieArt(axieId)
+  if (req !== buddyHeroRequest) return
+  const img = document.createElement('img')
+  img.alt = ''
+  img.dataset.buddyFace = '2d'
+  if (!art) {
+    img.src = fallbackAxieSvg(buddyState.active?.class ?? null, buddyState.active?.name || 'Your Axie')
+    img.className = 'bd-hero-art'
+    host.append(img)
+    return
+  }
+  const boxW = host.clientWidth || 116, boxH = host.clientHeight || 116
+  const fit = Math.min((boxW * 0.78) / art.w, (boxH * 0.66) / art.h)
+  const w = art.w * fit, h = art.h * fit
+  // a little low in the box: the space above is where a hat or a crown goes
+  const left = (boxW - w) / 2, top = (boxH - h) / 2 + boxH * 0.07
+  img.src = art.src
+  img.className = 'bd-hero-2d'
+  img.style.cssText = `left:${left}px;top:${top}px;width:${w}px;height:${h}px`
+  host.append(img)
+  const worn = buddyState.active?.wardrobe.worn ?? null
+  if (!worn) return
+  const overlay = document.createElement('canvas')
+  overlay.className = 'bd-hero-wardrobe'
+  overlay.dataset.buddyFace = 'wardrobe'
+  overlay.setAttribute('aria-hidden', 'true')
+  host.append(overlay)
+  const density = Math.min(2, window.devicePixelRatio || 1)
+  overlay.width = Math.round(boxW * 2 * density)
+  overlay.height = Math.round(boxH * 2 * density)
+  const g = overlay.getContext('2d')
+  if (!g) return
+  preloadWardrobe()
+  // the overlay's corner is half a box up and left of the host's
+  const joints = offsetJoints(jointsFor2D(w * density, h * density, art.topMid), (boxW / 2 + left) * density, (boxH / 2 + top) * density)
+  let tries = 0
+  const paint = (): void => {
+    if (req !== buddyHeroRequest || !overlay.isConnected) return
+    // the sprite may still be decoding on the first frames
+    if (!drawWardrobe(g, worn, joints) && tries++ < 90) requestAnimationFrame(paint)
+  }
+  paint()
+}
+
 async function showBuddyFaceIn(host: HTMLElement): Promise<void> {
   const req = ++buddyHeroRequest
   for (const old of host.querySelectorAll('[data-buddy-face]')) old.remove()
+  const realId = realBuddyAxieId()
+  if (realId) { await showRealBuddyIn(host, realId, req); return }
   const spec = await specForFace('buddy').catch(() => null)
   if (req !== buddyHeroRequest) return
   if (!spec) {

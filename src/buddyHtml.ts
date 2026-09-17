@@ -482,6 +482,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
         <div><p class="bd-eyebrow">Day ${dayCount(b)} · my Axie</p><h1>${esc(b.name)}</h1></div>
         <span class="bd-head-actions"><span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.streak}-day streak</span><button type="button" class="bd-pill bd-pill-btn" data-action="account" aria-label="Profile">${icon('user', 14)} Profile</button></span>
       </header>
+      <div class="bd-cols"><div class="bd-col">
       <div class="bd-card bd-ask">
         <div class="bd-speech-row">${line
           ? `<div class="bd-speech bd-speech-home">${esc(line)}</div>${opts.talk ? '<button type="button" class="bd-link" data-action="talk">Talk</button>' : ''}`
@@ -489,6 +490,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
         }</div>
         ${wishPillHtml(b, { compact: true })}
       </div>${happyCardHtml(b, { talk: opts.talk })}
+      </div><div class="bd-col">
       <div class="bd-card bd-hero">
         <div class="bd-hero-row">
           <div class="bd-hero-3d${glow}" data-face="buddy" data-action="pet" title="Pat ${esc(b.name)}"><span class="bd-badge">${icon('star', 11)} Bond ${b.level}</span></div>
@@ -504,6 +506,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
       <div class="bd-items">${wardrobe}</div>${restingRowHtml(opts.buddies || [], b.id)}
       <div class="bd-card-head"><a class="bd-label bd-link" data-action="scrapbook">Scrapbook · ${kept} ${icon('chevron', 12)}</a><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>
       <div class="bd-book">${book}</div>
+      </div></div>
       <p class="bd-small bd-center">Want another Axie? <a class="bd-link" data-action="fresh-egg">Hatch another egg</a> · ${esc(b.name)} rests, switch back any time in <a class="bd-link" data-action="account">Profile</a></p>
       <p class="bd-small bd-center">${wallet}</p>
     </div>
@@ -718,7 +721,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'Play as any real Axie by its number, or sign in with Ronin and bring your own',
     ], core: [
       'Every hatched Axie is put together from real Axie parts and classes, in 3D',
-      'Any real Axie plays as itself: real genes, real parts, and it knows its Axie Core level',
+      'Any real Axie plays as itself: its official art, its real parts, and it knows its Axie Core level',
       'Nothing to buy and nothing minted: the Axie is the point, not a token',
     ] },
     { when: 'Next', title: 'Round two', state: 'Next stage of the Vibeathon', items: [
@@ -858,7 +861,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <p class="lp-sub">No two hatched Axies share the same parts. Already own one on Ronin? Sign in and bring it instead of an egg.</p>
         <div class="bd-card lp-real">
           <div><b>Already love an Axie? Play as it.</b>
-          <span>Type any real Axie's number. It arrives in 3D with its real parts, its class and its Axie Core level, and it knows them. No wallet. If it is yours, sign in with Ronin later and it becomes your owned Axie with everything it earned.</span></div>
+          <span>Type any real Axie's number. It arrives as itself, in its official art, with its real parts, its class and its Axie Core level, and it knows them. No wallet. If it is yours, sign in with Ronin later and it becomes your owned Axie with everything it earned.</span></div>
           ${about ? '' : '<button type="button" class="bd-btn bd-btn-ghost" data-action="visit">Play as a real Axie</button>'}
         </div>
       </section>

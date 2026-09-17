@@ -4123,3 +4123,54 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
   .lp-real .bd-btn { flex: 0 0 auto; align-self: center; }
 }
 .lp-happy-list > b, .lp-end b, .lp-real b { font-family: var(--font-display); font-weight: 900; }
+
+/* Home's two groups: one column on a phone (the wrappers vanish), side by side on a wide screen. */
+.bd-cols, .bd-col { display: contents; }
+
+/* ===================================================================
+ * Desktop: the game fills the window. No floating phone frame; content keeps a readable measure
+ * in the middle, Home goes two columns, sheets become centred dialogs, and the camera is a
+ * portrait stage in the middle of a dark room (photos are portrait, and so is everything drawn
+ * on them).
+ * ================================================================= */
+@media (min-width: 900px) {
+  #app { width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+  body.bd-wide #app { height: auto; }
+
+  .buddy .bd-scroll:not(.lp) { --gutter: max(32px, calc((100% - 1040px) / 2)); padding: 36px var(--gutter) 8px; gap: 16px; }
+  .buddy > .bd-actions, .buddy > .bd-small { padding-left: max(32px, calc((100% - 1040px) / 2)); padding-right: max(32px, calc((100% - 1040px) / 2)); }
+  .buddy > .bd-actions { justify-content: center; padding-top: 14px; }
+  .buddy > .bd-actions > .bd-btn.bd-grow { flex: 0 1 520px; }
+  .buddy > .bd-actions:last-child, .buddy > .bd-small { padding-bottom: 22px; }
+  .buddy h1 { font-size: 34px; }
+  .buddy h2 { font-size: 22px; }
+  .buddy .bd-small { font-size: 14px; }
+
+  /* Home: the conversation and the game on the left, the Axie and its things on the right */
+  .bd-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .bd-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .bd-hero-3d { width: 190px; height: 190px; }
+  .bd-hero-3d-big { max-width: 420px; height: 340px; }
+  .bd-hatch-card { padding: 28px; }
+  .bd-speech-home { font-size: 18px; }
+  .bd-happy { padding: 18px; }
+  .bd-item { padding-top: 14px; padding-bottom: 14px; }
+
+  /* single-column screens (egg, hatch, ladder, diary, profile, claim) read better narrower */
+  #buddy-egg .bd-scroll, #buddy-hatch .bd-scroll, #buddy-ladder .bd-scroll, #buddy-monthly .bd-scroll, #buddy-diary .bd-scroll, #buddy-account .bd-scroll, #buddy-claim .bd-scroll, #buddy-talk .bd-scroll { --gutter: max(32px, calc((100% - 760px) / 2)); }
+  .bd-grid3 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+
+  /* sheets: a dialog in the middle, not a drawer across a wide window */
+  .buddy-sheet { align-items: center; justify-content: center; padding: 32px; }
+  .bd-sheet-card { max-width: 540px; padding: 24px; }
+
+  /* the camera and the preview: a portrait stage, centred */
+  #app:has(#viewfinder.active), #app:has(#preview.active) { background: radial-gradient(ellipse at 50% 30%, #22384D 0%, #0E1720 70%); }
+  #viewfinder, #preview { --stage: min(100vw, calc(100dvh * 0.62)); left: 50%; right: auto; width: var(--stage); margin-left: calc(var(--stage) / -2); overflow: hidden; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 30px 80px rgba(0, 0, 0, 0.5); }
+}
+
+/* ---- Real Axies in 2D: a still picture that breathes (scale/translate leave `transform` alone) ---- */
+@keyframes axie-breathe { 0%, 100% { scale: 1 1; translate: 0 0; } 50% { scale: 1.025 0.975; translate: 0 1.2%; } }
+#sticker.sticker-2d { animation: axie-breathe 3.2s ease-in-out infinite; transform-origin: center bottom; }
+.bd-hero-2d { position: absolute; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(26, 43, 60, 0.22)); animation: axie-breathe 3.2s ease-in-out infinite; transform-origin: center bottom; }
+@media (prefers-reduced-motion: reduce) { #sticker.sticker-2d, .bd-hero-2d { animation: none; } }

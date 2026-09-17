@@ -66,8 +66,9 @@ phone. Ronin sign-in is optional and only adds: bring an Axie you own, keep your
 Axie Core is the Axie itself: a creature with real parts, a class, a history and an owner, that
 gets stronger the more it is cared for. Axie Idol is built on that and nothing else.
 
-- **Real Axies play as themselves.** Any Axie, by number, read-only from the Sky Mavis API: genes
-  decoded into the official Three.js Axie Mixer, so it looks like itself in 3D. Its class, its six
+- **Real Axies play as themselves.** Any Axie, by number, read-only from Sky Mavis: shown as its
+  official art (the picture its owner knows), cropped and gently animated, with the wardrobe placed
+  on it. Hatched Axies, which have no official art, are 3D in the Three.js Axie Mixer. Its class, its six
   parts by name, its special genes, its birth year and its **Axie Core level** reach the voice, so
   a level 60 Beast with a Mystic horn talks like one.
 - **Ownership matters.** Ronin sign-in proves an Axie is yours; it is marked Owned on Home
@@ -109,7 +110,7 @@ npm install
 cp .env.example .env        # add your own keys; every key is optional
 npm run build
 npm start                   # http://localhost:5174
-npm test                    # 193 tests, no network needed
+npm test                    # 196 tests, no network needed
 ```
 
 Keys (all optional, all in `.env`, never committed): `GEMINI_API_KEY` for the voice (without it the
@@ -129,6 +130,9 @@ fall back to a 2D stand-in and the game still plays. More in `docs/DEVELOPMENT.m
   written library speaks instead; those lines are about the Axie, not about what is in the photo.
 - Photos are stored inside the Worker's Durable Object. That is fine at hackathon scale and would
   move to object storage before any real launch.
+- Real Axies are 2D on purpose: the public 3D mixer is an alpha and its proportions and some part
+  variants are not yet faithful enough for an Axie whose owner knows exactly how it looks. The
+  official art cannot be animated beyond a breathing motion without a Spine licence.
 - A real Axie played by number is a visit, not proof of ownership; several people can play the
   same Axie. Only a Ronin signature marks one Owned.
 - Thirty part variants missing from the public mixer pack are approximations built by

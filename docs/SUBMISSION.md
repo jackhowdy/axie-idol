@@ -29,8 +29,8 @@ real parts and Axie Core level. No wallet needed.
 **What it is.** Axie Idol turns an Axie into a companion instead of a fighter. You find an egg,
 carry it in your camera for five photos, and it hatches into an Axie nobody else has, built from
 real Axie parts and classes and shown in 3D with the official Axie Mixer. Or skip the egg and play
-as any real Axie by its number: it arrives with its real genes, its six parts by name, its class
-and its Axie Core level, and it knows them. A level 60 Beast with a Mystic horn talks like one.
+as any real Axie by its number: it arrives as its official art, with its six parts by name, its
+class and its Axie Core level, and it knows them. A level 60 Beast with a Mystic horn talks like one.
 
 **The voice.** After every photo the Axie says one line about what is actually in the picture, and
 the line is drawn onto the photo as a speech bubble. It names real things it can see, notices when
@@ -67,7 +67,7 @@ world; ladder seasons; and work with Sky Mavis so time spent here counts for the
 does. The roadmap is on the front page of the site.
 
 **Built with.** Vite, TypeScript and three.js in the browser; a Cloudflare Worker with one Durable
-Object behind it; 193 automated tests. Built by one person with Claude Code; Google Gemini looks at
+Object behind it; 196 automated tests. Built by one person with Claude Code; Google Gemini looks at
 the photos at run time. Full disclosures, known issues and run instructions are in the README.
 
 ## Thumbnail
