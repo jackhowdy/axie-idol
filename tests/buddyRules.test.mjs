@@ -10,12 +10,15 @@ const seq = (...vals) => { let i = 0; return () => vals[i++ % vals.length] }
 
 test('ladder has ten levels at the spec thresholds', () => {
   assert.deepEqual(LADDER.map((l) => l.bond), [5, 10, 16, 24, 34, 46, 60, 76, 95, 120])
+  assert.equal(LADDER[0].unlock, null, 'the hatch itself is the first rung')
+  assert.equal(LADDER[1].unlock, 'hat', 'the hat is earned five photos later')
+  assert.equal(LADDER[9].unlock, 'glow')
   assert.equal(levelFor(0), 0)
   assert.equal(levelFor(5), 1)
   assert.equal(levelFor(23), 3)
   assert.equal(levelFor(120), 10)
   assert.equal(levelFor(999), 10)
-  assert.deepEqual(nextStep(20), { level: 4, bond: 24, reward: 'Signature pose', remaining: 4 })
+  assert.deepEqual(nextStep(20), { level: 4, bond: 24, reward: 'Shades', remaining: 4 })
   assert.equal(nextStep(120), null)
 })
 

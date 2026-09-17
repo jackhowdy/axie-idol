@@ -100,7 +100,7 @@ test('egg -> snaps -> hatch produces a named wild Axie with one trait and conver
   assert.equal(b.bond, 6, 'egg snaps converted to bond')
   assert.equal(b.level, 1)
   assert.equal(h.json.lines.length, 1, 'one spoken line, for the one trait')
-  assert.ok(b.wardrobe.unlocked.includes('hat'))
+  assert.ok(!b.wardrobe.unlocked.includes('hat'), 'the hat is earned at bond ten, not given at the hatch')
 })
 
 test('a buddy post records the photo path so the scrapbook can render a real thumbnail', async () => {
@@ -815,7 +815,7 @@ test('look: the Axie sees the capture before the post, and the post reuses that 
   assert.equal(b.pendingLook, null, 'a stale look is dropped, never carried to a later photo')
 })
 
-test('look without a model, or before the hatch, has nothing to say', async () => {
+test('look without a model still puts a library line on the photo; before the hatch there is no look', async () => {
   const { buddy, call } = directModule()
   await call('/api/buddy/egg', { method: 'POST' })
   const early = await call('/api/buddy/look', { method: 'POST', body: { imageBase64: PHOTO } })
@@ -824,8 +824,13 @@ test('look without a model, or before the hatch, has nothing to say', async () =
   await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })
   const none = await call('/api/buddy/look', { method: 'POST', body: { imageBase64: PHOTO } })
   assert.equal(none.status, 200)
-  assert.equal(none.body.id, null)
-  assert.equal(none.body.line, null)
+  assert.ok(none.body.id, 'a look id even without a model')
+  assert.ok(typeof none.body.line === 'string' && none.body.line.length > 0, 'the library speaks on the photo')
+  assert.equal(none.body.fallback, true)
+  assert.doesNotMatch(none.body.line, /\d/)
+  // and the post that follows carries that same line to the card
+  const r = await buddy.recordSnap({ id: 'p1' }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12, lookId: none.body.id })
+  assert.equal(r.line, none.body.line)
 })
 
 test('typed chat is off unless TALK=1: the route is simply not there', async () => {

@@ -138,6 +138,25 @@ export function wishPillHtml(b: Buddy, opts: { interactive?: boolean; compact?: 
   </${tag}>`
 }
 
+/**
+ * The egg's voice: one small line per photo taken with it, so the five silent photos before the
+ * hatch are not silent. Keyed by how many photos it has had; past five it rotates.
+ */
+const EGG_LINES = [
+  "It's quiet in there. Take it somewhere.",
+  'Something moved in there.',
+  "It's warmer than it was.",
+  'A tap. From inside.',
+  'It rocked. Did you see that?',
+  "It's ready. Any time you like.",
+]
+const EGG_LINES_LATER = ['Still warm. Still waiting for the right place.', 'It likes it here. Keep going.', 'A bigger tap that time.']
+export function eggLine(snaps: number): string {
+  const n = Math.max(0, Math.floor(snaps))
+  if (n < EGG_LINES.length) return EGG_LINES[n]
+  return EGG_LINES_LATER[(n - EGG_LINES.length) % EGG_LINES_LATER.length]
+}
+
 const EGG_TIERS = [
   { at: 5, text: 'Common Axie, random class' },
   { at: 20, text: 'One rare part guaranteed' },
@@ -184,6 +203,7 @@ export function eggHtml(b: Buddy, opts: { buddies?: Buddy[] } = {}): string {
         <span class="bd-badge">${icon('star', 11)} Wild egg</span>
         <span class="bd-pill bd-pill-light">${snaps} ${snaps === 1 ? 'snap' : 'snaps'} · ${places} ${places === 1 ? 'place' : 'places'}</span>
       </div>
+      <div class="bd-speech bd-speech-home bd-speech-egg">${esc(eggLine(snaps))}</div>
       <div class="bd-card">
         <div class="bd-card-head"><span class="bd-label">Odds if you hatch</span><span class="bd-link">Every ten snaps counts</span></div>
         ${rows}

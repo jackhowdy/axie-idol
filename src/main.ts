@@ -20,7 +20,7 @@ import {
 import { fallbackAxieSvg } from './fallbackAxie'
 import { drawSpeechBubble, type BubbleAnchor } from './speechBubble'
 import { mountBuddyScreens } from './buddyScreens'
-import { reactionHtml, momentHtml, unlockHtml, vfChipHtml, wishPillHtml, frameTrayHtml, wardrobeTrayHtml } from './buddyHtml.ts'
+import { reactionHtml, momentHtml, unlockHtml, vfChipHtml, wishPillHtml, frameTrayHtml, wardrobeTrayHtml, eggLine } from './buddyHtml.ts'
 import {
   FRAME_IDS, drawFrame, drawWardrobe, isFrameId, offsetJoints, preloadWardrobe,
   type FrameId,
@@ -2255,6 +2255,19 @@ async function lookAtCapture(plain: Blob, seq: number, caption = ''): Promise<vo
     return
   }
   if (!line || !lookId || seq !== captureSeq || mine !== lookSeq) return
+  const blob = await bubbleOnto(plain, line, anchor)
+  if (!blob || seq !== captureSeq || mine !== lookSeq) return
+  if (captureUrl) URL.revokeObjectURL(captureUrl)
+  captureBlob = blob
+  captureUrl = URL.createObjectURL(blob)
+  captureLookId = lookId
+  lookedCaption = caption
+  previewImg.src = captureUrl
+  btnDownload.href = captureUrl
+}
+
+/** A fresh copy of the plain capture with a speech bubble drawn on it, or null if that failed. */
+async function bubbleOnto(plain: Blob, line: string, anchor: BubbleAnchor): Promise<Blob | null> {
   const img = new Image()
   const src = URL.createObjectURL(plain)
   img.src = src
@@ -2262,24 +2275,32 @@ async function lookAtCapture(plain: Blob, seq: number, caption = ''): Promise<vo
     await img.decode()
   } catch {
     URL.revokeObjectURL(src)
-    return
+    return null
   }
   const canvas = document.createElement('canvas')
   canvas.width = img.naturalWidth
   canvas.height = img.naturalHeight
   const ctx = canvas.getContext('2d')
-  if (!ctx) { URL.revokeObjectURL(src); return }
+  if (!ctx) { URL.revokeObjectURL(src); return null }
   ctx.drawImage(img, 0, 0)
   URL.revokeObjectURL(src)
   const family = getComputedStyle(document.body).getPropertyValue('--font-display').trim() || 'Nunito, system-ui, sans-serif'
-  if (!drawSpeechBubble(ctx, line, anchor, family)) return
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 0.95))
-  if (!blob || seq !== captureSeq || mine !== lookSeq) return
+  if (!drawSpeechBubble(ctx, line, anchor, family)) return null
+  return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 0.95))
+}
+
+/**
+ * The egg's line on the photo: no model, no server, just the next line in its small voice, so the
+ * five photos before the hatch already feel like something is in there.
+ */
+async function stampEggLine(plain: Blob, seq: number): Promise<void> {
+  const b = buddyState.active
+  if (!buddyEnabled || !b || b.hatchedAt || !captureAnchor) return
+  const blob = await bubbleOnto(plain, eggLine(b.egg.snaps + 1), captureAnchor)
+  if (!blob || seq !== captureSeq) return
   if (captureUrl) URL.revokeObjectURL(captureUrl)
   captureBlob = blob
   captureUrl = URL.createObjectURL(blob)
-  captureLookId = lookId
-  lookedCaption = caption
   previewImg.src = captureUrl
   btnDownload.href = captureUrl
 }
@@ -2480,7 +2501,8 @@ async function captureComposite(): Promise<void> {
   btnDownload.href = captureUrl
   if (captionInput) captionInput.value = ''
   captureSeq += 1
-  void lookAtCapture(blob, captureSeq)
+  if (buddyEnabled && buddyState.active && !buddyState.active.hatchedAt) void stampEggLine(blob, captureSeq)
+  else void lookAtCapture(blob, captureSeq)
 
   disposeSpineSticker()
   disposeSticker3D()

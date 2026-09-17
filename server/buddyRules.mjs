@@ -1,15 +1,16 @@
 // Pure game rules for the one-Axie loop. No I/O. The server is the only caller.
 
+// The first rung is the hatch itself; the first thing you wear is earned five photos later.
 export const LADDER = [
-  { level: 1, bond: 5, reward: 'Name and party hat', unlock: 'hat' },
-  { level: 2, bond: 10, reward: 'Scarf', unlock: 'scarf' },
-  { level: 3, bond: 16, reward: 'Shades', unlock: 'shades' },
-  { level: 4, bond: 24, reward: 'Signature pose', unlock: 'pose-1' },
-  { level: 5, bond: 34, reward: 'Cape and frames', unlock: 'cape' },
-  { level: 6, bond: 46, reward: 'First trick', unlock: 'trick-1' },
-  { level: 7, bond: 60, reward: 'Crown', unlock: 'crown' },
-  { level: 8, bond: 76, reward: 'Second trick', unlock: 'trick-2' },
-  { level: 9, bond: 95, reward: 'Sparkle trail', unlock: 'trail' },
+  { level: 1, bond: 5, reward: 'A name and a voice', unlock: null },
+  { level: 2, bond: 10, reward: 'Party hat', unlock: 'hat' },
+  { level: 3, bond: 16, reward: 'Scarf', unlock: 'scarf' },
+  { level: 4, bond: 24, reward: 'Shades', unlock: 'shades' },
+  { level: 5, bond: 34, reward: 'Signature pose', unlock: 'pose-1' },
+  { level: 6, bond: 46, reward: 'Cape and frames', unlock: 'cape' },
+  { level: 7, bond: 60, reward: 'First trick', unlock: 'trick-1' },
+  { level: 8, bond: 76, reward: 'Crown', unlock: 'crown' },
+  { level: 9, bond: 95, reward: 'Second trick', unlock: 'trick-2' },
   { level: 10, bond: 120, reward: 'Mystic glow and Idol card', unlock: 'glow' },
 ]
 export const LEVEL_NAMES = { 3: 'Good friends', 7: 'Best friends', 10: 'Idol' }

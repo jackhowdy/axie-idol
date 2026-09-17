@@ -629,7 +629,14 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     if (p === '/api/buddy/look' && req.method === 'POST') {
       if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }
       const image = model.enabled ? splitImage(body.imageBase64) : null
-      if (!image) { sendJson(res, 200, { id: null, line: null, labels: [] }); return true }
+      // No model (or no image): the written library speaks, and the post reuses the same line, so
+      // the bubble on the photo and the card never disagree and no photo goes without a bubble.
+      if (!image) {
+        const id = uid()
+        const line = say(active, 'after', {})
+        active.pendingLook = { id, line, labels: [], at: now() }
+        save(store); sendJson(res, 200, { id, line, labels: [], fallback: true }); return true
+      }
       const hour = Number.isFinite(Number(body.hour)) ? Number(body.hour) % 24 : undefined
       const placeName = typeof body.placeName === 'string' ? body.placeName.slice(0, 40) : undefined
       const placeType = typeof body.placeType === 'string' ? body.placeType.slice(0, 16) : undefined
@@ -647,10 +654,12 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       }
       // a photo it could not make out carries no nouns: nothing to feed the wishes or the memory
       const labels = out?.clear === false ? [] : cleanSeen(out?.seen)
-      if (!line && !labels.length) { sendJson(res, 200, { id: null, line: null, labels: [] }); return true }
+      // the model said nothing usable: the library line still goes on the photo
+      const fallback = !line
+      if (fallback) line = say(active, 'after', labels[0] ? { thing: labels[0] } : {})
       const id = uid()
       active.pendingLook = { id, line, labels, at: now() }
-      save(store); sendJson(res, 200, { id, line, labels }); return true
+      save(store); sendJson(res, 200, { id, line, labels, ...(fallback ? { fallback: true } : {}) }); return true
     }
     if (p === '/api/buddy/talk' && req.method === 'POST') {
       // R1 ships without typed chat (TALK=1 turns the route back on); without it the route is not there.

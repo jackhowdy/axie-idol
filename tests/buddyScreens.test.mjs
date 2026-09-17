@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -522,4 +522,16 @@ test('home has one ask, not two: the bubble carries the wish in the Axie\'s word
   assert.doesNotMatch(done, /data-action="wish-done"/)
   // the camera HUD still shows the wish text itself
   assert.match(wishPillHtml(wishing, { interactive: false }), /never taken me/)
+})
+
+
+test('the egg has a voice: one line per photo, shown on the egg screen', () => {
+  assert.match(eggLine(0), /quiet/)
+  assert.match(eggLine(1), /moved/)
+  assert.match(eggLine(5), /ready/)
+  assert.notEqual(eggLine(6), eggLine(7))
+  assert.equal(eggLine(6), eggLine(9), 'past five it rotates')
+  for (let n = 0; n < 12; n++) assert.doesNotMatch(eggLine(n), /\d/)
+  const egg = { ...miso, hatchedAt: null, egg: { snaps: 3, grids: ['a'], distanceKm: 0, foodSnaps: 0 } }
+  assert.match(eggHtml(egg, {}), /class="bd-speech bd-speech-home bd-speech-egg">A tap\. From inside\./)
 })
