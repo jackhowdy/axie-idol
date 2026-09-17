@@ -4150,7 +4150,7 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
   .bd-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
   .bd-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
   .bd-hero-3d { width: 190px; height: 190px; }
-  .bd-hero-3d-big { max-width: 420px; height: 340px; }
+  .bd-hero-3d.bd-hero-3d-big { width: 100%; max-width: 420px; height: 340px; }
   .bd-hatch-card { padding: 28px; }
   .bd-speech-home { font-size: 18px; }
   .bd-happy { padding: 18px; }
