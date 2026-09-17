@@ -628,7 +628,6 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'Talk back: a real conversation with your Axie, not only one line',
       'Duo photos: pair with a friend and both Axies are in the frame',
       'Parts that evolve as bond grows: horn, then back, then tail',
-      'A feed to share photos and cheer for other Axies',
       'A morning nudge, when your Axie wants to go out',
     ], core: [
       'Part evolution follows Axie Core: the same stage two parts, earned by bond',
@@ -636,15 +635,14 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'An owned badge on photos and on the ladder, so real Axies stand out',
     ] },
     { when: 'After', title: 'After the Vibeathon', state: 'Planned', items: [
+      'The social wall: one place to see every Axie out in the world, and cheer',
       'Seasons on the Idol ladder, with something to win',
       'A collectible card for every Axie that reaches Idol',
-      'More to wear, more tricks, more moments to find',
       'An app you can install, with notifications',
-      'Things only an owned Axie can earn',
     ], core: [
-      'Work with Sky Mavis on a path for a hatched Axie to become a real one',
-      'Let time spent with your Axie count beyond this game, the way AXP does',
-      'Idol cards and seasons that live with the Axie on Ronin, not in our database',
+      'Axies that stand higher in Axie Core come first: special props only they can wear, and a better place on the wall',
+      'Chat opens up for them too: the higher an Axie stands in Axie Core, the more it has to say',
+      'Work with Sky Mavis so time spent here counts for the Axie, the way AXP does',
     ] },
   ]
   const roadCards = road.map((r, i) => `
