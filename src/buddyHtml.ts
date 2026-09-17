@@ -547,31 +547,34 @@ export function photoViewHtml(b: Buddy, photoId: string): string {
  */
 export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null; address?: string | null } = {}): string {
   const about = Boolean(opts.hasAxie)
-  // Real lines from the live voice, on a sample shot: the page shows the game instead of describing it.
-  const lines = ['That yellow slide goes very high. Can we climb up?', 'We were right here before. What is past that tower?', 'That bench is far. Let us climb all those stairs to get to it.']
+  // A real photo from the field (the stairs) with real lines from the live voice: the page shows
+  // the game instead of describing it. The lines cycle in one bubble.
+  const lines = ['That bench is far. Let us climb all those stairs to get to it.', 'We were right here before. What is past the top this time?', 'Grey steps go up. Can we climb every single one?']
   const bubbles = lines.map((l, i) => `<div class="bd-w-bubble" style="--i:${i}">${esc(l)}</div>`).join('')
-  const start = about
-    ? `<div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="back">Back to ${esc(opts.axieName || 'your Axie')}</button></div>`
-    : `<div class="bd-actions bd-w-cta"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="start-egg">Find an egg</button></div>
-    <p class="bd-small bd-center">Free. No wallet needed. Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">Recovery code</a></p>`
+  const cta = about
+    ? `<div class="bd-w-cta"><button type="button" class="bd-btn bd-btn-primary" data-action="back">Back to ${esc(opts.axieName || 'your Axie')}</button></div>`
+    : `<div class="bd-w-cta">
+        <button type="button" class="bd-btn bd-btn-primary" data-action="start-egg">Find an egg</button>
+        <p class="bd-small">Free. No wallet needed. Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">Recovery code</a></p>
+      </div>`
   return `
     <div class="bd-scroll bd-welcome">
-      ${about ? `<header class="bd-head bd-head-row">
+      ${about ? `<header class="bd-head bd-head-row bd-w-head">
         <button type="button" class="bd-round" data-action="back" aria-label="Back">${icon('back', 18)}</button>
         <p class="bd-eyebrow">About Axie Idol</p>
         <span class="bd-round bd-round-ghost"></span>
       </header>` : ''}
       <div class="bd-w-shot" aria-hidden="true">
-        <div class="bd-w-sky"></div>
-        <div class="bd-w-ground"></div>
+        <img class="bd-w-photo" src="/welcome/stairs.jpg" alt="">
         <div class="bd-w-bubbles">${bubbles}</div>
         <img class="bd-w-axie" src="/stickers/kotaro.png" alt="">
-        <span class="bd-w-tag">Photo taken with an Axie</span>
+        <span class="bd-w-tag">A real photo, a real line</span>
       </div>
-      <div class="bd-welcome-hero">
+      <div class="bd-w-copy">
         <p class="bd-eyebrow">Axie Idol</p>
         <h1 class="bd-welcome-title">Your Axie. In your camera. With opinions.</h1>
         <p class="bd-welcome-line">Find an egg and take it places. When it hatches, it talks: one line after every photo, about what it actually sees, and where it wants to go next.</p>
+        ${cta}
       </div>
       <div class="bd-w-grid">
         <div class="bd-card bd-w-tile">
@@ -590,9 +593,8 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <span>Every photo builds bond. Bond unlocks the hat, the scarf, the shades, the crown, and a place on the monthly Idol ladder.</span>
         </div>
       </div>
-      <p class="bd-small bd-center bd-muted">Ten photos a day count, wishes add extra, nothing to buy. Own an Axie on Ronin? Bring it instead of an egg.</p>
-    </div>
-    ${start}`
+      <p class="bd-small bd-w-foot">Ten photos a day count, wishes add extra, nothing to buy. Own an Axie on Ronin? Bring it instead of an egg.</p>
+    </div>`
 }
 
 export function claimHtml(axies: OwnedAxie[], selectedId: string | null, address: string | null): string {

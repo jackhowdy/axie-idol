@@ -3786,17 +3786,20 @@ button.id-chip {
 .bd-book .bd-thumb { flex: 0 0 calc((100% - 24px) / 4); scroll-snap-align: start; }
 button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; }
 .bd-grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.bd-welcome { justify-content: flex-start; }
-.bd-welcome-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 6px 0 2px; }
+/* ------------------------------------------------------------------ welcome (phone first) */
+.bd-welcome { justify-content: flex-start; gap: 14px; padding-bottom: calc(18px + var(--safe-bottom)); }
+.bd-w-copy { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 2px 0; }
 .bd-welcome-title { font-size: 30px; line-height: 1.08; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
-.bd-welcome-line { font-size: 14px; font-weight: 700; color: var(--muted); margin: 0; max-width: 34ch; text-wrap: balance; }
-/* The sample shot: a photo-shaped card with a real Axie and its real lines, cycling. */
-.bd-w-shot { position: relative; height: 300px; border-radius: var(--radius-tray); overflow: hidden; box-shadow: 0 14px 30px rgba(26, 43, 60, 0.18); }
-.bd-w-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #7FB7E6 0%, #BFE1FF 60%, #DDEFFF 100%); }
-.bd-w-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: linear-gradient(180deg, #8EC46A 0%, #6EA84E 100%); }
-.bd-w-axie { position: absolute; left: 50%; bottom: -8px; width: 150px; transform: translateX(-52%); clip-path: inset(0 0 17% 0); filter: drop-shadow(0 10px 16px rgba(26, 43, 60, 0.3)); }
+.bd-welcome-line { font-size: 14px; font-weight: 700; color: var(--muted); margin: 0; max-width: 36ch; text-wrap: balance; }
+.bd-w-cta { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; padding-top: 4px; }
+.bd-w-cta .bd-btn { width: 100%; font-size: 17px; padding-top: 15px; padding-bottom: 15px; }
+.bd-w-cta .bd-small { margin: 0; text-align: center; }
+/* The sample shot: a real field photo, the Axie, and its real lines cycling. */
+.bd-w-shot { position: relative; height: 320px; border-radius: var(--radius-tray); overflow: hidden; box-shadow: 0 14px 30px rgba(26, 43, 60, 0.18); background: #7FB7E6; }
+.bd-w-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%; }
+.bd-w-axie { position: absolute; left: 50%; bottom: -10px; width: 150px; transform: translateX(-52%); clip-path: inset(0 0 17% 0); filter: drop-shadow(0 10px 16px rgba(26, 43, 60, 0.35)); }
 .bd-w-tag { position: absolute; left: 12px; top: 12px; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #FFFFFF; background: rgba(26, 43, 60, 0.55); border-radius: 999px; padding: 4px 9px; }
-.bd-w-bubbles { position: absolute; left: 14px; right: 14px; top: 42px; height: 70px; }
+.bd-w-bubbles { position: absolute; left: 14px; right: 14px; top: 44px; height: 70px; }
 .bd-w-bubble { position: absolute; left: 0; right: 0; margin: 0 auto; max-width: 300px; background: #FFFFFF; color: var(--text); border: 2px solid var(--text); border-radius: 16px; padding: 9px 13px; font-family: var(--font-display); font-weight: 800; font-size: 15px; line-height: 1.25; text-align: center; opacity: 0; animation: bd-w-say 12s infinite; animation-delay: calc(var(--i) * 4s); }
 .bd-w-bubble::after { content: ""; position: absolute; left: 50%; bottom: -12px; width: 14px; height: 14px; background: #FFFFFF; border-right: 2px solid var(--text); border-bottom: 2px solid var(--text); transform: translateX(-50%) rotate(45deg); }
 @keyframes bd-w-say { 0% { opacity: 0; transform: translateY(6px); } 5% { opacity: 1; transform: translateY(0); } 27% { opacity: 1; } 32% { opacity: 0; transform: translateY(-4px); } 100% { opacity: 0; } }
@@ -3808,7 +3811,34 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 .bd-w-icon { grid-row: 1 / span 2; width: 44px; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; object-fit: contain; background: var(--bg); }
 .bd-w-icon-talk { color: var(--accent); }
 .bd-w-icon-hat { color: var(--accent-hot); }
-.bd-w-cta .bd-btn { font-size: 17px; padding-top: 15px; padding-bottom: 15px; }
+.bd-w-foot { text-align: center; color: var(--muted); margin: 0; }
+
+/* ------------------------------------------------------------------ welcome on a wide screen
+ * The app is a phone-shaped column everywhere else. The front door is the one page a stranger
+ * meets on a laptop, so it lets the frame open up and lays out as a page: the photo on the left,
+ * the pitch and the button beside it, the three tiles in a row underneath. */
+@media (min-width: 900px) {
+  body.bd-wide #app { width: min(100% - 64px, 1180px); max-width: 1180px; height: auto; max-height: none; min-height: 0; }
+  body.bd-wide #buddy-welcome { position: relative; inset: auto; overflow: visible; }
+  body.bd-wide .bd-welcome { overflow: visible; display: grid; grid-template-columns: minmax(360px, 440px) 1fr; grid-template-areas: "head head" "shot copy" "grid grid" "foot foot"; column-gap: 44px; row-gap: 22px; padding: 44px 48px 40px; align-items: center; }
+  body.bd-wide .bd-w-head { grid-area: head; }
+  body.bd-wide .bd-w-shot { grid-area: shot; height: auto; aspect-ratio: 3 / 4; }
+  body.bd-wide .bd-w-axie { width: 190px; bottom: -12px; }
+  body.bd-wide .bd-w-bubbles { top: 56px; }
+  body.bd-wide .bd-w-bubble { font-size: 17px; max-width: 340px; }
+  body.bd-wide .bd-w-copy { grid-area: copy; align-items: flex-start; text-align: left; gap: 14px; }
+  body.bd-wide .bd-welcome-title { font-size: 46px; max-width: 14ch; }
+  body.bd-wide .bd-welcome-line { font-size: 17px; max-width: 46ch; }
+  body.bd-wide .bd-w-cta { align-items: flex-start; }
+  body.bd-wide .bd-w-cta .bd-btn { width: auto; min-width: 240px; padding-left: 36px; padding-right: 36px; }
+  body.bd-wide .bd-w-cta .bd-small { text-align: left; }
+  body.bd-wide .bd-w-grid { grid-area: grid; flex-direction: row; gap: 16px; }
+  body.bd-wide .bd-w-tile { flex: 1 1 0; padding: 18px; grid-template-columns: 1fr; grid-template-rows: auto auto auto; row-gap: 8px; }
+  body.bd-wide .bd-w-tile b { font-size: 16px; }
+  body.bd-wide .bd-w-tile span:last-child { grid-column: 1; font-size: 13.5px; }
+  body.bd-wide .bd-w-icon { grid-row: 1; width: 48px; height: 48px; }
+  body.bd-wide .bd-w-foot { grid-area: foot; text-align: left; }
+}
 .bd-steps { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 700; }
 .bd-steps b { font-weight: 900; }
 .bd-tile { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: linear-gradient(180deg, #BFE1FF 0%, var(--surface-soft) 100%); display: flex; align-items: flex-end; }

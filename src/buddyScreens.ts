@@ -105,6 +105,8 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
 
     hideSheet()
     hideAll()
+    // The front door is the one screen that opens the phone frame up on a wide screen.
+    document.body.classList.toggle('bd-wide', which === 'welcome')
     el.innerHTML = html
     el.hidden = false
     const scroller = el.querySelector<HTMLElement>('.bd-scroll')
@@ -211,7 +213,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   async function run(a: HTMLElement): Promise<void> {
     const act = a.dataset.action
     const b = buddyState.active
-    if (act === 'snap') { hideSheet(); nav.goSnap(); return }
+    if (act === 'snap') { hideSheet(); document.body.classList.remove('bd-wide'); nav.goSnap(); return }
     if (act === 'hatch-now') { pendingLines = []; await show('hatch'); return }
     if (act === 'hatch-confirm') {
       const input = document.querySelector<HTMLInputElement>('#bd-name')
