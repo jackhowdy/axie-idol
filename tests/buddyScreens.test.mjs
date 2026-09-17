@@ -486,7 +486,10 @@ test('the scrapbook screen shows every photo it has a picture for, newest first,
 test('the welcome screen: find an egg, or get an Axie back; as About it only leads back', () => {
   const fresh = welcomeHtml({})
   assert.match(fresh, /Axie Idol/)
-  assert.match(fresh, /Take pictures with your Axie/)
+  assert.match(fresh, /Your Axie\. In your camera\. With opinions\./)
+  assert.match(fresh, /That yellow slide goes very high/, 'a real line on the sample shot')
+  assert.match(fresh, /twenty photos guarantees a rare part/)
+  assert.match(fresh, /Free\. No wallet needed\./)
   assert.match(fresh, /data-action="start-egg">Find an egg/)
   assert.match(fresh, /data-action="ronin-welcome"/)
   assert.match(fresh, /data-action="recover"/)

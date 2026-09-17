@@ -547,30 +547,50 @@ export function photoViewHtml(b: Buddy, photoId: string): string {
  */
 export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null; address?: string | null } = {}): string {
   const about = Boolean(opts.hasAxie)
-  const steps = `
-      <ol class="bd-steps">
-        <li><b>Find an egg.</b> It rides along in your camera.</li>
-        <li><b>Take five pictures with it.</b> Anywhere. The longer you carry it, the rarer what hatches.</li>
-        <li><b>It hatches, and it talks.</b> One line after every photo, about what it saw and what it wants next.</li>
-      </ol>`
+  // Real lines from the live voice, on a sample shot: the page shows the game instead of describing it.
+  const lines = ['That yellow slide goes very high. Can we climb up?', 'We were right here before. What is past that tower?', 'That bench is far. Let us climb all those stairs to get to it.']
+  const bubbles = lines.map((l, i) => `<div class="bd-w-bubble" style="--i:${i}">${esc(l)}</div>`).join('')
   const start = about
     ? `<div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="back">Back to ${esc(opts.axieName || 'your Axie')}</button></div>`
-    : `<div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="start-egg">Find an egg</button></div>
-    <p class="bd-small bd-center">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>`
+    : `<div class="bd-actions bd-w-cta"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="start-egg">Find an egg</button></div>
+    <p class="bd-small bd-center">Free. No wallet needed. Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">Recovery code</a></p>`
   return `
     <div class="bd-scroll bd-welcome">
       ${about ? `<header class="bd-head bd-head-row">
         <button type="button" class="bd-round" data-action="back" aria-label="Back">${icon('back', 18)}</button>
         <p class="bd-eyebrow">About Axie Idol</p>
         <span class="bd-round bd-round-ghost"></span>
-      </header>` : '<p class="bd-eyebrow bd-center">Axie Vibeathon 2026</p>'}
-      <div class="bd-welcome-hero">
-        <img class="bd-welcome-egg" src="/previews/egg-1.svg" alt="" width="120" height="120">
-        <h1 class="bd-welcome-title">Axie Idol</h1>
-        <p class="bd-welcome-line">Take pictures with your Axie. It tells you what it wants to do next.</p>
+      </header>` : ''}
+      <div class="bd-w-shot" aria-hidden="true">
+        <div class="bd-w-sky"></div>
+        <div class="bd-w-ground"></div>
+        <div class="bd-w-bubbles">${bubbles}</div>
+        <img class="bd-w-axie" src="/stickers/kotaro.png" alt="">
+        <span class="bd-w-tag">Photo taken with an Axie</span>
       </div>
-      <div class="bd-card">${steps}</div>
-      <p class="bd-small bd-center bd-muted">One photo is one bond. Bond opens the wardrobe and the Idol ladder. Every Axie is one of a kind.</p>
+      <div class="bd-welcome-hero">
+        <p class="bd-eyebrow">Axie Idol</p>
+        <h1 class="bd-welcome-title">Your Axie. In your camera. With opinions.</h1>
+        <p class="bd-welcome-line">Find an egg and take it places. When it hatches, it talks: one line after every photo, about what it actually sees, and where it wants to go next.</p>
+      </div>
+      <div class="bd-w-grid">
+        <div class="bd-card bd-w-tile">
+          <img class="bd-w-icon" src="/previews/egg-2.svg" alt="">
+          <b>Hatch one nobody else has</b>
+          <span>Five photos and it hatches. Carry it longer for a rarer Axie: twenty photos guarantees a rare part, a hundred gives a shot at Mystic.</span>
+        </div>
+        <div class="bd-card bd-w-tile">
+          <span class="bd-w-icon bd-w-icon-talk">${icon('comment', 26)}</span>
+          <b>It sees. It remembers. It wants things.</b>
+          <span>It names what is in your photo, notices when you are back somewhere, and asks for the next place. Its words go on the picture.</span>
+        </div>
+        <div class="bd-card bd-w-tile">
+          <span class="bd-w-icon bd-w-icon-hat">${icon('hat', 26)}</span>
+          <b>Grow it, dress it, climb the ladder</b>
+          <span>Every photo builds bond. Bond unlocks the hat, the scarf, the shades, the crown, and a place on the monthly Idol ladder.</span>
+        </div>
+      </div>
+      <p class="bd-small bd-center bd-muted">Ten photos a day count, wishes add extra, nothing to buy. Own an Axie on Ronin? Bring it instead of an egg.</p>
     </div>
     ${start}`
 }

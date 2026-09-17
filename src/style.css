@@ -3786,11 +3786,29 @@ button.id-chip {
 .bd-book .bd-thumb { flex: 0 0 calc((100% - 24px) / 4); scroll-snap-align: start; }
 button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; }
 .bd-grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.bd-welcome { justify-content: center; }
-.bd-welcome-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 8px 0 4px; }
-.bd-welcome-egg { width: 120px; height: 120px; filter: drop-shadow(0 12px 18px rgba(26, 43, 60, 0.18)); }
-.bd-welcome-title { font-size: 34px; margin: 4px 0 0; letter-spacing: -0.01em; }
-.bd-welcome-line { font-size: 15px; font-weight: 700; color: var(--muted); margin: 0; max-width: 28ch; text-wrap: balance; }
+.bd-welcome { justify-content: flex-start; }
+.bd-welcome-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 6px 0 2px; }
+.bd-welcome-title { font-size: 30px; line-height: 1.08; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.bd-welcome-line { font-size: 14px; font-weight: 700; color: var(--muted); margin: 0; max-width: 34ch; text-wrap: balance; }
+/* The sample shot: a photo-shaped card with a real Axie and its real lines, cycling. */
+.bd-w-shot { position: relative; height: 300px; border-radius: var(--radius-tray); overflow: hidden; box-shadow: 0 14px 30px rgba(26, 43, 60, 0.18); }
+.bd-w-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #7FB7E6 0%, #BFE1FF 60%, #DDEFFF 100%); }
+.bd-w-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: linear-gradient(180deg, #8EC46A 0%, #6EA84E 100%); }
+.bd-w-axie { position: absolute; left: 50%; bottom: -8px; width: 150px; transform: translateX(-52%); clip-path: inset(0 0 17% 0); filter: drop-shadow(0 10px 16px rgba(26, 43, 60, 0.3)); }
+.bd-w-tag { position: absolute; left: 12px; top: 12px; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #FFFFFF; background: rgba(26, 43, 60, 0.55); border-radius: 999px; padding: 4px 9px; }
+.bd-w-bubbles { position: absolute; left: 14px; right: 14px; top: 42px; height: 70px; }
+.bd-w-bubble { position: absolute; left: 0; right: 0; margin: 0 auto; max-width: 300px; background: #FFFFFF; color: var(--text); border: 2px solid var(--text); border-radius: 16px; padding: 9px 13px; font-family: var(--font-display); font-weight: 800; font-size: 15px; line-height: 1.25; text-align: center; opacity: 0; animation: bd-w-say 12s infinite; animation-delay: calc(var(--i) * 4s); }
+.bd-w-bubble::after { content: ""; position: absolute; left: 50%; bottom: -12px; width: 14px; height: 14px; background: #FFFFFF; border-right: 2px solid var(--text); border-bottom: 2px solid var(--text); transform: translateX(-50%) rotate(45deg); }
+@keyframes bd-w-say { 0% { opacity: 0; transform: translateY(6px); } 5% { opacity: 1; transform: translateY(0); } 27% { opacity: 1; } 32% { opacity: 0; transform: translateY(-4px); } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .bd-w-bubble { animation: none; } .bd-w-bubble[style*="--i:0"] { opacity: 1; } }
+.bd-w-grid { display: flex; flex-direction: column; gap: 10px; }
+.bd-w-tile { display: grid; grid-template-columns: 44px 1fr; grid-template-rows: auto auto; column-gap: 12px; row-gap: 2px; padding: 12px 14px; }
+.bd-w-tile b { font-size: 14px; }
+.bd-w-tile span:last-child { grid-column: 2; font-size: 12.5px; font-weight: 700; color: var(--muted); line-height: 1.35; }
+.bd-w-icon { grid-row: 1 / span 2; width: 44px; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; object-fit: contain; background: var(--bg); }
+.bd-w-icon-talk { color: var(--accent); }
+.bd-w-icon-hat { color: var(--accent-hot); }
+.bd-w-cta .bd-btn { font-size: 17px; padding-top: 15px; padding-bottom: 15px; }
 .bd-steps { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 700; }
 .bd-steps b { font-weight: 900; }
 .bd-tile { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: linear-gradient(180deg, #BFE1FF 0%, var(--surface-soft) 100%); display: flex; align-items: flex-end; }
