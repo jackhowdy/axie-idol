@@ -17,12 +17,12 @@ import {
   type SnapResult,
 } from './buddy'
 import { fallbackAxieSvg } from './fallbackAxie'
-import { loadAxieArt, jointsFor2D, type Art2D } from './axie2d.ts'
+import { loadAxieArt, jointsFor2D, ITEM_ANCHORS_2D, BEHIND_2D, type Art2D } from './axie2d.ts'
 import { drawSpeechBubble, type BubbleAnchor } from './speechBubble'
 import { mountBuddyScreens } from './buddyScreens'
 import { reactionHtml, momentHtml, unlockHtml, joyHtml, vfChipHtml, wishPillHtml, frameTrayHtml, wardrobeTrayHtml, eggLine } from './buddyHtml.ts'
 import {
-  FRAME_IDS, drawFrame, drawWardrobe, isFrameId, offsetJoints, preloadWardrobe,
+  FRAME_IDS, drawFrame, drawWardrobe, isFrameId, offsetJoints, preloadWardrobe, wardrobeSprite2D,
   type FrameId,
 } from './wardrobe'
 import {
@@ -935,7 +935,9 @@ function drawWardrobeOverlay2D(worn: string, art: Art2D): void {
   if (!wardrobeCtx || wardrobeCtx.canvas !== wardrobeOverlay) wardrobeCtx = wardrobeOverlay.getContext('2d')
   if (!wardrobeCtx) return
   const joints = jointsFor2D(iw * density, ih * density, art.topMid)
-  drawWardrobe(wardrobeCtx, worn, offsetJoints(joints, (w - iw * density) / 2, (h - ih * density) / 2))
+  drawWardrobe(wardrobeCtx, worn, offsetJoints(joints, (w - iw * density) / 2, (h - ih * density) / 2), wardrobeSprite2D, ITEM_ANCHORS_2D)
+  // a cape hangs behind the picture; everything else sits on it
+  wardrobeOverlay.classList.toggle('behind', BEHIND_2D.includes(worn))
 }
 /** A still picture has no frame loop of its own: this one runs only while a 2D Axie is on the layer. */
 let art2dLoop = 0
@@ -1269,6 +1271,7 @@ async function startCamera(nextFacing: Facing = facing): Promise<boolean> {
     uploadPreview.hidden = true
     cameraDenied.hidden = true
     mode = 'camera'
+    syncUploadFit()
     cameraStarted = true
     lsSet(CAMERA_OK_LS, '1')
     video.classList.toggle('mirror', facing === 'user')
@@ -1301,12 +1304,36 @@ function showCameraFallback(message: string): void {
   btnFlip.disabled = true
 }
 
+/**
+ * A still photo whose shape is far from the viewfinder's (a portrait photo on a wide desktop
+ * window, a landscape one on a phone) is shown whole over a blurred copy of itself, instead of
+ * being cropped to a sliver. The capture draws the same thing, so the photo matches the view.
+ */
+function uploadShownWhole(): boolean {
+  if (mode !== 'upload' || uploadPreview.hidden || !uploadPreview.naturalWidth) return false
+  const vf = viewfinder.getBoundingClientRect()
+  if (!vf.width || !vf.height) return false
+  const photo = uploadPreview.naturalWidth / uploadPreview.naturalHeight
+  const frame = vf.width / vf.height
+  // A different orientation always qualifies. The same orientation only when the shapes are far
+  // apart: a phone photo on a slightly taller phone screen keeps filling it, as it always has.
+  if ((photo < 1) !== (frame < 1)) return true
+  return Math.max(photo / frame, frame / photo) > 1.6
+}
+function syncUploadFit(): void {
+  const whole = uploadShownWhole()
+  viewfinder.classList.toggle('vf-whole', whole)
+  viewfinder.style.setProperty('--upload-url', whole ? `url("${uploadPreview.src}")` : 'none')
+}
+window.addEventListener('resize', syncUploadFit)
+
 function loadUpload(file: File): void {
   const url = URL.createObjectURL(file)
   uploadPreview.onload = () => {
     uploadPreview.hidden = false
     video.hidden = true
     mode = 'upload'
+    syncUploadFit()
     cameraDenied.hidden = true
     hideCameraGate()
     // Still photo path — no live stream
@@ -2419,26 +2446,45 @@ async function captureComposite(): Promise<void> {
 
   // Fit canvas to cover viewfinder aspect like object-fit: cover
   const vf = viewfinder.getBoundingClientRect()
-  const outW = Math.min(1440, Math.max(srcW, 720))
+  // never smaller than the frame on screen: a small source on a wide window would otherwise make
+  // a photo (and an Axie on it) coarser than what the player just looked at
+  const outW = Math.min(1440, Math.max(srcW, 720, Math.round(vf.width)))
   const outH = Math.round(outW * (vf.height / vf.width))
   canvas.width = outW
   canvas.height = outH
 
   // Draw video/image with cover crop into canvas
   const scaleCover = Math.max(outW / srcW, outH / srcH)
-  const dw = srcW * scaleCover
-  const dh = srcH * scaleCover
-  const dx = (outW - dw) / 2
-  const dy = (outH - dh) / 2
-
-  ctx.save()
-  ctx.beginPath()
-  ctx.rect(0, 0, outW, outH)
-  ctx.clip()
-  ctx.translate(dx, dy)
-  ctx.scale(scaleCover, scaleCover)
-  drawBase(ctx, srcW, srcH)
-  ctx.restore()
+  const drawScaled = (scale: number): void => {
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(0, 0, outW, outH)
+    ctx.clip()
+    ctx.translate((outW - srcW * scale) / 2, (outH - srcH * scale) / 2)
+    ctx.scale(scale, scale)
+    drawBase(ctx, srcW, srcH)
+    ctx.restore()
+  }
+  if (uploadShownWhole()) {
+    // The backdrop: the photo shrunk to a few dozen pixels and stretched back over the frame (a
+    // blur that works in every browser, canvas filters do not), dimmed; then the whole photo on top.
+    const tiny = document.createElement('canvas')
+    tiny.width = 40
+    tiny.height = Math.max(8, Math.round(40 * (outH / outW)))
+    const tg = tiny.getContext('2d')
+    if (tg) {
+      const s = Math.max(tiny.width / srcW, tiny.height / srcH)
+      tg.drawImage(uploadPreview, (tiny.width - srcW * s) / 2, (tiny.height - srcH * s) / 2, srcW * s, srcH * s)
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(tiny, 0, 0, outW, outH)
+      ctx.fillStyle = 'rgba(10, 21, 32, 0.45)'
+      ctx.fillRect(0, 0, outW, outH)
+    }
+    drawScaled(Math.min(outW / srcW, outH / srcH))
+  } else {
+    drawScaled(scaleCover)
+  }
 
   const scaleX = outW / vf.width
   const cx = (state.x + state.gyroX) * scaleX
@@ -2508,6 +2554,22 @@ async function captureComposite(): Promise<void> {
     captureAnchor = { x: cx, y: cy, halfW: (baseW * state.scale) / 2, halfH: (baseH * state.scale) / 2 }
     // headwear stands above the picture: the speech bubble's tail starts above it, not inside it
     if (art2d && ['hat', 'crown'].includes(wornItem() || '')) captureAnchor.halfH += baseW * state.scale * 0.42
+    // what the 2D Axie wears, from the same overlay the live view shows: a cape goes under the
+    // picture, anything else over it
+    const drawWorn2D = (): void => {
+      if (!art2d || !wardrobeOverlay || !wardrobeOverlayShown || wardrobeOverlay.clientWidth <= 0) return
+      const ow = wardrobeOverlay.clientWidth * scaleX
+      const oh = wardrobeOverlay.clientHeight * scaleX
+      ctx.save()
+      ctx.translate(cx, cy)
+      ctx.rotate((state.rotation * Math.PI) / 180)
+      ctx.scale(state.scale, state.scale)
+      ctx.drawImage(wardrobeOverlay, -ow / 2, -oh / 2, ow, oh)
+      ctx.restore()
+    }
+    const wornBehind = BEHIND_2D.includes(wornItem() || '')
+    if (art2d) drawWardrobeOverlay()
+    if (wornBehind) drawWorn2D()
     if (art2d && buddyGlowOn()) {
       ctx.save()
       ctx.shadowColor = 'rgba(255, 209, 102, 0.9)'
@@ -2525,18 +2587,7 @@ async function captureComposite(): Promise<void> {
     ctx.scale(state.scale, state.scale)
     ctx.drawImage(stickerImg, -baseW / 2, -baseH / 2, baseW, baseH)
     ctx.restore()
-    // a real Axie's worn item, from the same overlay the live view shows
-    if (art2d && wardrobeOverlay && wardrobeOverlayShown && wardrobeOverlay.clientWidth > 0) {
-      drawWardrobeOverlay()
-      const ow = wardrobeOverlay.clientWidth * scaleX
-      const oh = wardrobeOverlay.clientHeight * scaleX
-      ctx.save()
-      ctx.translate(cx, cy)
-      ctx.rotate((state.rotation * Math.PI) / 180)
-      ctx.scale(state.scale, state.scale)
-      ctx.drawImage(wardrobeOverlay, -ow / 2, -oh / 2, ow, oh)
-      ctx.restore()
-    }
+    if (!wornBehind) drawWorn2D()
   }
 
   if (leadShiny && !customAxieId && leadGlint) {
@@ -3041,6 +3092,7 @@ async function initSticker3D(): Promise<void> {
   // A real Axie: its official art, cropped, on the ordinary sticker layer. No rig to warm up.
   const realId = cast === 'buddy' ? realBuddyAxieId() : null
   if (art2d) setWardrobeOverlayShown(false)
+  wardrobeOverlay?.classList.remove('behind')
   art2d = null
   stickerImg.classList.remove('sticker-2d')
   if (realId) {
@@ -3456,7 +3508,9 @@ async function showRealBuddyIn(host: HTMLElement, axieId: string, req: number): 
   overlay.className = 'bd-hero-wardrobe'
   overlay.dataset.buddyFace = 'wardrobe'
   overlay.setAttribute('aria-hidden', 'true')
-  host.append(overlay)
+  // a cape goes under the picture, anything else over it
+  if (BEHIND_2D.includes(worn)) host.insertBefore(overlay, img)
+  else host.append(overlay)
   const density = Math.min(2, window.devicePixelRatio || 1)
   overlay.width = Math.round(boxW * 2 * density)
   overlay.height = Math.round(boxH * 2 * density)
@@ -3469,7 +3523,7 @@ async function showRealBuddyIn(host: HTMLElement, axieId: string, req: number): 
   const paint = (): void => {
     if (req !== buddyHeroRequest || !overlay.isConnected) return
     // the sprite may still be decoding on the first frames
-    if (!drawWardrobe(g, worn, joints) && tries++ < 90) requestAnimationFrame(paint)
+    if (!drawWardrobe(g, worn, joints, wardrobeSprite2D, ITEM_ANCHORS_2D) && tries++ < 90) requestAnimationFrame(paint)
   }
   paint()
 }
@@ -6929,3 +6983,7 @@ async function boot(): Promise<void> {
 }
 
 void boot()
+
+// QA only: /?qa2d=2660,80 draws the 2D placement contact sheet (see src/qa2d.ts).
+const qa2dIds = new URLSearchParams(location.search).get('qa2d')
+if (qa2dIds) void import('./qa2d.ts').then((m) => m.renderArtSheet(qa2dIds.split(',').map((x) => x.trim()).filter((x) => /^\d+$/.test(x)).slice(0, 24)))

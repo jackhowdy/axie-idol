@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <!-- Scarf for side-view art: the front of the loop only (a band hugging a round body) and the tail. -->
+  <g stroke="#1A2B3C" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M146 168 Q166 206 148 244 L98 232 Q122 204 112 170 Z" fill="#1F73C9"/>
+    <path d="M22 84 Q128 176 234 84 L230 124 Q128 218 26 124 Z" fill="#2B8CEE"/>
+    <path d="M40 112 Q128 190 216 112" stroke="#7FC0FF" stroke-width="8"/>
+  </g>
+</svg>

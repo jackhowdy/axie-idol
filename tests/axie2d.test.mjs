@@ -1,17 +1,18 @@
 // Real Axies in 2D: the crop and the joints are pure, so they are tested without a browser.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { cropBox, jointsFor2D } from '../src/axie2d.ts'
-import { ITEM_ANCHORS, placeItem } from '../src/wardrobe.ts'
+import { cropBox, jointsFor2D, ITEM_ANCHORS_2D, BEHIND_2D } from '../src/axie2d.ts'
+import { placeItem, WEARABLE_IDS } from '../src/wardrobe.ts'
 
 /** A 100 x 80 picture: a body from (20,30) to (79,69), and a tall tail at the right reaching y=10. */
 const alphaAt = (x, y) => ((x >= 20 && x < 80 && y >= 30 && y < 70) || (x >= 70 && x < 80 && y >= 10 && y < 30) ? 255 : 0)
 
-test('the crop is the outline of the opaque pixels, and the head is the top of the middle, not the tail', () => {
+test('the crop is the outline of the opaque pixels, and the head is the top of the wide body, not a narrow part above it', () => {
   const found = cropBox(100, 80, alphaAt, 1)
   assert.deepEqual(found.box, { l: 20, t: 10, r: 80, b: 70 })
-  // the body starts at y=30 in a box that runs 10..69: a third of the way down
-  assert.ok(Math.abs(found.topMid - 20 / 59) < 0.01, String(found.topMid))
+  // the body (the first wide row) starts at y=30 in a box that runs 10..69; the crown of a round
+  // head is a touch above where the body gets wide
+  assert.ok(Math.abs(found.topMid - (20 / 59 - 0.05)) < 0.01, String(found.topMid))
   assert.equal(cropBox(10, 10, () => 0), null, 'an empty picture has no box')
 })
 
@@ -27,9 +28,12 @@ test('joints are fractions of the picture, in the unit the wardrobe uses', () =>
 
 test('a hat lands on top of the head and a scarf on the lower body', () => {
   const j = jointsFor2D(200, 150, 0.1)
-  const hat = placeItem(ITEM_ANCHORS.hat, j.head, 256, 256)
+  const hat = placeItem(ITEM_ANCHORS_2D.hat, j.head, 256, 256)
   assert.ok(hat.y < j.head.y && hat.y + hat.h > j.head.y, 'the brim sits on the head line')
   assert.ok(hat.y + hat.h < 150 * 0.45, 'and the hat stays off the face')
-  const scarf = placeItem(ITEM_ANCHORS.scarf, j.chest, 256, 256)
-  assert.ok(scarf.y + scarf.h * ITEM_ANCHORS.scarf.rest > 150 * 0.7)
+  const scarf = placeItem(ITEM_ANCHORS_2D.scarf, j.chest, 256, 256)
+  assert.ok(scarf.y + scarf.h * ITEM_ANCHORS_2D.scarf.rest > 150 * 0.7)
+  assert.ok(scarf.w < 200, 'the scarf is narrower than the picture')
+  assert.deepEqual(Object.keys(ITEM_ANCHORS_2D).sort(), [...WEARABLE_IDS].sort(), 'every wearable has a 2D anchor')
+  assert.deepEqual([...BEHIND_2D], ['cape'], 'only the cape goes behind the picture')
 })

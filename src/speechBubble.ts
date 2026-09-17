@@ -49,16 +49,26 @@ export function wrapLines(text: string, maxWidth: number, measure: (s: string) =
   return lines
 }
 
+/**
+ * What the bubble is sized against: the photo's width on a portrait photo (a phone), but on a wide
+ * one (a desktop window) a portrait-sized slice of it, so the words stay in proportion to the Axie
+ * instead of growing with the window.
+ */
+export function bubbleBase(W: number, H: number): number {
+  return Math.min(W, H * 0.62)
+}
+
 export function layoutBubble(opts: { W: number; H: number; anchor: BubbleAnchor; text: string; measure: (s: string) => number }): BubbleLayout | null {
   const { W, H, anchor, text, measure } = opts
   if (!text.trim() || W < 64 || H < 64) return null
-  const fontPx = Math.max(18, Math.min(44, Math.round(W / 26)))
+  const base = bubbleBase(W, H)
+  const fontPx = Math.max(18, Math.min(44, Math.round(base / 26)))
   const lineH = Math.round(fontPx * 1.25)
   const pad = Math.round(fontPx * 0.7)
   const margin = Math.round(fontPx * 0.6)
   const tailLen = Math.round(fontPx * 0.9)
   const r = Math.round(fontPx * 0.75)
-  const lines = wrapLines(text, W * 0.72 - 2 * pad, measure)
+  const lines = wrapLines(text, base * 0.72 - 2 * pad, measure)
   if (!lines.length) return null
   const textW = Math.max(...lines.map(measure))
   const w = Math.min(W - 2 * margin, Math.round(textW + 2 * pad))
@@ -102,8 +112,8 @@ export function drawSpeechBubble(ctx: CanvasRenderingContext2D, text: string, an
   const W = ctx.canvas.width
   const H = ctx.canvas.height
   const probeFont = (px: number) => `800 ${px}px ${family}`
-  // measure with the size the layout will pick (it depends only on W)
-  const fontPx = Math.max(18, Math.min(44, Math.round(W / 26)))
+  // measure with the size the layout will pick
+  const fontPx = Math.max(18, Math.min(44, Math.round(bubbleBase(W, H) / 26)))
   ctx.save()
   ctx.font = probeFont(fontPx)
   const layout = layoutBubble({ W, H, anchor, text, measure: (s) => ctx.measureText(s).width })

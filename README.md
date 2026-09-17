@@ -33,7 +33,7 @@ You do not need a phone, a camera or a wallet.
 | | |
 |---|---|
 | **Phone** | iPhone Safari 16+, Android Chrome. Tap to shoot, drag the Axie, pinch to resize, two fingers to rotate. |
-| **Desktop** | Chrome, Edge, Firefox, Safari. Webcam, a photo from disk, or the built-in sample photos. Mouse drag; the round buttons zoom and rotate. |
+| **Desktop and tablet** | Chrome, Edge, Firefox, Safari. The game fills the window and the camera runs edge to edge. Webcam, a photo from disk, or the built-in sample photos (a photo of another shape is shown whole over a blurred copy of itself). Mouse drag; the round buttons zoom and rotate. |
 | **Not supported** | In-app browsers that hide the camera (some chat apps). The photo upload and the sample photos still work there. |
 | **Location** | Optional. If allowed, the Axie knows when it is back somewhere. Refusing changes nothing else. |
 
@@ -119,6 +119,9 @@ Ronin sign-in. The 3D part pack (about 500 MB) is not in the repository: clone
 [threejs-axie-mixer3d-public](https://github.com/jaatster/threejs-axie-mixer3d-public) and run
 `node scripts/copy-mixer-assets.mjs <path-to-clone>` to copy it into `public/assets/axie/`. Without it, real and hatched Axies
 fall back to a 2D stand-in and the game still plays. More in `docs/DEVELOPMENT.md`.
+
+QA helper: `/?qa2d=2660,80,1234567` draws a contact sheet of real Axies in their official art with
+every wardrobe item on, using the production crop and placement code (`src/qa2d.ts`).
 
 ## Known issues
 

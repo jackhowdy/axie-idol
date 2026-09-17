@@ -4128,12 +4128,11 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 .bd-cols, .bd-col { display: contents; }
 
 /* ===================================================================
- * Desktop: the game fills the window. No floating phone frame; content keeps a readable measure
- * in the middle, Home goes two columns, sheets become centred dialogs, and the camera is a
- * portrait stage in the middle of a dark room (photos are portrait, and so is everything drawn
- * on them).
+ * Tablet and desktop: the game fills the window. No floating phone frame; content keeps a readable measure
+ * in the middle, Home goes two columns, sheets become centred dialogs, and the camera runs edge
+ * to edge (a still photo of another shape is shown whole over a blurred copy of itself).
  * ================================================================= */
-@media (min-width: 900px) {
+@media (min-width: 768px) {
   #app { width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; box-shadow: none; }
   body.bd-wide #app { height: auto; }
 
@@ -4147,8 +4146,10 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
   .buddy .bd-small { font-size: 14px; }
 
   /* Home: the conversation and the game on the left, the Axie and its things on the right */
-  .bd-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-  .bd-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  @media (min-width: 900px) {
+    .bd-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+    .bd-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  }
   .bd-hero-3d { width: 190px; height: 190px; }
   .bd-hero-3d.bd-hero-3d-big { width: 100%; max-width: 420px; height: 340px; }
   .bd-hatch-card { padding: 28px; }
@@ -4164,9 +4165,9 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
   .buddy-sheet { align-items: center; justify-content: center; padding: 32px; }
   .bd-sheet-card { max-width: 540px; padding: 24px; }
 
-  /* the camera and the preview: a portrait stage, centred */
-  #app:has(#viewfinder.active), #app:has(#preview.active) { background: radial-gradient(ellipse at 50% 30%, #22384D 0%, #0E1720 70%); }
-  #viewfinder, #preview { --stage: min(100vw, calc(100dvh * 0.62)); left: 50%; right: auto; width: var(--stage); margin-left: calc(var(--stage) / -2); overflow: hidden; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 30px 80px rgba(0, 0, 0, 0.5); }
+  /* the camera runs edge to edge; its controls keep a comfortable width in the middle */
+  #viewfinder .chrome.bottom > *, #preview .preview-actions > * { max-width: 760px; margin-left: auto; margin-right: auto; }
+  #viewfinder .chrome.bottom .toolbar { width: 100%; }
 }
 
 /* ---- Real Axies in 2D: a still picture that breathes (scale/translate leave `transform` alone) ---- */
@@ -4174,3 +4175,9 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 #sticker.sticker-2d { animation: axie-breathe 3.2s ease-in-out infinite; transform-origin: center bottom; }
 .bd-hero-2d { position: absolute; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(26, 43, 60, 0.22)); animation: axie-breathe 3.2s ease-in-out infinite; transform-origin: center bottom; }
 @media (prefers-reduced-motion: reduce) { #sticker.sticker-2d, .bd-hero-2d { animation: none; } }
+
+/* ---- A still photo shown whole: blurred copy behind, the photo itself uncropped on top ---- */
+#viewfinder.vf-whole::before { content: ""; position: absolute; inset: -48px; background: var(--upload-url) center / cover no-repeat; filter: blur(30px) brightness(0.55); z-index: 0; }
+#viewfinder.vf-whole #upload-preview { object-fit: contain; background: transparent; }
+#sticker.sticker-2d { z-index: 1; }
+.wardrobe-overlay.behind { z-index: 0; }

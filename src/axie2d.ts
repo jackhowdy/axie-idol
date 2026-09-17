@@ -10,23 +10,40 @@
  * `jointsFor2D` and `cropBox` are pure, so `tests/axie2d.test.mjs` can load this file under
  * `node --experimental-strip-types`. `loadAxieArt` needs a browser.
  */
-import type { JointScreen } from './wardrobe.ts'
+import type { ItemAnchor, JointScreen, WearableId } from './wardrobe.ts'
+
+/**
+ * Where each item sits on official art. The 3D anchors assume a rig seen three-quarters on; the
+ * art is a side view of a rounder body with the face on the left, so headwear is smaller and sits
+ * on the head behind the horns, the scarf rides low under the chin, and the cape hangs from the
+ * shoulders behind the body (`BEHIND_2D`: drawn under the picture, so only its edges show).
+ */
+export const ITEM_ANCHORS_2D: Record<WearableId, ItemAnchor> = {
+  hat: { joint: 'head', dx: 0, dy: 0.05, w: 0.46, rest: 0.79 },
+  crown: { joint: 'head', dx: 0, dy: 0.04, w: 0.4, rest: 0.76 },
+  shades: { joint: 'eyeL', dx: 0, dy: 0, w: 0.4, rest: 0.51 },
+  scarf: { joint: 'chest', dx: 0, dy: 0, w: 0.68, rest: 0.58 },
+  cape: { joint: 'back', dx: 0, dy: 0, w: 0.9, rest: 0.12 },
+}
+export const BEHIND_2D: readonly string[] = ['cape']
 
 export type Art2D = {
   /** Cropped art as a PNG data URL (same-origin source, so it never taints a canvas). */
   src: string
   w: number
   h: number
-  /** Where the top of the body is in the middle of the picture, as a fraction of the height. */
+  /** Where the top of the head is, as a fraction of the height: the body's top, not a horn's tip. */
   topMid: number
 }
 
 export type Box = { l: number; t: number; r: number; b: number }
 
 /**
- * The outline of the opaque pixels, and the top of the opaque pixels in the middle fifth of that
- * outline (a hat sits on the head, not on the tip of a tall tail at the back). `alphaAt` reads one
- * pixel's alpha; `step` trades accuracy for speed. Null when nothing is opaque.
+ * The outline of the opaque pixels, and where the head's top is inside it. Horns, ears and back
+ * parts are narrow; the body is the wide part. The first row (from the top) where opaque pixels
+ * span at least half the outline's width is where the body starts, and the crown of the head is a
+ * touch above that (the body is round). `alphaAt` reads one pixel's alpha; `step` trades accuracy
+ * for speed. Null when nothing is opaque.
  */
 export function cropBox(width: number, height: number, alphaAt: (x: number, y: number) => number, step = 2): { box: Box; topMid: number } | null {
   let l = width, t = height, r = -1, b = -1
@@ -36,15 +53,14 @@ export function cropBox(width: number, height: number, alphaAt: (x: number, y: n
     }
   }
   if (r < l || b < t) return null
-  const from = Math.round(l + (r - l) * 0.4)
-  const to = Math.round(l + (r - l) * 0.6)
-  let top = b
-  for (let x = from; x <= to; x += step) {
-    for (let y = t; y <= b; y += step) {
-      if (alphaAt(x, y) > 24) { if (y < top) top = y; break }
-    }
+  const need = ((r - l) / step) * 0.5
+  let top = t
+  for (let y = t; y <= b; y += step) {
+    let n = 0
+    for (let x = l; x <= r; x += step) if (alphaAt(x, y) > 24) n++
+    if (n >= need) { top = y; break }
   }
-  return { box: { l, t, r: r + step, b: b + step }, topMid: (top - t) / Math.max(1, b - t) }
+  return { box: { l, t, r: r + step, b: b + step }, topMid: Math.max(0, (top - t) / Math.max(1, b - t) - 0.05) }
 }
 
 /**
@@ -55,14 +71,15 @@ export function cropBox(width: number, height: number, alphaAt: (x: number, y: n
 export function jointsFor2D(w: number, h: number, topMid: number): JointScreen {
   const scale = w / 100
   const top = Math.min(0.5, Math.max(0, topMid)) * h
+  const bodyH = h - top
   const at = (x: number, y: number) => ({ x, y, scale })
   return {
-    head: at(w * 0.46, top),
-    eyeL: at(w * 0.3, h * 0.5),
-    eyeR: at(w * 0.3, h * 0.5),
-    neck: at(w * 0.48, h * 0.62),
-    chest: at(w * 0.5, h * 0.76),
-    back: at(w * 0.72, h * 0.42),
+    head: at(w * 0.44, top),
+    eyeL: at(w * 0.3, top + bodyH * 0.4),
+    eyeR: at(w * 0.3, top + bodyH * 0.4),
+    neck: at(w * 0.44, top + bodyH * 0.7),
+    chest: at(w * 0.46, top + bodyH * 0.8),
+    back: at(w * 0.66, top + bodyH * 0.08),
   }
 }
 

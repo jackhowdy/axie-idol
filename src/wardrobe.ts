@@ -130,13 +130,21 @@ export function wardrobeSprite(item: string): HTMLImageElement | null {
   return isWearableId(item) ? sprite(`/wardrobe/${item}.svg`) : null
 }
 
+/**
+ * Sprites for side-view official art. Only the scarf differs: a filled loop reads as a plate under
+ * a flat picture, so the 2D scarf is the front of the loop only, a band that hugs the body.
+ */
+export function wardrobeSprite2D(item: string): HTMLImageElement | null {
+  return item === 'scarf' ? sprite('/wardrobe/scarf-2d.svg') : wardrobeSprite(item)
+}
+
 export function frameSprite(id: string): HTMLImageElement | null {
   return isFrameId(id) && id !== 'none' ? sprite(`/frames/${id}.svg`) : null
 }
 
 /** Start the downloads before the first frame that needs them (called once the camera opens). */
 export function preloadWardrobe(): void {
-  for (const item of WEARABLE_IDS) wardrobeSprite(item)
+  for (const item of WEARABLE_IDS) { wardrobeSprite(item); wardrobeSprite2D(item) }
   for (const id of FRAME_IDS) frameSprite(id)
 }
 
@@ -149,12 +157,13 @@ export function drawWardrobe(
   worn: string | null,
   joints: JointScreen | null,
   resolve: (item: string) => HTMLImageElement | null = wardrobeSprite,
+  anchors: Record<WearableId, ItemAnchor> = ITEM_ANCHORS,
 ): boolean {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
   if (!worn || !joints || !isWearableId(worn)) return false
   const img = resolve(worn)
   if (!usable(img)) return false
-  const anchor = ITEM_ANCHORS[worn]
+  const anchor = anchors[worn]
   const box = placeItem(anchor, joints[anchor.joint], img.naturalWidth, img.naturalHeight)
   ctx.drawImage(img, box.x, box.y, box.w, box.h)
   return true
