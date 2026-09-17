@@ -2,7 +2,7 @@
 // Source: a clone of https://github.com/jaatster/threejs-axie-mixer3d-public (RIGHTS.md applies).
 import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
-const src = process.argv[2] || process.env.MIXER3D_CLONE || 'C:/Users/jackhowdy/Desktop/threejs-axie-mixer3d-public'
+const src = process.argv[2] || process.env.MIXER3D_CLONE || '../threejs-axie-mixer3d-public'
 const from = resolve(src, 'public/assets/axie')
 const to = resolve('public/assets/axie')
 if (!existsSync(from)) { console.error('Mixer clone not found at', from, '\nUsage: node scripts/copy-mixer-assets.mjs <path-to-clone>'); process.exit(1) }
