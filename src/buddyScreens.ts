@@ -7,10 +7,10 @@
  */
 import {
   buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone, talkEnabled,
-  roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto,
+  roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto, pet, visitAxie, type HappyChange,
 } from './buddy'
 import {
-  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml,
+  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml,
   bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
@@ -158,10 +158,10 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     }
     if (input) input.disabled = true
     let res: Response
-    let data: { reply?: string; error?: string }
+    let data: { reply?: string; error?: string; happy?: HappyChange }
     try {
       res = await fetch(`/api/buddy/talk?hour=${new Date().getHours()}`, { method: 'POST', headers: buddyHeaders(), body: JSON.stringify({ text }) })
-      data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string }
+      data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string; happy?: HappyChange }
     } finally {
       if (input) input.disabled = false
     }
@@ -169,6 +169,8 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     exchanges = [...exchanges, { you: text, reply: data.reply || '' }].slice(-3)
     if (input) input.value = ''
     await show('talk')
+    if (data.happy && data.happy.delta > 0) nav.toast(`+${data.happy.delta} happy · ${data.happy.mood} ${data.happy.value}`)
+    if (data.happy?.overjoyed && buddyState.active) { await loadBuddy().catch(() => {}); sheet(joyHtml(data.happy, buddyState.active)) }
   }
 
   function sheet(html: string): void {
@@ -232,6 +234,27 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       return
     }
     if (act === 'talk') { await show('talk'); return }
+    // A pat: the Axie answers in its bubble, the meter moves, and the fifth one can win the day.
+    if (act === 'pet') {
+      const r = await pet()
+      await show('home')
+      const bubble = document.querySelector<HTMLElement>('#buddy-home .bd-speech-home')
+      if (bubble) { bubble.textContent = r.line; bubble.classList.remove('bd-speech-quiet') }
+      nav.toast(r.happy.delta > 0 ? `+${r.happy.delta} happy · ${r.happy.mood} ${r.happy.value}` : 'It liked that. No more points for pats today.')
+      if (r.happy.overjoyed && buddyState.active) sheet(joyHtml(r.happy, buddyState.active))
+      return
+    }
+    if (act === 'visit') { sheet(visitHtml()); document.querySelector<HTMLInputElement>('#bd-visit-id')?.focus(); return }
+    if (act === 'visit-go') {
+      const id = (a.dataset.id || document.querySelector<HTMLInputElement>('#bd-visit-id')?.value || '').replace(/[^0-9]/g, '')
+      if (!id) throw new Error('Type an Axie number first, like 2660')
+      const pendingSnaps = b && !b.hatchedAt ? b.egg.snaps : 0
+      if (pendingSnaps >= 1 && !confirm(`Your egg with ${pendingSnaps} snaps will be set aside. Continue?`)) return
+      const r = await visitAxie(id)
+      pendingLines = r.lines
+      await show('hatch')
+      return
+    }
     if (act === 'talk-send') { await talkSend(); return }
     if (act === 'claim') { await show('claim'); return }
     if (act === 'ronin') { await roninSignIn(); await show('claim'); return }

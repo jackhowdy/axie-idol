@@ -20,7 +20,7 @@ export type Unlock = Snap['unlocks'][number]
 export type OwnedAxie = { id: string; name: string; class: string | null }
 export type MonthlyRow = {
   rank: number; buddyId: string; name: string; class: string | null
-  kind: 'wild' | 'owned'; traits: string[]; level: number; monthlyBond: number; rarity: number
+  kind: 'wild' | 'owned' | 'visit'; traits: string[]; level: number; monthlyBond: number; rarity: number
 }
 export type Monthly = {
   month: string; endsAt: string; rows: MonthlyRow[]
@@ -215,7 +215,7 @@ export function eggHtml(b: Buddy, opts: { buddies?: Buddy[] } = {}): string {
       ${canHatch ? '<button type="button" class="bd-btn bd-btn-outline" data-action="hatch-now">Hatch now</button>' : ''}
       <button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="snap">${icon('camera', 20)} ${canHatch ? 'Keep snapping' : snaps === 0 ? 'Take the first photo' : 'Take another photo'}</button>
     </div>
-    <p class="bd-small bd-center">Own an Axie on Ronin? <a class="bd-link" data-action="claim">Connect wallet and skip the egg</a></p>`
+    <p class="bd-small bd-center">Own an Axie on Ronin? <a class="bd-link" data-action="claim">Connect wallet and skip the egg</a> · <a class="bd-link" data-action="visit">Play as any real Axie</a></p>`
 }
 
 /** `S02_Beast04_L1_Horn` and a descriptor part both reduce to `Beast04_horn`. */
@@ -249,13 +249,13 @@ export function hatchHtml(b: Buddy, lines: string[]): string {
   return `
     <div class="bd-scroll">
       <header class="bd-head bd-center">
-        <p class="bd-eyebrow">Day ${dayCount(b)} · ${b.kind === 'owned' ? 'your own Axie' : `${b.egg.snaps} snaps together`}</p>
-        <h1>${hatched ? (b.kind === 'owned' ? 'Say hello' : 'Your egg hatched!') : 'It is ready to hatch'}</h1>
+        <p class="bd-eyebrow">Day ${dayCount(b)} · ${b.kind === 'owned' ? 'your own Axie' : b.kind === 'visit' ? `real Axie #${esc(b.axieId ?? '')}` : `${b.egg.snaps} snaps together`}</p>
+        <h1>${hatched ? (b.kind === 'wild' ? 'Your egg hatched!' : 'Say hello') : 'It is ready to hatch'}</h1>
       </header>
       <div class="bd-speech-stack">${speech}</div>
       <div class="bd-card bd-center bd-hatch-card">
         <div class="bd-hero-3d bd-hero-3d-big" data-face="buddy"></div>
-        ${b.class ? `<span class="bd-badge">${b.kind === 'owned' ? 'Owned' : 'Wild'} · ${esc(b.class)}</span>` : ''}
+        ${b.class ? `<span class="bd-badge">${b.kind === 'owned' ? 'Owned' : b.kind === 'visit' ? 'Real Axie' : 'Wild'} · ${esc(b.class)}${coreLevel(b)}</span>` : ''}
         <div class="bd-chips">${parts}</div>
       </div>
       ${hatched ? '' : naming}
@@ -265,6 +265,70 @@ export function hatchHtml(b: Buddy, lines: string[]): string {
 }
 
 const WEARABLES = ['hat', 'scarf', 'shades', 'cape', 'crown']
+
+/** " · Axie Core level 60" for a real Axie whose level we know, else nothing. */
+function coreLevel(b: Buddy): string {
+  return b.kind !== 'wild' && b.core?.level ? ` · Axie Core level ${b.core.level}` : ''
+}
+
+/**
+ * The game, on Home: five hearts and a meter for how happy it is right now, the mood in a word,
+ * what lifts it and what wears it down, and the two things you can do without leaving the screen.
+ */
+export function happyCardHtml(b: Buddy, opts: { talk?: boolean } = {}): string {
+  const h = b.happy
+  if (!h) return ''
+  const full = Math.round(h.value / 20)
+  const hearts = Array.from({ length: 5 }, (_, i) => `<span class="bd-heart${i < full ? ' on' : ''}">${icon(i < full ? 'heartFilled' : 'heart', 18)}</span>`).join('')
+  const name = esc(b.name)
+  const say: Record<string, string> = {
+    bored: `${name} is bored. A photo somewhere new fixes that fastest.`,
+    restless: `${name} is restless and wants to go out.`,
+    content: `${name} is fine. A few photos would make it a good day.`,
+    happy: `${name} is happy. Nearly overjoyed.`,
+    overjoyed: `${name} is overjoyed. Today is a joy day.`,
+  }
+  const streak = b.joy && b.joy.streak > 0 ? `<span class="bd-pill bd-pill-light">${b.joy.streak} joy day${b.joy.streak === 1 ? '' : 's'} in a row</span>` : ''
+  const goal = h.overjoyedToday ? 'Joy day won. Keep it up tomorrow.' : `Get to 90 for a joy day: +3 bond.`
+  return `
+      <div class="bd-card bd-happy bd-happy-${esc(h.moodId)}">
+        <div class="bd-happy-head"><span class="bd-label">Happiness</span><span class="bd-hearts">${hearts}</span></div>
+        <div class="bd-meter-row"><b>${esc(h.mood)} · ${h.value}</b><span>${goal}</span></div>
+        <div class="bd-meter bd-meter-happy"><i style="width:${Math.max(3, h.value)}%"></i><u style="left:90%"></u></div>
+        <p class="bd-small">${say[h.moodId] || ''} ${streak}</p>
+        <div class="bd-happy-acts">
+          <button type="button" class="bd-btn bd-btn-ghost" data-action="pet">${icon('heartFilled', 16)} Pat ${name}${h.petsLeft ? '' : ' (no more points today)'}</button>
+          ${opts.talk ? `<button type="button" class="bd-btn bd-btn-ghost" data-action="talk">${icon('comment', 16)} Talk</button>` : ''}
+        </div>
+        <p class="bd-small bd-muted">Photos, new places, new things, a wish come true, a talk and a pat make it happier. Time alone wears it down.</p>
+      </div>`
+}
+
+/** The win: the first time in a day it becomes Overjoyed. */
+export function joyHtml(h: { joyBonus: number; joyStreak: number }, b: Buddy): string {
+  return `
+    <div class="bd-moment">
+      <span class="bd-moment-mark">${icon('heartFilled', 24)}</span>
+      <div class="bd-hero-text">
+        <p class="bd-eyebrow">Joy day</p>
+        <h2>${esc(b.name)} is overjoyed</h2>
+        <p class="bd-small">You made its day. +${h.joyBonus} bond${h.joyStreak > 1 ? ` · ${h.joyStreak} joy days in a row` : ''}. Come back tomorrow and do it again: time alone wears happiness down.</p>
+      </div>
+    </div>
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="sheet-next">Lovely</button></div>`
+}
+
+/** Play as a real Axie: a number box, and three real ones to try. No wallet. */
+export function visitHtml(): string {
+  const tries: Array<[string, string]> = [['2660', 'A Mystic Beast'], ['12094912', 'Six shiny parts'], ['9', 'One of the first']]
+  return `
+    <p class="bd-eyebrow">Play as a real Axie</p>
+    <h2>Any Axie, by its number</h2>
+    <p class="bd-small">It comes in with its real parts, class and Axie Core level, and it knows them. No wallet needed. If it is yours, sign in with Ronin later and it becomes your owned Axie with everything it earned.</p>
+    <div class="bd-input-row"><input id="bd-visit-id" class="bd-input" inputmode="numeric" maxlength="10" placeholder="Axie number, like 2660" autocomplete="off"><button type="button" class="bd-btn bd-btn-primary" data-action="visit-go">Play</button></div>
+    <div class="bd-chips">${tries.map(([id, what]) => `<button type="button" class="bd-chip bd-chip-btn" data-action="visit-go" data-id="${id}">#${id} · ${esc(what)}</button>`).join('')}</div>
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="close-sheet">Not now</button></div>`
+}
 
 const FRAME_LABELS: Record<string, string> = {
   none: 'No frame',
@@ -341,8 +405,6 @@ function photoPath(b: Buddy, photoId: string | null): string | null {
  * optional so the renderer stays a pure string-in/string-out function for the unit test.
  */
 export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Buddy[]; address?: string | null; talk?: boolean } = {}): string {
-  const filled = Math.ceil(b.level / 2)
-  const hearts = Array.from({ length: 5 }, (_, i) => `<span class="bd-heart${i < filled ? ' on' : ''}">${icon(i < filled ? 'heartFilled' : 'heart', 18)}</span>`).join('')
   const floorBond = b.ladder.find((r) => r.level === b.level)?.bond ?? 0
   const meter = b.next
     ? `<div class="bd-meter-row"><span>Bond ${b.next.level} in ${b.next.remaining} snap${b.next.remaining === 1 ? '' : 's'}</span><b class="bd-hot">${esc(b.next.reward)}</b></div>
@@ -369,7 +431,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
       return `<button type="button" class="bd-thumb" data-action="photo" data-id="${esc(id)}" aria-label="Photo ${kept - i}">${art}<small>${kept - i}</small></button>`
     }).join('')
     || '<span class="bd-small bd-muted">No photos yet. The first one starts the book.</span>'
-  const who = b.kind === 'owned' ? `${esc(b.name)} · owned${b.axieId ? ` #${esc(b.axieId)}` : ''}` : `Wild ${esc(b.class ?? 'Axie')}`
+  const who = b.kind === 'wild' ? `Wild ${esc(b.class ?? 'Axie')}` : `${b.kind === 'owned' ? 'Owned' : 'Real'} Axie${b.axieId ? ` #${esc(b.axieId)}` : ''}${coreLevel(b)}`
   // The Mystic glow arrives at bond level 10 and stays on: the hero box glows in the CSS, the
   // camera layer and the capture get the same treatment from main.ts.
   const glow = b.level >= 10 ? ' bd-glow' : ''
@@ -378,7 +440,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
   // The only wallet entry point once the egg has hatched — the egg screen's version is gone by then.
   const wallet = opts.address
     ? '<a class="bd-link" data-action="claim">Wallet connected · pick another Axie</a>'
-    : 'Own an Axie on Ronin? <a class="bd-link" data-action="claim">Bring it</a>'
+    : 'Own an Axie on Ronin? <a class="bd-link" data-action="claim">Bring it</a> · <a class="bd-link" data-action="visit">Play as any real Axie</a>'
   return `
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
@@ -391,15 +453,14 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
           : `<div class="bd-speech bd-speech-home bd-speech-quiet">${esc(b.name)}</div>${opts.talk ? `<button type="button" class="bd-link" data-action="talk">Talk to ${esc(b.name)}</button>` : ''}`
         }</div>
         ${wishPillHtml(b, { compact: true })}
-      </div>
+      </div>${happyCardHtml(b, { talk: opts.talk })}
       <div class="bd-card bd-hero">
         <div class="bd-hero-row">
-          <div class="bd-hero-3d${glow}" data-face="buddy"${opts.talk ? ' data-action="talk"' : ''}><span class="bd-badge">${icon('star', 11)} Bond ${b.level}</span></div>
+          <div class="bd-hero-3d${glow}" data-face="buddy" data-action="pet" title="Pat ${esc(b.name)}"><span class="bd-badge">${icon('star', 11)} Bond ${b.level}</span></div>
           <div class="bd-hero-text">
             <b>${esc(levelTitle(b))}</b>
             <span class="bd-muted">${who} · ${b.snapCount} snaps · ${b.moments.length} of ${b.momentsTotal} moments</span>
             <div class="bd-chips">${b.traits.map((t) => chipHtml(t)).join('')}${b.earnedTrait ? chipHtml(b.earnedTrait, 'earned') : ''}${b.mystic ? chipHtml('Mystic', 'mystic') : ''}</div>
-            <div class="bd-hearts">${hearts}</div>
           </div>
         </div>
         ${meter}
@@ -457,7 +518,7 @@ export function accountHtml(b: Buddy | null, opts: { buddies?: Buddy[]; address?
         <span class="bd-hero-text"><b>Guest on this phone</b><span class="bd-muted">Sign in with Ronin to keep every Axie, wild or owned, on your account for good.</span></span>
       </div>
       <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="ronin-account">Sign in with Ronin</button></div>
-      <p class="bd-small bd-center"><a class="bd-link" data-action="claim">Bring an Axie you own</a> · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
+      <p class="bd-small bd-center"><a class="bd-link" data-action="claim">Bring an Axie you own</a> · <a class="bd-link" data-action="visit">Play as any real Axie</a> · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
       <div class="bd-card">
         <div class="bd-card-head"><span class="bd-label">Moving phones?</span></div>
         <p class="bd-small">A recovery code moves this account to another phone. It works once.</p>
@@ -465,7 +526,7 @@ export function accountHtml(b: Buddy | null, opts: { buddies?: Buddy[]; address?
       </div>`
   const active = b
     ? b.hatchedAt
-      ? `<div class="bd-row"><b>${esc(b.name)}</b><span class="bd-muted">${esc(b.kind === 'owned' ? 'owned' : `Wild ${b.class ?? 'Axie'}`)} · Bond ${b.level}</span><span class="bd-pill bd-pill-ok">Active</span></div>`
+      ? `<div class="bd-row"><b>${esc(b.name)}</b><span class="bd-muted">${esc(b.kind === 'owned' ? 'owned' : b.kind === 'visit' ? `real Axie #${b.axieId ?? ''}` : `Wild ${b.class ?? 'Axie'}`)} · Bond ${b.level}</span><span class="bd-pill bd-pill-ok">Active</span></div>`
       : `<div class="bd-row"><b>Your egg</b><span class="bd-muted">${b.egg.snaps} ${b.egg.snaps === 1 ? 'snap' : 'snaps'} so far</span><span class="bd-pill bd-pill-ok">Active</span></div>`
     : '<p class="bd-small bd-muted">No Axie yet.</p>'
   // Another Axie is an egg, not a replacement: the active one rests and comes back with one tap.
@@ -617,15 +678,16 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'A voice that looks at each photo and writes its line on the picture',
       'Memory: it knows when you are back somewhere, and it answers your caption',
       'Ten steps of growth: hat, scarf, shades, cape, crown, the Mystic glow',
+      'A happiness score: photos, talks and pats keep it happy, time alone bores it',
       'A wish every day, a scrapbook, and the monthly Idol ladder',
-      'Ronin sign-in: bring an Axie you own, and keep more than one',
+      'Play as any real Axie by its number, or sign in with Ronin and bring your own',
     ], core: [
       'Every hatched Axie is put together from real Axie parts and classes, in 3D',
-      'Axies you own on Ronin load from their real genes and play as themselves',
+      'Any real Axie plays as itself: real genes, real parts, and it knows its Axie Core level',
       'Nothing to buy and nothing minted: the Axie is the point, not a token',
     ] },
     { when: 'Next', title: 'Round two', state: 'Next stage of the Vibeathon', items: [
-      'Talk back: a real conversation with your Axie, not only one line',
+      'Longer talks: it remembers what you said yesterday',
       'Duo photos: pair with a friend and both Axies are in the frame',
       'Parts that evolve as bond grows: horn, then back, then tail',
       'A morning nudge, when your Axie wants to go out',
@@ -673,7 +735,8 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <h1 class="lp-h1">Your Axie. In your camera. With opinions.</h1>
           <p class="lp-lede">Find an egg and take it places. When it hatches, it talks: one line after every photo, about what it actually sees, and where it wants to go next.</p>
           <div class="lp-cta">${primary}${about ? '' : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
-          ${about ? '' : `<p class="bd-small lp-alt">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>`}
+          ${about ? '' : `<p class="bd-small lp-alt">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
+          <p class="bd-small lp-alt"><b>Have a favourite Axie?</b> <a class="bd-link" data-action="visit">Play as any real Axie by its number</a>. No wallet.</p>`}
         </div>
         <div class="bd-w-shot lp-hero-shot" aria-hidden="true">
           <img class="bd-w-photo" src="/welcome/stairs.jpg" alt="">
@@ -685,11 +748,12 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
 
       <section class="lp-section" id="lp-how">
         <p class="bd-eyebrow">How it works</p>
-        <h2 class="lp-h2">Three steps, and the third one talks back</h2>
+        <h2 class="lp-h2">Hatch it, then keep it happy</h2>
         <ol class="lp-steps">
           <li><b>Find an egg</b><span>It rides along in your camera, in every photo you take.</span></li>
           <li><b>Take it places</b><span>Five photos and it can hatch. Carry it further for a rarer Axie.</span></li>
           <li><b>It hatches, and it talks</b><span>A one-of-a-kind Axie with a voice. It says one line after every photo, and its words go on the picture.</span></li>
+          <li><b>Keep it happy</b><span>That is the game. Photos, new places, a wish come true, a talk and a pat make it happier. Get it to Overjoyed for a joy day. Leave it alone and it gets bored.</span></li>
         </ol>
       </section>
 
@@ -739,7 +803,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <div><dt>Is it free?</dt><dd>Yes. There is nothing to buy and no ads.</dd></div>
           <div><dt>Do I need a wallet?</dt><dd>No. A wallet only matters if you want to bring an Axie you already own, or keep your Axies on an account across phones.</dd></div>
           <div><dt>How many photos count?</dt><dd>Ten a day build bond. Wishes and moments add a little on top. The rest still go in the book.</dd></div>
-          <div><dt>Where do my photos go?</dt><dd>Into your Axie's scrapbook. Your Axie looks at each one to find its line. Nothing is sold.</dd></div>
+          <div><dt>Where do my photos go?</dt><dd>Into your Axie's scrapbook. To find its line, each photo is looked at once by an AI model (Google Gemini). If you allow location, we keep roughly where a photo was taken, so your Axie knows when it is back somewhere. Nothing is sold and there are no ads.</dd></div>
         </dl>
       </section>
 
@@ -808,10 +872,15 @@ export function reactionHtml(r: Snap): string {
     r.wishDone ? `wish done +${r.wishDone.bonus}` : '',
     `${Math.min(r.snapsToday ?? r.bondToday, r.dailyCap)} of ${r.dailyCap} photos today`,
   ].filter(Boolean).join(' · ')
+  const happy = r.happy
+    ? `<div class="bd-happy-line"><b>${icon('heartFilled', 14)} ${r.happy.delta > 0 ? `+${r.happy.delta}` : r.happy.delta} happy</b><span>${esc(r.happy.mood)} · ${r.happy.value}${r.happy.reasons.length ? ` · ${esc(r.happy.reasons.join(', '))}` : ''}</span></div>
+    <div class="bd-meter bd-meter-happy"><i style="width:${Math.max(3, r.happy.value)}%"></i><u style="left:90%"></u></div>`
+    : ''
   return `
     <p class="bd-eyebrow">After the shot</p>
     <div class="bd-speech">${esc(r.line)}</div>
     <div class="bd-chips">${chips}</div>
+    ${happy}
     <p class="bd-small">${esc(bits)}</p>
     <div class="bd-actions">
       <button type="button" class="bd-btn bd-btn-ghost" data-action="retake">Retake</button>
@@ -903,7 +972,7 @@ export function monthlyHtml(data: Monthly): string {
     <div class="bd-rank${data.you && data.you.rank === r.rank ? ' me' : ''}">
       <b class="bd-rank-n">${r.rank}</b>
       <span class="bd-rank-art bd-class-${esc(String(r.class || 'wild').toLowerCase())}"></span>
-      <span class="bd-hero-text"><b>${esc(r.name)}${r.kind === 'owned' ? ' <span class="bd-badge">Owned</span>' : ''}</b><span class="bd-muted">Bond ${r.level} · rarity top ${pct(r.rarity)}%</span></span>
+      <span class="bd-hero-text"><b>${esc(r.name)}${r.kind === 'owned' ? ' <span class="bd-badge">Owned</span>' : r.kind === 'visit' ? ' <span class="bd-badge">Real</span>' : ''}</b><span class="bd-muted">Bond ${r.level} · rarity top ${pct(r.rarity)}%</span></span>
       <b>${r.monthlyBond}</b>
     </div>`).join('') || '<p class="bd-small bd-muted">Nobody has earned bond this month yet. Be first.</p>'
   const days = Math.max(0, Math.ceil((Date.parse(data.endsAt) - Date.now()) / 864e5))

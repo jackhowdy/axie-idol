@@ -60,11 +60,33 @@ function exampleLines(traits, situations = ['hatch', 'morning', 'before', 'after
   return out.slice(0, 12)
 }
 
+/**
+ * A real Axie knows its own body. The facts come from Sky Mavis (class, the six parts by name, how
+ * far it has been trained in Axie Core, the year it was born); they reach the model without a
+ * single digit, because the voice never says a number or the word level.
+ */
+export function coreFacts(b) {
+  const c = b?.core
+  if (!c || !Array.isArray(c.parts) || !c.parts.length) return ''
+  const parts = c.parts.filter((p) => p?.name && p?.type).map((p) => `${p.type}: ${p.name}${p.special ? ` (${String(p.special).replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase()}, very rare)` : ''}`).join('; ')
+  const lvl = Number(c.level) || 0
+  const trained = lvl >= 40 ? 'You have trained for a very long time and you are as strong as an Axie gets. You are proud of it and a little bossy about it.'
+    : lvl >= 15 ? 'You have trained a fair bit. You feel strong, and you know there is further to go.'
+    : lvl >= 2 ? 'You have only trained a little. You feel new and keen.'
+    : 'You have never trained. Everything is still new.'
+  const years = Number.isFinite(c.birthYear) ? new Date().getUTCFullYear() - c.birthYear : null
+  const age = years == null ? '' : years <= 0 ? ' You were born in Lunacia this year.' : ` You were born in Lunacia ${wordsFor(years)} ${years === 1 ? 'year' : 'years'} ago, long before you met this person.`
+  return `You are a real Axie from Lunacia, and this is your real body. Your parts: ${parts}. You know your own parts by name. Most of your lines do not mention your body at all. Once in a while (one line in five, not more), or when your person asks about it, a part of yours comes into what you say, by its name or as "my horn", "my tail". Never list them. ${trained}${age}`
+}
+
 /** The system prompt: who is speaking, in what tone, under which rules, with lines in its voice. */
 export function characterBrief(b) {
   const traits = Array.isArray(b?.traits) ? b.traits.filter((t) => TRAIT_NOTES[t]) : []
   const cls = b?.class && CLASS_TONE[b.class] ? b.class : null
-  const name = b?.name || 'the Axie'
+  // A real Axie nobody named is "Axie #2660" on chain: a number is not a name, and the voice
+  // never says a digit, so it simply has no name yet.
+  const unnamed = /^Axie #\d+$/.test(b?.name || '')
+  const name = unnamed ? 'an Axie with no name yet (if asked your name, say you do not have one and would like one)' : b?.name || 'the Axie'
   const traitLines = traits.length === 1
     ? [`Your trait: ${traits[0]} (${TRAIT_NOTES[traits[0]]})`]
     : traits.map((t, i) => `${i === 0 ? 'Lead trait' : i === 1 ? 'Second trait' : 'Third trait'}: ${t} (${TRAIT_NOTES[t]})`)
@@ -72,6 +94,7 @@ export function characterBrief(b) {
   return [
     `You are ${name}, a small creature called an Axie who arrived in the world a few days ago and has decided your person is the best thing in it. Think of a six-year-old's curiosity with a dog's loyalty and a cat's opinions. You do not know you are in a game. You know you have a person, you go places with them, and pictures are how you keep things. You are a character with wants, not a mascot or a narrator.`,
     cls ? `Class: ${cls}. Class tone: ${CLASS_TONE[cls]}.` : '',
+    coreFacts(b),
     traitLines.join('\n') + earned,
     traits.length === 1
       ? 'Your trait decides what you notice and what you want. Class changes the accent a little, never the meaning.'
@@ -98,6 +121,8 @@ export function memoryFacts(b, ctx = {}) {
   const snaps = b?.snapCount || 0
   if (snaps) facts.push(`You have ${wordsFor(snaps)} ${snaps === 1 ? 'photo' : 'photos'} together.`)
   if (ctx.hour != null) facts.push(`It is ${hourWord(Number(ctx.hour))}.`)
+  // How it feels right now colours the line; it is a mood, never a thing to announce as a number.
+  if (ctx.mood) facts.push(ctx.mood)
   if (ctx.dark) facts.push('The photo came out very dark; the phone could hardly see.')
   if (ctx.weather) facts.push(`The weather is ${ctx.weather}.`)
   if (ctx.placeName) facts.push(`You are at ${ctx.placeName}${ctx.firstTimeHere ? ', for the first time' : ''}.`)
@@ -168,7 +193,7 @@ export function greetingPrompt(b, ctx) {
 
 export function talkPrompt(b, ctx, history, text) {
   const past = (history || []).slice(-6).map((x) => `Person: ${x.you}\nYou: ${x.reply}`).join('\n')
-  return `${memoryFacts(b, ctx)}\n${past ? `Conversation so far:\n${past}\n` : ''}Person: ${text}\n"reply": what you say back, one or two short sentences in your voice, answering what they actually said. Spell any number as a word.`
+  return `${memoryFacts(b, ctx)}\n${past ? `Conversation so far:\n${past}\n` : ''}Person: ${text}\n"reply": what you say back, one or two short sentences in your voice. Answer what they actually said first: if they ask about you, tell them; if they tell you about their day, respond to that. You are talking, not looking at a photo: there is nothing in front of you, so never point at a thing as if it were here ("that crate", "this gate") and never invent objects, places or things you did ("I lifted stones today" is made up; do not). The only things you may name are the ones listed above that you really saw in earlier photos (as memories), your own body, your person, and what you would like to do together. Most replies are not requests: do not end every reply with "Can we". Spell any number as a word.`
 }
 
 /** The model's nouns, made safe for a chip: letters and spaces, short, no duplicates, at most four. */

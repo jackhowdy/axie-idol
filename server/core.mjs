@@ -1154,13 +1154,25 @@ async function graphqlRequestKeyed(payload) {
 async function fetchAxieGenes(axieId) {
   const cache = storage.get('axies', () => ({}))
   const hit = cache[axieId]
-  if (hit && hit.genes && Array.isArray(hit.parts)) return hit
-  const data = await graphqlRequest(
-    `query($axieId: ID!) {
-      axie(axieId: $axieId) { id name class newGenes genes bodyShape parts { id name type stage specialGenes } }
-    }`,
-    { axieId: String(axieId) },
-  )
+  // `level` marks a record fetched since the Axie Core facts were added; older ones are refreshed.
+  if (hit && hit.genes && Array.isArray(hit.parts) && hit.level !== undefined) return hit
+  let data
+  try {
+    data = await graphqlRequest(
+      `query($axieId: ID!) {
+        axie(axieId: $axieId) { id name class newGenes genes bodyShape birthDate breedCount axpInfo { level } parts { id name type class stage specialGenes } }
+      }`,
+      { axieId: String(axieId) },
+    )
+  } catch {
+    // The Axie Core fields are a bonus: without them the Axie still loads and plays.
+    data = await graphqlRequest(
+      `query($axieId: ID!) {
+        axie(axieId: $axieId) { id name class newGenes genes bodyShape parts { id name type stage specialGenes } }
+      }`,
+      { axieId: String(axieId) },
+    )
+  }
   const axie = data?.axie
   if (!axie || !axie.id) return null
   const rec = {
@@ -1169,6 +1181,10 @@ async function fetchAxieGenes(axieId) {
     class: axie.class || null,
     genes: axie.newGenes || axie.genes || '',
     bodyShape: axie.bodyShape || null,
+    // Axie Core: how far it has been trained, when it was born, how often it has bred.
+    level: Number.isFinite(Number(axie.axpInfo?.level)) ? Number(axie.axpInfo.level) : null,
+    birthDate: Number(axie.birthDate) || null,
+    breedCount: Number.isFinite(Number(axie.breedCount)) ? Number(axie.breedCount) : null,
     // Stage per part slot (1 or 2). The mixer's genes decoder always emits stage 1, so the client
     // needs this to pick stage-2 meshes (all Nightmare and Nightmare-shiny parts are stage 2).
     parts: Array.isArray(axie.parts)
@@ -1176,6 +1192,7 @@ async function fetchAxieGenes(axieId) {
           type: String(p.type || '').toLowerCase(),
           stage: p.stage === 2 ? 2 : 1,
           name: p.name || null,
+          class: p.class || null,
           specialGenes: p.specialGenes || null,
         }))
       : [],

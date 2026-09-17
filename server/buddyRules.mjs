@@ -224,3 +224,48 @@ export function detectMoments(ctx, have) {
   if (ctx.snapCount === 100) add('hundredth')
   return found
 }
+
+/**
+ * Happiness: the game. An Axie is as happy as the last day or two made it. Photos, new things,
+ * new places, a wish that came true, a talk and a pat all lift it; time alone wears it down.
+ * Keep it Overjoyed and the day counts as a joy day; leave it and it ends up Bored. The Axie never
+ * blames anyone for being bored (voice rule six): it just wants to do something.
+ */
+export const HAPPY_START = 50
+/** Points lost per hour alone: a full meter is Content after a day and Bored after about two. */
+export const HAPPY_DECAY_PER_HOUR = 1.5
+export const HAPPY = {
+  photo: 10, sameAgain: 3, unclear: 2, newThings: 5, newPlace: 10, wish: 20,
+  talk: 4, talksPerDay: 5, pet: 2, petsPerDay: 5, dressUp: 3,
+  overjoyedAt: 90, joyBonus: 3,
+}
+export const MOODS = [
+  { id: 'bored', name: 'Bored', min: 0, feel: 'Right now you feel flat and bored: nothing has happened for a long while. You are never sad at your person and you never blame them. You just badly want to DO something.' },
+  { id: 'restless', name: 'Restless', min: 20, feel: 'Right now you feel fidgety. You want to go out and see something.' },
+  { id: 'content', name: 'Content', min: 45, feel: 'Right now you feel fine and settled.' },
+  { id: 'happy', name: 'Happy', min: 70, feel: 'Right now you feel happy and full of plans.' },
+  { id: 'overjoyed', name: 'Overjoyed', min: 90, feel: 'Right now you feel overjoyed. Everything is the best thing you have ever seen.' },
+]
+export function moodFor(value) {
+  let m = MOODS[0]
+  for (const row of MOODS) if (value >= row.min) m = row
+  return m
+}
+/** What is left of a happiness value after some hours alone. */
+export function decayed(value, hours) {
+  return Math.max(0, Math.min(100, value - Math.max(0, hours) * HAPPY_DECAY_PER_HOUR))
+}
+/** What one photo is worth, and why, from what the Axie saw in it. */
+export function photoJoy({ labels = [], previous = [], recent = [], isNewPlace = false, wishDone = false, judged = true }) {
+  const reasons = []
+  let delta
+  if (judged && !labels.length) { delta = HAPPY.unclear; reasons.push('could not see much') }
+  else if (labels.length && previous.length && labels.every((l) => previous.includes(l))) { delta = HAPPY.sameAgain; reasons.push('same things again') }
+  else {
+    delta = HAPPY.photo; reasons.push('a photo together')
+    if (labels.some((l) => !recent.includes(l))) { delta += HAPPY.newThings; reasons.push('something new') }
+  }
+  if (isNewPlace) { delta += HAPPY.newPlace; reasons.push('a new place') }
+  if (wishDone) { delta += HAPPY.wish; reasons.push('its wish came true') }
+  return { delta, reasons }
+}

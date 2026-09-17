@@ -182,6 +182,13 @@
             </div>
             <button type="button" id="btn-capture" class="btn capture" title="Capture" aria-label="Capture"><span class="shutter"></span></button>
           </div>
+          <!-- No camera (a desk, a blocked permission): real photos to play with instead -->
+          <div id="sample-tray" class="sample-tray" role="toolbar" aria-label="Sample photos" hidden>
+            <span class="sample-label">No camera? Try a sample photo</span>
+            <button type="button" class="sample-chip" data-sample="/samples/playground.jpg" aria-label="Playground"><img src="/samples/playground.jpg" alt="" loading="lazy" draggable="false" /></button>
+            <button type="button" class="sample-chip" data-sample="/samples/stairs.jpg" aria-label="Stairs"><img src="/samples/stairs.jpg" alt="" loading="lazy" draggable="false" /></button>
+            <button type="button" class="sample-chip" data-sample="/samples/shop.jpg" aria-label="Shop shelf"><img src="/samples/shop.jpg" alt="" loading="lazy" draggable="false" /></button>
+          </div>
           <!-- Gallery pick (no capture attribute) -->
           <input id="file-input" type="file" accept="image/*" hidden />
           <!-- Native iOS/Android camera snap (world-facing) -->

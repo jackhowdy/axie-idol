@@ -2,7 +2,7 @@
 // Rules (checkRules): no digits, no game words, no emoji, at most three short sentences, one loud word.
 // Lines with {slots} are used only when the app has a real noun for the slot; everything else works
 // anywhere, so an Axie on a staircase never talks about waves.
-export const SITUATIONS = ['hatch', 'morning', 'wish', 'before', 'after', 'bedtime', 'return', 'big', 'moment', 'unlock', 'talk', 'talk-warm', 'talk-curious']
+export const SITUATIONS = ['hatch', 'morning', 'wish', 'before', 'after', 'bedtime', 'return', 'big', 'moment', 'unlock', 'talk', 'talk-warm', 'talk-curious', 'pet']
 
 export const LINES = {
   Explorer: {
@@ -378,6 +378,17 @@ export const LINES = {
 
 /** Trait-neutral lines for each situation. Used when every trait line is spent or needs a slot we do not have. */
 export const GENERIC = {
+  // A pat on the head, on Home. Small and glad, and often it turns into wanting to go out.
+  pet: [
+    'Oh. Do that again.',
+    'That spot. Right there. Yes.',
+    'My horn likes that. Keep going?',
+    'Hee. That tickles. Again?',
+    'I was hoping you would do that.',
+    'Mmm. Now I want to go somewhere with you.',
+    'Warm hand. Good hand.',
+    'Again. Then outside?',
+  ],
   hatch: ['Hello. You\'re my person now. Where are we?', 'Oh. Hi. So this is outside.'],
   morning: [
     'Morning. Where are we going?',
@@ -435,6 +446,7 @@ export const GENERIC = {
 
 /** Lines with slots, used only when the app has a real noun for every slot. */
 export const TEMPLATES = {
+  pet: ['Oh. Do that again.'],
   hatch: ['Hello. You\'re my person now. Where are we?'],
   morning: ['It\'s {weather}. Good. Let\'s go anyway.', 'Day {count}. What\'s the plan?'],
   wish: ['Take me to {place} today.'],

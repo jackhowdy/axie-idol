@@ -20,7 +20,7 @@ import {
 import { fallbackAxieSvg } from './fallbackAxie'
 import { drawSpeechBubble, type BubbleAnchor } from './speechBubble'
 import { mountBuddyScreens } from './buddyScreens'
-import { reactionHtml, momentHtml, unlockHtml, vfChipHtml, wishPillHtml, frameTrayHtml, wardrobeTrayHtml, eggLine } from './buddyHtml.ts'
+import { reactionHtml, momentHtml, unlockHtml, joyHtml, vfChipHtml, wishPillHtml, frameTrayHtml, wardrobeTrayHtml, eggLine } from './buddyHtml.ts'
 import {
   FRAME_IDS, drawFrame, drawWardrobe, isFrameId, offsetJoints, preloadWardrobe,
   type FrameId,
@@ -837,6 +837,7 @@ function syncCameraTrays(): void {
   if (btnToProfile) btnToProfile.hidden = true
   syncWardrobeTray()
   syncBuddyGlow()
+  syncSampleTray()
 }
 
 wardrobeTray?.addEventListener('click', (e) => {
@@ -1253,6 +1254,7 @@ function showCameraFallback(message: string): void {
   video.hidden = true
   cameraDenied.hidden = false
   cameraDenied.textContent = message
+  syncSampleTray()
   btnFlip.disabled = true
 }
 
@@ -1702,6 +1704,26 @@ btnFlip.addEventListener('click', () => {
 })
 
 btnUpload.addEventListener('click', () => fileInput.click())
+
+/**
+ * Sample photos, for anyone without a usable camera (a judge at a desk, a blocked permission).
+ * Shown whenever the pointer is a mouse or the camera was refused; a sample goes down the same
+ * path as a gallery pick, so everything after it (the Axie's look, the post, happiness) is real.
+ */
+const sampleTray = document.querySelector<HTMLElement>('#sample-tray')
+function syncSampleTray(): void {
+  if (!sampleTray) return
+  sampleTray.hidden = !(buddyEnabled && (window.matchMedia('(pointer: fine)').matches || !cameraDenied.hidden || mode === 'upload'))
+}
+sampleTray?.addEventListener('click', (e) => {
+  const chip = (e.target as HTMLElement | null)?.closest?.('.sample-chip') as HTMLButtonElement | null
+  const src = chip?.dataset.sample
+  if (!src) return
+  void fetch(src)
+    .then((r) => r.blob())
+    .then((blob) => loadUpload(new File([blob], src.split('/').pop() || 'sample.jpg', { type: blob.type || 'image/jpeg' })))
+    .catch(() => showLiveToast('Could not open that photo', 2000))
+})
 
 fileInput.addEventListener('change', () => {
   const file = fileInput.files?.[0]
@@ -5491,6 +5513,7 @@ async function handleBuddySnap(snap: SnapResult | null, photoId: string | null =
   const b = buddyState.active
   if (b) {
     buddySheetQueue = [
+      ...(snap.happy?.overjoyed ? [joyHtml(snap.happy, b)] : []),
       ...snap.moments.map((m) => momentHtml(m, b)),
       ...snap.unlocks.map((u) => unlockHtml(u, b)),
     ]

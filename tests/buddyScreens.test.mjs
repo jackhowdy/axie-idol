@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -84,17 +84,51 @@ test('camera wardrobe tray renders the five wearables only, and nothing at all w
   assert.doesNotMatch(html, /aria-pressed="true"/, 'nothing worn')
 })
 
-test('home offers a way to talk only when talk mode is on (off for R1)', () => {
+test('home offers a way to talk only when talk mode is on', () => {
   assert.doesNotMatch(homeHtml(miso, 'New day. New street?'), /data-action="talk"/, 'off by default')
   assert.doesNotMatch(homeHtml(miso, null), /data-action="talk"/)
   const withGreeting = homeHtml(miso, 'New day. New street?', { talk: true })
   assert.match(withGreeting, /data-action="talk"/)
   const withoutGreeting = homeHtml(miso, null, { talk: true })
   // the "Talk" control (a small bubble naming the Axie plus a "Talk to <name>" link) must
-  // still be reachable even with no queued greeting, and tapping the hero box works too
+  // still be reachable even with no queued greeting; tapping the Axie itself is a pat
   assert.match(withoutGreeting, /data-action="talk"/)
   assert.match(withoutGreeting, /Talk to Miso/)
-  assert.match(withoutGreeting, /<div class="bd-hero-3d" data-face="buddy" data-action="talk">/)
+  assert.match(withoutGreeting, /<div class="bd-hero-3d" data-face="buddy" data-action="pet"/)
+})
+
+test('happiness is the game on Home: hearts, the mood, the goal, a pat and what moves it', () => {
+  const happy = { value: 62, mood: 'Content', moodId: 'content', talksLeft: 5, petsLeft: 5, overjoyedToday: false }
+  const html = homeHtml({ ...miso, happy, joy: { days: 2, streak: 2, best: 2 } }, null, { talk: true })
+  assert.match(html, /bd-happy bd-happy-content/)
+  assert.match(html, /Content · 62/)
+  assert.match(html, /Get to 90 for a joy day/)
+  assert.match(html, /2 joy days in a row/)
+  assert.match(html, /data-action="pet"[^>]*>.*Pat Miso/s)
+  assert.match(html, /Time alone wears it down/)
+  assert.equal((html.match(/bd-heart on/g) || []).length, 3, 'sixty-two is three hearts of five')
+  const won = homeHtml({ ...miso, happy: { ...happy, value: 95, mood: 'Overjoyed', moodId: 'overjoyed', overjoyedToday: true, petsLeft: 0 } }, null)
+  assert.match(won, /Joy day won/); assert.match(won, /no more points today/)
+  assert.doesNotMatch(homeHtml(miso, null), /bd-happy /, 'an older payload without the score still renders')
+})
+
+test('the after-the-shot sheet says what the photo did for its happiness, and the win gets its own card', () => {
+  const snap = { kind: 'snap', granted: 1, bond: 12, level: 2, next: null, line: 'That slide is so yellow.', labels: ['slide'], isNewPlace: true, wishDone: null, unlocks: [], moments: [], bondToday: 3, snapsToday: 3, dailyCap: 10,
+    happy: { delta: 25, value: 91, mood: 'Overjoyed', reasons: ['a photo together', 'something new', 'a new place'], overjoyed: true, joyBonus: 3, joyStreak: 2 } }
+  const html = reactionHtml(snap)
+  assert.match(html, /\+25 happy/); assert.match(html, /Overjoyed · 91 · a photo together, something new, a new place/)
+  const joy = joyHtml(snap.happy, miso)
+  assert.match(joy, /Miso is overjoyed/); assert.match(joy, /\+3 bond · 2 joy days in a row/); assert.match(joy, /data-action="sheet-next"/)
+})
+
+test('a real Axie played by its number says so, with its Axie Core level; the visit sheet needs no wallet', () => {
+  const real = { ...miso, kind: 'visit', axieId: '2660', class: 'Beast', core: { level: 60, birthYear: 2018, breedCount: 1, parts: [] } }
+  assert.match(homeHtml(real, null), /Real Axie #2660 · Axie Core level 60/)
+  assert.match(hatchHtml(real, ['Hello.']), /Say hello/); assert.match(hatchHtml(real, []), /Real Axie · Beast · Axie Core level 60/)
+  assert.match(homeHtml({ ...real, kind: 'owned' }, null), /Owned Axie #2660 · Axie Core level 60/)
+  const sheet = visitHtml()
+  assert.match(sheet, /id="bd-visit-id"/); assert.match(sheet, /No wallet needed/); assert.match(sheet, /data-action="visit-go" data-id="2660"/)
+  assert.match(homeHtml(miso, null), /data-action="visit"/, 'reachable from Home')
 })
 
 test('hatch and reaction render the spoken lines', () => {
@@ -488,6 +522,8 @@ test('the front door: header with the mark, hero with a real photo and line, sec
   assert.match(fresh, /class="lp-mark"/, 'the logo mark')
   assert.match(fresh, /class="lp-wordmark"[^>]*aria-label="Axie Idol"/, 'the name, drawn, still readable to a screen reader')
   assert.doesNotMatch(fresh.slice(0, fresh.indexOf('lp-hero')), /ellipse/, 'the mark has no face')
+  assert.match(fresh, /Keep it happy/, 'the game is named on the front door')
+  assert.match(fresh, /data-action="visit"/, 'and a real Axie can be played from it')
   assert.match(fresh, /id="lp-road"/, 'the roadmap')
   for (const part of ['Round one', 'Round two', 'Next stage of the Vibeathon', 'After the Vibeathon']) assert.match(fresh, new RegExp(part), part)
   assert.equal((fresh.match(/class="lp-road-card/g) || []).length, 3, 'three parts')

@@ -222,9 +222,10 @@ test('daily cap holds across hatch: egg snaps and post-hatch snaps share the sam
   for (let i = 0; i < 10; i++) last = await snap(`post-${i}`)
   assert.equal(last.granted, 0, 'ten photos already counted today; the 10th post-hatch snap grants nothing')
   assert.equal(last.snapsToday, 10, 'six egg photos and four hatched ones: ten photos counted today')
-  // bond is ten counted photos plus whatever bonus landed on top (a wish that matched any snap)
+  // bond is ten counted photos plus whatever bonus landed on top: a wish that matched a snap
+  // (up to two) and the joy bonus for the day it became Overjoyed (three, once a day)
   const bonus = last.bond - 10
-  assert.ok(bonus >= 0 && bonus <= 2, `bond ${last.bond} = ten photos + a small bonus`)
+  assert.ok(bonus >= 0 && bonus <= 5, `bond ${last.bond} = ten photos + a small bonus`)
   assert.equal(last.bondToday, last.bond)
 
   const g = await call('/api/buddy')

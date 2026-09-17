@@ -2,7 +2,7 @@
 import catalogueJson from './partCatalogue.json' with { type: 'json' }
 import {
   LADDER, LEVEL_NAMES, levelFor, nextStep, eggOdds, rollWild, rollTraits, traitsForOwned, normalizeTraits,
-  wishForToday, detectMoments, MOMENTS,
+  wishForToday, detectMoments, MOMENTS, HAPPY, HAPPY_START, moodFor, decayed, photoJoy,
 } from './buddyRules.mjs'
 import { pickLine, checkRules } from './voiceLines.mjs'
 import { createVoiceModel, splitImage } from './voiceModel.mjs'
@@ -42,6 +42,8 @@ const RATE_LIMITS = {
   'POST /api/buddy/retire': 5,
   'POST /api/buddy/photo/unkeep': 20,
   'POST /api/buddy/look': 40,
+  'POST /api/buddy/pet': 60,
+  'POST /api/buddy/visit': 10,
   'POST /api/buddy/talk': 40,
   'POST /api/account/recover': 10,
   'POST /api/account/recovery': 10,
@@ -149,7 +151,77 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       seen: [], talkLog: [], greeting: null, pendingLook: null,
       // Photos counted per day: the ten-a-day ceiling is on photos, never on the bonuses.
       snapsByDay: {},
+      // Happiness (the game): the value as of `at`, today's talks and pats, and the joy days.
+      happy: null, joy: { days: 0, streak: 0, best: 0, lastDay: null },
+      // A real Axie's facts from Sky Mavis: parts by name, Axie Core level, the year it was born.
+      core: null,
     }
+  }
+
+  /**
+   * Happiness is stored as a value and the moment it was true; reading it applies the hours since.
+   * Axies from before the score existed start where a new one does, from now.
+   */
+  function happyOf(b) {
+    const day = manilaDayKey()
+    if (!b.happy) b.happy = { value: HAPPY_START, at: now(), day, talks: 0, pets: 0, dressed: false, joyPaid: false }
+    const h = b.happy
+    h.value = decayed(h.value, (now() - h.at) / 36e5); h.at = now()
+    if (h.day !== day) { h.day = day; h.talks = 0; h.pets = 0; h.dressed = false; h.joyPaid = false }
+    b.joy ||= { days: 0, streak: 0, best: 0, lastDay: null }
+    return h
+  }
+  /**
+   * Make it happier. Reaching Overjoyed for the first time in a day is the win: the day becomes a
+   * joy day (they chain into a streak) and pays a little bond. Returns what changed, for the screen.
+   */
+  function addHappy(b, delta, reasons = []) {
+    const h = happyOf(b)
+    const before = h.value
+    h.value = Math.max(0, Math.min(100, h.value + delta))
+    let overjoyed = false; let unlocks = []
+    if (before < HAPPY.overjoyedAt && h.value >= HAPPY.overjoyedAt && !h.joyPaid) {
+      h.joyPaid = true; overjoyed = true
+      const j = b.joy; const yesterday = manilaDayKey(new Date(now() - 864e5))
+      j.streak = j.lastDay === yesterday ? j.streak + 1 : j.lastDay === h.day ? j.streak : 1
+      j.lastDay = h.day; j.days += 1; j.best = Math.max(j.best, j.streak)
+      unlocks = addBond(b, HAPPY.joyBonus).unlocks
+    }
+    return { delta: Math.round(h.value - before), value: Math.round(h.value), mood: moodFor(h.value).name, reasons, overjoyed, joyBonus: overjoyed ? HAPPY.joyBonus : 0, joyStreak: b.joy.streak, unlocks }
+  }
+  function publicHappy(b) {
+    if (!b.hatchedAt) return null
+    const h = b.happy || { value: HAPPY_START, at: now(), day: manilaDayKey(), talks: 0, pets: 0 }
+    const value = Math.round(decayed(h.value, (now() - h.at) / 36e5))
+    const today = h.day === manilaDayKey()
+    const m = moodFor(value)
+    return { value, mood: m.name, moodId: m.id, talksLeft: Math.max(0, HAPPY.talksPerDay - (today ? h.talks : 0)), petsLeft: Math.max(0, HAPPY.petsPerDay - (today ? h.pets : 0)), overjoyedToday: today && Boolean(h.joyPaid) }
+  }
+  function publicJoy(b) {
+    const j = b.joy || { days: 0, streak: 0, best: 0, lastDay: null }
+    const live = j.lastDay === manilaDayKey() || j.lastDay === manilaDayKey(new Date(now() - 864e5))
+    return { days: j.days, streak: live ? j.streak : 0, best: j.best }
+  }
+  const moodFeel = (b) => (b.hatchedAt ? moodFor(publicHappy(b).value).feel : undefined)
+
+  /** The facts a real Axie knows about itself, from the record the host fetched from Sky Mavis. */
+  function coreOf(rec) {
+    return {
+      level: Number.isFinite(Number(rec.level)) ? Number(rec.level) : null,
+      birthYear: Number.isFinite(Number(rec.birthDate)) && Number(rec.birthDate) > 0 ? new Date(Number(rec.birthDate) * 1000).getUTCFullYear() : null,
+      breedCount: Number.isFinite(Number(rec.breedCount)) ? Number(rec.breedCount) : null,
+      parts: (rec.parts || []).filter((x) => x?.name).map((x) => ({ type: String(x.type || '').toLowerCase(), name: String(x.name).slice(0, 40), class: x.class || null, special: x.specialGenes || null })),
+    }
+  }
+  /** A real Axie joins the account already hatched: it has a name, a body and a past. */
+  function realBuddy(ownerKey, rec, kind) {
+    const b = newEgg(ownerKey)
+    b.kind = kind; b.axieId = String(rec.id); b.class = rec.class || null
+    b.name = ((rec.name && !/^Axie #\d+$/.test(rec.name) && validName(String(rec.name).slice(0, 16))) || `Axie #${rec.id}`).slice(0, 16)
+    b.traits = traitsForOwned(b.axieId, rec.class || '', (rec.parts || []).map((x) => x.name))
+    b.hatchedAt = b.createdAt; b.mystic = (rec.parts || []).some((x) => x.specialGenes === 'Mystic'); b.rarity = b.mystic ? 0.03 : 0.5
+    b.core = coreOf(rec)
+    return b
   }
 
   function gridOf(lat, lng) {
@@ -170,6 +242,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       photos: b.photos || [], // records written before this field existed
       // Photos still in the book: every counted snap minus the ones the owner chose not to keep.
       photoCount: Math.max(0, b.snapCount - (b.unkeptCount || 0)),
+      happy: publicHappy(b), joy: publicJoy(b),
       eggOdds: b.hatchedAt ? null : eggOdds(b.egg.snaps, b.egg.grids.length),
       momentsTotal: MOMENTS.length, ladder: LADDER, bondToday: b.bondByDay[manilaDayKey()] || 0, snapsToday: snapsToday(b), dailyCap: DAILY_CAP,
       streak: streakFor(b),
@@ -221,7 +294,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     }
     return line
   }
-  const talkCtx = (b, extra = {}) => ({ dayCount: b.hatchedAt ? daysSince(b.hatchedAt) : undefined, dayKey: manilaDayKey(), ...extra })
+  const talkCtx = (b, extra = {}) => ({ dayCount: b.hatchedAt ? daysSince(b.hatchedAt) : undefined, dayKey: manilaDayKey(), mood: moodFeel(b), ...extra })
   /** How often the Axie has stood on this grid square before, and how long ago the first time was. */
   function placeMemory(b, grid, alreadyCounted = 0) {
     const p = grid ? b.places?.[grid] : null
@@ -344,11 +417,16 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     // look for a different capture (or a stale one) is ignored. Nothing here blocks the shot: a
     // slow or failed call leaves the library to speak.
     let modelLine = null
+    let judged = false
+    // What it had seen before this photo: new things make it happier than the same things again.
+    const previousSeen = (b.seen || []).at(-1)?.seen || []
+    const recentSeen = (b.seen || []).slice(-4).flatMap((x) => x.seen || [])
     const look = b.pendingLook || null
     b.pendingLook = null
     if (look && ctx.lookId && look.id === ctx.lookId && now() - look.at < LOOK_TTL_MS) {
       if (look.labels?.length) labels = look.labels
       modelLine = look.line || null
+      judged = !look.fallback
     } else {
       const image = model.enabled ? splitImage(ctx.image) : null
       if (image) {
@@ -358,6 +436,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
         const seen = out?.clear === false ? [] : cleanSeen(out?.seen)
         if (seen.length) labels = seen
         modelLine = ruled(out?.line)
+        judged = Boolean(out)
       }
     }
     if (labels.length) b.seen = [...(b.seen || []), { day: manilaDayKey(), seen: labels.slice(0, 4), place: ctx.placeName || ctx.placeType || null }].slice(-10)
@@ -375,6 +454,9 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const districtsToday = new Set(Object.values(b.places).filter((p) => p.district && p.count).map((p) => p.district)).size
     const found = detectMoments({ hour, weather: ctx.weather, placeType: ctx.placeType, labels, isNewPlace, isNewDistrict: Boolean(ctx.district), districtsToday, snapCount: b.snapCount, hatchGrid: b.hatchGrid, grid }, b.moments.map((m) => m.id))
     for (const id of found) { b.moments.push({ id, at: b.lastSnapAt, photoId: post.id }); const m = addBond(b, 2); unlocks.push(...m.unlocks) }
+    const joyOf = photoJoy({ labels, previous: previousSeen, recent: recentSeen, isNewPlace, wishDone: Boolean(wishDone), judged })
+    const happy = addHappy(b, joyOf.delta, joyOf.reasons)
+    unlocks.push(...happy.unlocks)
     // Only real nouns go into slots. With nothing seen or named, lines that need {thing} or
     // {place} are skipped, so the Axie never says "There was here" or "First time at here".
     const slots = {}
@@ -386,7 +468,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     save(store)
     return {
       kind: 'snap', granted, bond: b.bond, level: levelFor(b.bond), next: nextStep(b.bond), line, labels, isNewPlace,
-      wishDone, unlocks: unlocks.map((u) => ({ level: u.level, reward: u.reward, unlock: u.unlock, line: say(b, 'big') })),
+      happy: { ...happy, unlocks: undefined }, wishDone, unlocks: unlocks.map((u) => ({ level: u.level, reward: u.reward, unlock: u.unlock, line: say(b, 'big') })),
       moments: momentLines.map((m) => ({ ...m, rarity: m.rarityHint })), bondToday: b.bondByDay[manilaDayKey()] || 0, snapsToday: snapsToday(b), dailyCap: DAILY_CAP,
     }
   }
@@ -608,7 +690,10 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }
       const item = body.item == null ? null : String(body.item)
       if (item && !active.wardrobe.unlocked.includes(item)) { sendJson(res, 403, { error: 'Locked' }); return true }
-      active.wardrobe.worn = item; save(store); sendJson(res, 200, payload(store, ownerKey)); return true
+      active.wardrobe.worn = item
+      let happy = null
+      if (item && !happyOf(active).dressed) { active.happy.dressed = true; happy = addHappy(active, HAPPY.dressUp, ['dressed up']) }
+      save(store); sendJson(res, 200, payload(store, ownerKey, happy ? { happy } : {})); return true
     }
     if (p === '/api/buddy/before' && req.method === 'GET') {
       if (!active?.hatchedAt) { sendJson(res, 200, { line: null }); return true }
@@ -619,6 +704,36 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       if (placeParam) beforeSlots.place = placeParam
       const line = say(active, 'before', beforeSlots)
       save(store); sendJson(res, 200, { line }); return true
+    }
+    /** A pat on the head: small, quick, five a day. After that it is still nice, just not points. */
+    if (p === '/api/buddy/pet' && req.method === 'POST') {
+      if (!active?.hatchedAt) { sendJson(res, 409, { error: 'No Axie yet' }); return true }
+      const h = happyOf(active)
+      const counts = h.pets < HAPPY.petsPerDay
+      h.pets += 1
+      const happy = addHappy(active, counts ? HAPPY.pet : 0, counts ? ['a pat'] : [])
+      save(store); sendJson(res, 200, payload(store, ownerKey, { happy, line: say(active, 'pet') })); return true
+    }
+    /**
+     * Play as a real Axie without a wallet: any Axie, by its number, read from Sky Mavis. It is a
+     * visit, not a claim: it says so on screen, several people can visit the same Axie, and signing
+     * in with Ronin later turns a visit into an owned Axie with everything it earned.
+     */
+    if (p === '/api/buddy/visit' && req.method === 'POST') {
+      const axieId = String(body.axieId || '').replace(/^#/, '').trim()
+      if (!/^\d{1,9}$/.test(axieId)) { sendJson(res, 400, { error: 'Type an Axie number, like 2660' }); return true }
+      const existing = acc.buddyIds.map((id) => store.buddies[id]).find((x) => x && x.kind !== 'wild' && x.axieId === axieId)
+      if (existing) { existing.retiredAt = null; acc.activeBuddyId = existing.id; save(store); sendJson(res, 200, payload(store, ownerKey)); return true }
+      if (acc.buddyIds.length >= BUDDY_CAP) { sendJson(res, 409, { error: 'Too many Axies in the scrapbook' }); return true }
+      let rec
+      if (env.BUDDY_TEST_SKIP_CHAIN === '1') rec = { id: axieId, name: `Axie #${axieId}`, class: 'Beast', level: 42, birthDate: 1523510193, breedCount: 1, parts: [{ type: 'horn', name: 'Ronin', class: 'Beast' }, { type: 'tail', name: 'Hatsune', class: 'Plant' }], genes: '0x0' }
+      else { try { rec = await fetchAxieGenes(axieId) } catch { rec = null } }
+      if (!rec) { sendJson(res, 404, { error: 'No Axie with that number' }); return true }
+      const b = realBuddy(ownerKey, rec, 'visit')
+      if (active && !active.hatchedAt) { acc.buddyIds = acc.buddyIds.filter((id) => id !== active.id); delete store.buddies[active.id] }
+      store.buddies[b.id] = b; acc.buddyIds.push(b.id); acc.activeBuddyId = b.id
+      addBondIgnoringCap(b, 5); ensureWish(b)
+      save(store); sendJson(res, 201, payload(store, ownerKey, { lines: b.traits.map((t) => pickLine({ traits: [t], situation: 'hatch', rng })) })); return true
     }
     /**
      * The Axie looks at a capture before it is posted, so its line can be drawn onto the photo.
@@ -634,7 +749,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       if (!image) {
         const id = uid()
         const line = say(active, 'after', {})
-        active.pendingLook = { id, line, labels: [], at: now() }
+        active.pendingLook = { id, line, labels: [], at: now(), fallback: true }
         save(store); sendJson(res, 200, { id, line, labels: [], fallback: true }); return true
       }
       const hour = Number.isFinite(Number(body.hour)) ? Number(body.hour) % 24 : undefined
@@ -658,7 +773,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const fallback = !line
       if (fallback) line = say(active, 'after', labels[0] ? { thing: labels[0] } : {})
       const id = uid()
-      active.pendingLook = { id, line, labels, at: now() }
+      active.pendingLook = { id, line, labels, at: now(), ...(out ? {} : { fallback: true }) }
       save(store); sendJson(res, 200, { id, line, labels, ...(fallback ? { fallback: true } : {}) }); return true
     }
     if (p === '/api/buddy/talk' && req.method === 'POST') {
@@ -676,7 +791,11 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       }
       if (!reply) reply = libraryReply(active, text)
       active.talkLog = [...(active.talkLog || []), { you: raw, reply }].slice(-12)
-      save(store); sendJson(res, 200, { reply }); return true
+      const th = happyOf(active)
+      const talkCounts = th.talks < HAPPY.talksPerDay
+      th.talks += 1
+      const happy = addHappy(active, talkCounts ? HAPPY.talk : 0, talkCounts ? ['a talk'] : [])
+      save(store); sendJson(res, 200, { reply, happy }); return true
     }
     if (p === '/api/ronin/nonce' && req.method === 'GET') {
       const address = normalizeAddress(url.searchParams.get('address') || '')
@@ -722,12 +841,10 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
         rec = await fetchAxieGenes(axieId)
       }
       if (!rec) { sendJson(res, 404, { error: 'Axie not found' }); return true }
-      const existing = acc.buddyIds.map((id) => store.buddies[id]).find((b) => b?.kind === 'owned' && b.axieId === axieId)
-      if (existing) { existing.retiredAt = null; acc.activeBuddyId = existing.id; save(store); sendJson(res, 200, payload(store, ownerKey)); return true }
-      const b = newEgg(ownerKey)
-      b.kind = 'owned'; b.axieId = axieId; b.class = rec.class || null; b.name = (rec.name && !/^Axie #\d+$/.test(rec.name) ? rec.name : `Axie #${axieId}`).slice(0, 16)
-      b.traits = traitsForOwned(axieId, rec.class || '', (rec.parts || []).map((x) => x.name))
-      b.hatchedAt = b.createdAt; b.mystic = (rec.parts || []).some((x) => x.specialGenes === 'Mystic'); b.rarity = b.mystic ? 0.03 : 0.5
+      // An Axie already here as a visit (or already claimed) keeps everything it earned.
+      const existing = acc.buddyIds.map((id) => store.buddies[id]).find((b) => b && b.kind !== 'wild' && b.axieId === axieId)
+      if (existing) { existing.kind = 'owned'; existing.core = coreOf(rec); existing.retiredAt = null; acc.activeBuddyId = existing.id; save(store); sendJson(res, 200, payload(store, ownerKey)); return true }
+      const b = realBuddy(ownerKey, { ...rec, id: axieId }, 'owned')
       if (active && !active.hatchedAt) { acc.buddyIds = acc.buddyIds.filter((id) => id !== active.id); delete store.buddies[active.id] }
       store.buddies[b.id] = b; acc.buddyIds.push(b.id); acc.activeBuddyId = b.id
       addBondIgnoringCap(b, 5); ensureWish(b)
@@ -768,7 +885,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     return false
   }
   function rarityFor(b) {
-    if (b.kind === 'owned') return b.rarity ?? 0.5
+    if (b.kind !== 'wild') return b.rarity ?? 0.5
     const score = 0.6 - b.rareIds.length * 0.2 - (b.mystic ? 0.3 : 0)
     return Math.max(0.02, Math.round(score * 100) / 100) // share of Axies at least this rare; lower is rarer
   }
