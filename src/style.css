@@ -3857,6 +3857,12 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 .lp-road-card ul li { position: relative; padding-left: 18px; font-size: 13px; font-weight: 700; line-height: 1.4; color: var(--muted); }
 .lp-road-card ul li::before { content: ""; position: absolute; left: 2px; top: 6px; width: 7px; height: 7px; border-radius: 2px; background: var(--border); transform: rotate(45deg); }
 .lp-road-done ul li { color: var(--text); }
+.lp-road-card > ul { flex: 1 1 auto; }
+.lp-road-core { margin-top: 12px; padding: 12px; border-radius: 12px; background: color-mix(in srgb, #1E90FF 9%, var(--bg-2)); border: 1px solid color-mix(in srgb, #1E90FF 28%, var(--border)); }
+.lp-road-core-tag { display: inline-block; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #0B6BDD; }
+.lp-road-card .lp-road-core ul { margin-top: 6px; }
+.lp-road-card .lp-road-core ul li { color: var(--text); }
+.lp-road-card .lp-road-core ul li::before { background: #1E90FF; }
 .lp-road-done ul li::before { background: var(--accent-hot); }
 .lp-faq { margin: 4px 0 0; display: flex; flex-direction: column; gap: 8px; }
 .lp-faq div { padding: 12px 14px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--border); }

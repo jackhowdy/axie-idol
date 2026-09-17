@@ -611,7 +611,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
   const wearRow = wardrobe.map(([id, label]) => `<span class="lp-wear">${icon(id, 22)}<small>${label}</small></span>`).join('')
   const odds = [['5', 'photos', 'A common Axie, any class'], ['20', 'photos', 'One rare part, guaranteed'], ['50', 'photos', 'Two rare parts'], ['100', 'photos', 'A shot at Mystic']]
   // Three parts, in the order people ask: what is real today, what the next round adds, what comes after.
-  const road: Array<{ when: string; title: string; state: string; items: string[] }> = [
+  const road: Array<{ when: string; title: string; state: string; items: string[]; core: string[] }> = [
     { when: 'Done', title: 'Round one', state: 'Live now', items: [
       'An egg that rides in your camera and hatches an Axie nobody else has',
       'A voice that looks at each photo and writes its line on the picture',
@@ -619,6 +619,10 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'Ten steps of growth: hat, scarf, shades, cape, crown, the Mystic glow',
       'A wish every day, a scrapbook, and the monthly Idol ladder',
       'Ronin sign-in: bring an Axie you own, and keep more than one',
+    ], core: [
+      'Every hatched Axie is put together from real Axie parts and classes, in 3D',
+      'Axies you own on Ronin load from their real genes and play as themselves',
+      'Nothing to buy and nothing minted: the Axie is the point, not a token',
     ] },
     { when: 'Next', title: 'Round two', state: 'Next stage of the Vibeathon', items: [
       'Talk back: a real conversation with your Axie, not only one line',
@@ -626,13 +630,21 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'Parts that evolve as bond grows: horn, then back, then tail',
       'A feed to share photos and cheer for other Axies',
       'A morning nudge, when your Axie wants to go out',
+    ], core: [
+      'Part evolution follows Axie Core: the same stage two parts, earned by bond',
+      'Your whole Ronin collection playable, each Axie with its own bond and voice',
+      'An owned badge on photos and on the ladder, so real Axies stand out',
     ] },
     { when: 'After', title: 'After the Vibeathon', state: 'Planned', items: [
       'Seasons on the Idol ladder, with something to win',
       'A collectible card for every Axie that reaches Idol',
       'More to wear, more tricks, more moments to find',
       'An app you can install, with notifications',
-      'Closer ties to Ronin for players who own their Axies',
+      'Things only an owned Axie can earn',
+    ], core: [
+      'Work with Sky Mavis on a path for a hatched Axie to become a real one',
+      'Let time spent with your Axie count beyond this game, the way AXP does',
+      'Idol cards and seasons that live with the Axie on Ronin, not in our database',
     ] },
   ]
   const roadCards = road.map((r, i) => `
@@ -641,6 +653,10 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
             <b>${r.title}</b>
             <span class="lp-road-state">${r.state}</span>
             <ul>${r.items.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+            <div class="lp-road-core">
+              <span class="lp-road-core-tag">Axie Core fit</span>
+              <ul>${r.core.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+            </div>
           </li>`).join('')
   const oddsRow = odds.map(([n, unit, what]) => `<div class="lp-odd"><b>${n}</b><small>${unit}</small><span>${what}</span></div>`).join('')
   return `
@@ -712,6 +728,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       <section class="lp-section" id="lp-road">
         <p class="bd-eyebrow">Roadmap</p>
         <h2 class="lp-h2">What is done, what is next, what comes after</h2>
+        <p class="lp-sub">Axie Idol gives an Axie a voice and a life outside battle. Every stage is built around the Axie itself: real parts, real ownership, and a reason to care about one Axie for a long time.</p>
         <ol class="lp-road">${roadCards}
         </ol>
         <p class="lp-sub">Round one is what you can play today. The rest are plans, in the order we mean to build them.</p>
