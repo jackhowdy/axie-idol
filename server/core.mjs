@@ -1155,12 +1155,12 @@ async function fetchAxieGenes(axieId) {
   const cache = storage.get('axies', () => ({}))
   const hit = cache[axieId]
   // `level` marks a record fetched since the Axie Core facts were added; older ones are refreshed.
-  if (hit && hit.genes && Array.isArray(hit.parts) && hit.level !== undefined) return hit
+  if (hit && hit.genes && Array.isArray(hit.parts) && hit.level !== undefined && hit.stage !== undefined) return hit
   let data
   try {
     data = await graphqlRequest(
       `query($axieId: ID!) {
-        axie(axieId: $axieId) { id name class newGenes genes bodyShape birthDate breedCount axpInfo { level } parts { id name type class stage specialGenes } }
+        axie(axieId: $axieId) { id name class stage newGenes genes bodyShape birthDate breedCount axpInfo { level } parts { id name type class stage specialGenes } }
       }`,
       { axieId: String(axieId) },
     )
@@ -1183,6 +1183,8 @@ async function fetchAxieGenes(axieId) {
     bodyShape: axie.bodyShape || null,
     // Axie Core: how far it has been trained, when it was born, how often it has bred.
     level: Number.isFinite(Number(axie.axpInfo?.level)) ? Number(axie.axpInfo.level) : null,
+    // 4 is a grown Axie; eggs and petites have no real art to show
+    stage: Number.isFinite(Number(axie.stage)) ? Number(axie.stage) : null,
     birthDate: Number(axie.birthDate) || null,
     breedCount: Number.isFinite(Number(axie.breedCount)) ? Number(axie.breedCount) : null,
     // Stage per part slot (1 or 2). The mixer's genes decoder always emits stage 1, so the client

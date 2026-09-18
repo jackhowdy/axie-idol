@@ -46,6 +46,8 @@ const RATE_LIMITS = {
   'POST /api/buddy/treat': 20,
   'POST /api/buddy/play': 60,
   'POST /api/buddy/visit': 10,
+  'GET /api/buddy/meet': 60,
+  'POST /api/buddy/nickname': 20,
   'POST /api/buddy/talk': 40,
   'POST /api/account/recover': 10,
   'POST /api/account/recovery': 10,
@@ -60,6 +62,9 @@ const NONCE_ADDRESS_CAP = 2000
 export function createBuddyModule({ storage, helpers, env = {}, catalogue = catalogueJson, now = () => Date.now(), rng = Math.random, voice = null }) {
   const { sendJson, readBody, deviceKeyFrom, manilaDayKey, fetchAxieGenes, fetchAllOwnerAxies, normalizeAddress, checkRate, recordRate, removePost } = helpers
   const enabled = env.BUDDY !== '0'
+  // Eggs (hatch your own Axie) are off in Round 1: every Axie is a real one. EGGS=1 turns them back
+  // on. Eggs already in play keep working either way.
+  const eggsOn = env.EGGS === '1'
   // The model behind the voice (tests pass a fake; production reads GEMINI_API_KEY). Off = library only.
   const model = voice || createVoiceModel({ env, now })
 
@@ -216,10 +221,45 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       parts: (rec.parts || []).filter((x) => x?.name).map((x) => ({ type: String(x.type || '').toLowerCase(), name: String(x.name).slice(0, 40), class: x.class || null, special: x.specialGenes || null })),
     }
   }
+  /**
+   * Three real Axies to meet: grown ones (stage four) found by trying random numbers against
+   * Sky Mavis, kept in a pool that starts with a few known good ones and grows a little on each
+   * visit, so the cards change over time and the first visit is instant.
+   */
+  const MEET_SEED = [['2660', 'Beast'], ['80', 'Aquatic'], ['9', 'Plant'], ['7', 'Beast'], ['12094912', 'Bug'], ['12131202', 'Beast'], ['1234567', 'Plant'], ['3456789', 'Aquatic'], ['5555555', 'Reptile'], ['7654321', 'Bird']]
+  const MEET_MAX_ID = 12_100_000
+  const MEET_POOL_CAP = 80
+  async function meetProbe(pool) {
+    const id = String(1 + Math.floor(rng() * MEET_MAX_ID))
+    if (pool.some((x) => x.id === id)) return
+    let rec = null
+    try { rec = await fetchAxieGenes(id) } catch { rec = null }
+    if (!rec || rec.stage !== 4 || !rec.genes) return
+    pool.push({ id, name: rec.name && !/^Axie #\d+$/.test(rec.name) ? String(rec.name).slice(0, 24) : `Axie #${id}`, class: rec.class || null, level: Number.isFinite(Number(rec.level)) ? Number(rec.level) : null })
+  }
+  async function meetCards(store) {
+    if (env.BUDDY_TEST_SKIP_CHAIN === '1') return [{ id: '2660', name: 'Axie #2660', class: 'Beast', level: 60 }, { id: '80', name: 'Axie #80', class: 'Aquatic', level: 34 }, { id: '9', name: 'Axie #9', class: 'Plant', level: 1 }].map((c) => ({ ...c, image: `/api/image/${c.id}` }))
+    const meet = (store.meet ||= { pool: MEET_SEED.map(([id, cls]) => ({ id, name: `Axie #${id}`, class: cls, level: null })) })
+    // grow the pool a little, and refresh a seed's name and level when it comes up
+    if (meet.pool.length < MEET_POOL_CAP) await meetProbe(meet.pool)
+    const picks = []
+    const pool = [...meet.pool]
+    while (picks.length < 3 && pool.length) picks.push(pool.splice(Math.floor(rng() * pool.length), 1)[0])
+    for (const card of picks) {
+      if (card.level != null && card.name !== `Axie #${card.id}`) continue
+      try {
+        const rec = await fetchAxieGenes(card.id)
+        if (rec) { card.name = rec.name && !/^Axie #\d+$/.test(rec.name) ? String(rec.name).slice(0, 24) : card.name; card.level = Number.isFinite(Number(rec.level)) ? Number(rec.level) : card.level; card.class = rec.class || card.class }
+      } catch { /* the seed's own facts do */ }
+    }
+    return picks.map((c) => ({ ...c, image: `/api/image/${c.id}` }))
+  }
+
   /** A real Axie joins the account already hatched: it has a name, a body and a past. */
   function realBuddy(ownerKey, rec, kind) {
     const b = newEgg(ownerKey)
     b.kind = kind; b.axieId = String(rec.id); b.class = rec.class || null
+    b.realName = rec.name && !/^Axie #\d+$/.test(rec.name) ? String(rec.name).slice(0, 40) : null
     b.name = ((rec.name && !/^Axie #\d+$/.test(rec.name) && validName(String(rec.name).slice(0, 16))) || `Axie #${rec.id}`).slice(0, 16)
     b.traits = traitsForOwned(b.axieId, rec.class || '', (rec.parts || []).map((x) => x.name))
     b.hatchedAt = b.createdAt; b.mystic = (rec.parts || []).some((x) => x.specialGenes === 'Mystic'); b.rarity = b.mystic ? 0.03 : 0.5
@@ -625,6 +665,21 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       if (greeting) save(store)
       sendJson(res, 200, payload(store, ownerKey, { greeting })); return true
     }
+    if ((p === '/api/buddy/egg' || p === '/api/buddy/retire') && req.method === 'POST' && !eggsOn) {
+      sendJson(res, 409, { error: 'Eggs are off. Every Axie here is a real one: meet one instead.' }); return true
+    }
+    if (p === '/api/buddy/meet' && req.method === 'GET') {
+      const cards = await meetCards(store)
+      save(store); sendJson(res, 200, { cards }); return true
+    }
+    /** A nickname for a real Axie: what your person calls you, on top of the name on chain. */
+    if (p === '/api/buddy/nickname' && req.method === 'POST') {
+      if (!active?.hatchedAt || active.kind === 'wild') { sendJson(res, 409, { error: 'Only a real Axie takes a nickname' }); return true }
+      const name = validName(body.name)
+      if (!name) { sendJson(res, 400, { error: 'Name must be 2 to 16 letters and kind' }); return true }
+      active.name = name
+      save(store); sendJson(res, 200, payload(store, ownerKey)); return true
+    }
     if (p === '/api/buddy/egg' && req.method === 'POST') {
       if (active && !active.retiredAt && !active.hatchedAt) { sendJson(res, 200, payload(store, ownerKey)); return true }
       if (acc.buddyIds.length >= BUDDY_CAP) { sendJson(res, 409, { error: 'Too many Axies in the scrapbook' }); return true }
@@ -758,6 +813,8 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       else { try { rec = await fetchAxieGenes(axieId) } catch { rec = null } }
       if (!rec) { sendJson(res, 404, { error: 'No Axie with that number' }); return true }
       const b = realBuddy(ownerKey, rec, 'visit')
+      const nickname = body.nickname == null ? null : validName(body.nickname)
+      if (nickname) b.name = nickname
       if (active && !active.hatchedAt) { acc.buddyIds = acc.buddyIds.filter((id) => id !== active.id); delete store.buddies[active.id] }
       store.buddies[b.id] = b; acc.buddyIds.push(b.id); acc.activeBuddyId = b.id
       addBondIgnoringCap(b, 5); ensureWish(b)

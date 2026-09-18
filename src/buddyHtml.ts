@@ -243,7 +243,18 @@ export function hatchHtml(b: Buddy, lines: string[]): string {
       <input id="bd-name" class="bd-input" maxlength="16" value="${esc(b.name)}" placeholder="Miso" autocomplete="off">
       <button type="button" class="bd-btn bd-btn-ghost" data-action="suggest">Suggest</button>
     </div>`
-  const cta = hatched
+  const real = hatched && b.kind !== 'wild'
+  // A real Axie keeps its name on chain and can take a nickname: what you call it, from here on.
+  const nicknaming = `
+    <label class="bd-label" for="bd-name">What will you call it?</label>
+    <div class="bd-input-row">
+      <input id="bd-name" class="bd-input" maxlength="16" value="${esc(b.name)}" placeholder="${esc(b.name)}" autocomplete="off">
+      <button type="button" class="bd-btn bd-btn-ghost" data-action="suggest">Suggest</button>
+    </div>
+    <p class="bd-small bd-muted">${b.realName ? `On chain it is ${esc(b.realName)}. ` : ''}Keep its name, or give it one of your own.</p>`
+  const cta = real
+    ? `<button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="nickname-confirm">Hello, <span data-name-echo>${esc(b.name)}</span></button>`
+    : hatched
     ? `<button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="home">Hello, ${esc(b.name)}</button>`
     : `<button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="hatch-confirm">Hello, <span data-name-echo>${esc(b.name || 'Miso')}</span></button>`
   return `
@@ -258,10 +269,10 @@ export function hatchHtml(b: Buddy, lines: string[]): string {
         ${b.class ? `<span class="bd-badge">${b.kind === 'owned' ? 'Owned' : b.kind === 'visit' ? 'Real Axie' : 'Wild'} · ${esc(b.class)}${coreLevel(b)}</span>` : ''}
         <div class="bd-chips">${parts}</div>
       </div>
-      ${hatched ? '' : naming}
+      ${real ? nicknaming : hatched ? '' : naming}
     </div>
     <div class="bd-actions">${cta}</div>
-    <p class="bd-small bd-center">Not the one? You can start a fresh egg any time from Home. Only one Axie is active.</p>`
+    <p class="bd-small bd-center">Not the one? ${real ? 'Meet another Axie any time from Home.' : 'You can start a fresh egg any time from Home.'} Only one Axie is active.</p>`
 }
 
 const WEARABLES = ['hat', 'scarf', 'shades', 'cape', 'crown']
@@ -273,11 +284,12 @@ const WEARABLES = ['hat', 'scarf', 'shades', 'cape', 'crown']
  * for anyone who does not think to press a logo. On a phone the links fold away and the name
  * shrinks to the star, so the bar stays one line.
  */
-export function topBarHtml(current: string, hatched: boolean): string {
+export function topBarHtml(current: string, hatched: boolean, opts: { eggs?: boolean } = {}): string {
   const link = (action: string, label: string, on = false) => `<a class="bd-top-link${on ? ' on' : ''}" data-action="${action}">${label}</a>`
+  const first = current === 'egg' || opts.eggs ? link('back', 'My egg', current === 'egg') : link('meet', 'Meet an Axie', current === 'meet')
   const nav = hatched
     ? `${link('home', 'My Axie', current === 'home')}${link('scrapbook', 'Scrapbook', current === 'scrapbook')}${link('ladder', 'Growth', current === 'ladder')}${link('monthly', 'Idol ladder', current === 'monthly')}`
-    : `${link('back', 'My egg', current === 'egg')}${link('monthly', 'Idol ladder', current === 'monthly')}`
+    : `${first}${link('monthly', 'Idol ladder', current === 'monthly')}`
   return `
     <header class="bd-top">
       <a class="lp-brand bd-top-brand" data-action="about" title="Axie Idol homepage">${logoSvg(30)}${wordmarkSvg(20)}</a>
@@ -376,6 +388,38 @@ export function playResultHtml(b: Buddy, r: { line: string; catches: number; rou
     </div>`
 }
 
+/**
+ * Meet your Axie: three real Axies as cards (official art, name, class, Axie Core level), a
+ * shuffle, a number box for a favourite, and the wallet way in. The way into the game now that
+ * eggs are off: every Axie here is a real one.
+ */
+export type MeetCardView = { id: string; name: string; class: string | null; level: number | null; image: string }
+export function meetHtml(cards: MeetCardView[], opts: { address?: string | null; hasAxie?: boolean } = {}): string {
+  const cardHtml = cards.map((c) => `
+        <button type="button" class="bd-card bd-meet-card" data-action="visit-go" data-id="${esc(c.id)}">
+          <span class="bd-meet-art"><img src="${esc(c.image)}" alt="" loading="lazy"></span>
+          <b>${esc(c.name)}</b>
+          <span class="bd-muted">#${esc(c.id)}${c.class ? ` · ${esc(c.class)}` : ''}${c.level ? ` · Axie Core level ${c.level}` : ''}</span>
+          <span class="bd-pill bd-pill-ok">Play with ${esc(c.name.length > 12 ? 'this one' : c.name)}</span>
+        </button>`).join('')
+  return `
+    <div class="bd-scroll">
+      <header class="bd-head bd-head-row">
+        ${opts.hasAxie ? `<button type="button" class="bd-round" data-action="back" aria-label="Back">${icon('back', 18)}</button>` : '<span class="bd-round bd-round-ghost"></span>'}
+        <div class="bd-center bd-grow"><p class="bd-eyebrow">Meet your Axie</p><h1>Every Axie here is a real one</h1></div>
+        <span class="bd-round bd-round-ghost"></span>
+      </header>
+      <p class="bd-small bd-center bd-muted">Pick one of these three, shuffle for three more, or type the number of a favourite. It arrives as itself: its official art, its real parts, its Axie Core level. No wallet needed.</p>
+      <div class="bd-meet">${cardHtml || '<p class="bd-small bd-muted">Could not reach the Axies right now. Type a number below, or try again.</p>'}</div>
+      <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="meet-shuffle">${icon('rotateR', 16)} Show me three more</button></div>
+      <div class="bd-card">
+        <b>Have a favourite?</b>
+        <div class="bd-input-row"><input id="bd-visit-id" class="bd-input" inputmode="numeric" maxlength="10" placeholder="Axie number, like 2660" autocomplete="off"><button type="button" class="bd-btn bd-btn-primary" data-action="visit-go">Play</button></div>
+      </div>
+      <p class="bd-small bd-center">Own Axies on Ronin? ${opts.address ? '<a class="bd-link" data-action="claim">Pick one from your wallet</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
+    </div>`
+}
+
 /** Play as a real Axie: a number box, and three real ones to try. No wallet. */
 export function visitHtml(): string {
   const tries: Array<[string, string]> = [['2660', 'A Mystic Beast'], ['12094912', 'Six shiny parts'], ['9', 'One of the first']]
@@ -462,7 +506,7 @@ function photoPath(b: Buddy, photoId: string | null): string | null {
  * `buddies` feeds the "Resting Axies" row; `address` decides how the wallet line reads. Both are
  * optional so the renderer stays a pure string-in/string-out function for the unit test.
  */
-export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Buddy[]; address?: string | null; talk?: boolean } = {}): string {
+export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Buddy[]; address?: string | null; talk?: boolean; eggs?: boolean } = {}): string {
   const floorBond = b.ladder.find((r) => r.level === b.level)?.bond ?? 0
   const meter = b.next
     ? `<div class="bd-meter-row"><span>Bond ${b.next.level} in ${b.next.remaining} snap${b.next.remaining === 1 ? '' : 's'}</span><b class="bd-hot">${esc(b.next.reward)}</b></div>
@@ -530,7 +574,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
       <div class="bd-card-head"><a class="bd-label bd-link" data-action="scrapbook">Scrapbook · ${kept} ${icon('chevron', 12)}</a><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>
       <div class="bd-book">${book}</div>
       </div></div>
-      <p class="bd-small bd-center">Want another Axie? <a class="bd-link" data-action="fresh-egg">Hatch another egg</a> · ${esc(b.name)} rests, switch back any time in <a class="bd-link" data-action="account">Profile</a></p>
+      <p class="bd-small bd-center">Want another Axie? ${opts.eggs ? '<a class="bd-link" data-action="fresh-egg">Hatch another egg</a>' : '<a class="bd-link" data-action="meet">Meet another Axie</a>'} · ${esc(b.name)} rests, switch back any time in <a class="bd-link" data-action="account">Profile</a></p>
       <p class="bd-small bd-center">${wallet}</p>
     </div>
     <div class="bd-actions">
@@ -562,7 +606,7 @@ export function bootErrorHtml(): string {
  * account otherwise); a signed-in player sees the wallet and the owned-Axie shortcut. Reached from
  * the person button on the egg and Home screens.
  */
-export function accountHtml(b: Buddy | null, opts: { buddies?: Buddy[]; address?: string | null } = {}): string {
+export function accountHtml(b: Buddy | null, opts: { buddies?: Buddy[]; address?: string | null; eggs?: boolean } = {}): string {
   const address = opts.address || null
   const short = address ? (address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address) : ''
   const identity = address
@@ -590,11 +634,14 @@ export function accountHtml(b: Buddy | null, opts: { buddies?: Buddy[]; address?
       ? `<div class="bd-row"><b>${esc(b.name)}</b><span class="bd-muted">${esc(b.kind === 'owned' ? 'owned' : b.kind === 'visit' ? `real Axie #${b.axieId ?? ''}` : `Wild ${b.class ?? 'Axie'}`)} · Bond ${b.level}</span><span class="bd-pill bd-pill-ok">Active</span></div>`
       : `<div class="bd-row"><b>Your egg</b><span class="bd-muted">${b.egg.snaps} ${b.egg.snaps === 1 ? 'snap' : 'snaps'} so far</span><span class="bd-pill bd-pill-ok">Active</span></div>`
     : '<p class="bd-small bd-muted">No Axie yet.</p>'
-  // Another Axie is an egg, not a replacement: the active one rests and comes back with one tap.
+  // Another Axie is not a replacement: the active one rests and comes back with one tap.
   const another = b?.hatchedAt
-    ? `<p class="bd-small">${esc(b.name)} rests while you raise a new egg, and comes back with one tap.</p>
+    ? opts.eggs
+      ? `<p class="bd-small">${esc(b.name)} rests while you raise a new egg, and comes back with one tap.</p>
       <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="fresh-egg">Hatch another egg</button></div>`
-    : b ? '<p class="bd-small bd-muted">Hatch this egg first, then you can raise another.</p>' : ''
+      : `<p class="bd-small">${esc(b.name)} rests while you play with another real Axie, and comes back with one tap.</p>
+      <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="meet">Meet another Axie</button></div>`
+    : b ? '<p class="bd-small bd-muted">Hatch this egg first, then you can raise another.</p>' : opts.eggs === false ? '<div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="meet">Meet an Axie</button></div>' : ''
   return `
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
@@ -717,16 +764,18 @@ export function wordmarkSvg(height = 22): string {
  * says, how it grows, what hatches, the honest rules. On a phone it is one clean column inside
  * the frame; on a wide screen the frame opens and it is a page. As About it leads back instead.
  */
-export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null; address?: string | null } = {}): string {
+export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null; address?: string | null; eggs?: boolean } = {}): string {
   const about = Boolean(opts.hasAxie)
   const name = esc(opts.axieName || 'your Axie')
   const primary = about
     ? `<button type="button" class="bd-btn bd-btn-primary" data-action="back">Back to ${name}</button>`
-    : `<button type="button" class="bd-btn bd-btn-primary" data-action="start-egg">Find an egg</button>`
+    : opts.eggs
+      ? `<button type="button" class="bd-btn bd-btn-primary" data-action="start-egg">Find an egg</button>`
+      : `<button type="button" class="bd-btn bd-btn-primary" data-action="meet">Meet your Axie</button>`
   const heroLines = ['That bench is far. Let us climb all those stairs to get to it.', 'We were right here before. What is past the top this time?', 'Grey steps go up. Can we climb every single one?']
   const bubbles = heroLines.map((l, i) => `<div class="bd-w-bubble" style="--i:${i}">${esc(l)}</div>`).join('')
   const said = [
-    { photo: '/welcome/playground.jpg', who: 'The egg, photo two', line: 'Something moved in there.' },
+    { photo: '/welcome/playground.jpg', who: 'Miso, at the playground', line: 'That yellow slide goes very high. Can we climb up?' },
     { photo: '/welcome/rug.jpg', who: 'Happy, at home', line: 'That white shoe is neat. Can I poke it?' },
     { photo: '/welcome/aisle.jpg', who: 'In a shop', line: 'So many yellow bags. Can we open one?' },
   ]
@@ -741,7 +790,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
   // Three parts, in the order people ask: what is real today, what the next round adds, what comes after.
   const road: Array<{ when: string; title: string; state: string; items: string[]; core: string[] }> = [
     { when: 'Done', title: 'Round one', state: 'Live now', items: [
-      'An egg that rides in your camera and hatches an Axie nobody else has',
+      'Every Axie is a real Axie: pick one of three, type a number, or bring your own',
       'A voice that looks at each photo and writes its line on the picture',
       'Memory: it knows when you are back somewhere, and it answers your caption',
       'Ten steps of growth: hat, scarf, shades, cape, crown, the Mystic glow',
@@ -749,8 +798,8 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'A wish every day, a scrapbook, and the monthly Idol ladder',
       'Play as any real Axie by its number, or sign in with Ronin and bring your own',
     ], core: [
-      'Every hatched Axie is put together from real Axie parts and classes, in 3D',
       'Any real Axie plays as itself: its official art, its real parts, and it knows its Axie Core level',
+      'Real ownership shows: a Ronin sign-in marks an Axie Owned on Home and on the ladder',
       'Nothing to buy and nothing minted: the Axie is the point, not a token',
     ] },
     { when: 'Next', title: 'Round two', state: 'Next stage of the Vibeathon', items: [
@@ -806,10 +855,10 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <div class="lp-hero-copy">
           <p class="bd-eyebrow">Axie Vibeathon 2026 · Round one</p>
           <h1 class="lp-h1">Your Axie. In your camera. With opinions.</h1>
-          <p class="lp-lede">Hatch an Axie, take it everywhere, and keep it happy. It talks about every photo you take together, and it gets bored if you leave it alone.</p>
+          <p class="lp-lede">${opts.eggs ? 'Hatch an Axie' : 'Pick a real Axie'}, take it everywhere, and keep it happy. It talks about every photo you take together, and it gets bored if you leave it alone.</p>
           <div class="lp-cta">${primary}${about ? '' : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
           ${about ? '' : `<p class="bd-small lp-alt">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
-          <p class="bd-small lp-alt"><b>Have a favourite Axie?</b> <a class="bd-link" data-action="visit">Play as any real Axie by its number</a>. No wallet.</p>`}
+          <p class="bd-small lp-alt"><b>Have a favourite Axie?</b> <a class="bd-link" data-action="visit">Play as it, by its number</a>. No wallet.</p>`}
         </div>
         <div class="bd-w-shot lp-hero-shot" aria-hidden="true">
           <img class="bd-w-photo" src="/welcome/stairs.jpg" alt="">
@@ -822,11 +871,15 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
 
       <section class="lp-section" id="lp-how">
         <p class="bd-eyebrow">How it works</p>
-        <h2 class="lp-h2">Hatch it, then keep it happy</h2>
+        <h2 class="lp-h2">${opts.eggs ? 'Hatch it, then keep it happy' : 'Pick one, then keep it happy'}</h2>
         <ol class="lp-steps">
-          <li><b>Find an egg</b><span>It rides along in your camera, in every photo you take.</span></li>
+          ${opts.eggs
+            ? `<li><b>Find an egg</b><span>It rides along in your camera, in every photo you take.</span></li>
           <li><b>Take it places</b><span>Five photos and it can hatch. Carry it further for a rarer Axie.</span></li>
-          <li><b>It hatches, and it talks</b><span>A one-of-a-kind Axie with a voice. It says one line after every photo, and its words go on the picture.</span></li>
+          <li><b>It hatches, and it talks</b><span>A one-of-a-kind Axie with a voice. It says one line after every photo, and its words go on the picture.</span></li>`
+            : `<li><b>Pick a real Axie</b><span>One of three we show you, a favourite by its number, or one you own on Ronin. It arrives as itself.</span></li>
+          <li><b>Take it places</b><span>It rides along in your camera, in every photo you take.</span></li>
+          <li><b>It talks</b><span>One line after every photo, about what it actually sees, and its words go on the picture.</span></li>`}
           <li><b>Keep it happy</b><span>That is the game. Everything you do together makes it happier. Get it to Overjoyed and the day is won. Leave it alone and it gets bored.</span></li>
         </ol>
       </section>
@@ -884,14 +937,22 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       </section>
 
       <section class="lp-section" id="lp-hatch">
-        <p class="bd-eyebrow">What hatches</p>
+        ${opts.eggs ? `<p class="bd-eyebrow">What hatches</p>
         <h2 class="lp-h2">The longer you carry the egg, the rarer the Axie</h2>
         <div class="lp-odds">${oddsRow}</div>
-        <p class="lp-sub">No two hatched Axies share the same parts. Already own one on Ronin? Sign in and bring it instead of an egg.</p>
+        <p class="lp-sub">No two hatched Axies share the same parts. Already own one on Ronin? Sign in and bring it instead of an egg.</p>`
+        : `<p class="bd-eyebrow">Real Axies</p>
+        <h2 class="lp-h2">Every Axie here is a real Axie</h2>
+        <div class="lp-odds">
+          <div class="lp-odd"><b>3</b><small>to meet</small><span>We show you three real Axies. Pick one, or shuffle for three more.</span></div>
+          <div class="lp-odd"><b>#</b><small>by number</small><span>Type a favourite's number and it comes as itself.</span></div>
+          <div class="lp-odd"><b>60</b><small>levels</small><span>Its Axie Core level, its class and its parts reach its voice.</span></div>
+          <div class="lp-odd"><b>0</b><small>wallets needed</small><span>Ronin sign-in is only for bringing the Axies you own.</span></div>
+        </div>`}
         <div class="bd-card lp-real">
-          <div><b>Already love an Axie? Play as it.</b>
-          <span>Type any real Axie's number. It arrives as itself, in its official art, with its real parts, its class and its Axie Core level, and it knows them. No wallet. If it is yours, sign in with Ronin later and it becomes your owned Axie with everything it earned.</span></div>
-          ${about ? '' : '<button type="button" class="bd-btn bd-btn-ghost" data-action="visit">Play as a real Axie</button>'}
+          <div><b>${opts.eggs ? 'Already love an Axie? Play as it.' : 'Its official art, its real self.'}</b>
+          <span>${opts.eggs ? "Type any real Axie's number. It" : 'A real Axie'} arrives as itself, in its official art, with its real parts, its class and its Axie Core level, and it knows them. No wallet. If it is yours, sign in with Ronin later and it becomes your owned Axie with everything it earned.</span></div>
+          ${about ? '' : `<button type="button" class="bd-btn bd-btn-ghost" data-action="${opts.eggs ? 'visit' : 'meet'}">${opts.eggs ? 'Play as a real Axie' : 'Meet your Axie'}</button>`}
         </div>
       </section>
 

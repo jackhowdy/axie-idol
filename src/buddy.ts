@@ -4,6 +4,8 @@ import type { AxieDescriptor } from '@jaatster/threejs-axie-mixer3d-public'
 export const buddyEnabled = import.meta.env.VITE_BUDDY === '1'
 /** Talk mode (typed chat) is off for R1: the Axie speaks after photos. VITE_TALK=1 brings the screen back. */
 export const talkEnabled = import.meta.env.VITE_TALK === '1'
+/** Eggs (hatch your own) are off in Round 1: every Axie is a real one. VITE_EGGS=1 brings them back. */
+export const eggsEnabled = import.meta.env.VITE_EGGS === '1'
 const SESSION_LS = 'axieIdol.buddySession'
 const ADDRESS_LS = 'axieIdol.buddyAddress'
 
@@ -57,6 +59,8 @@ export type Buddy = {
   /** The game: how happy it is right now (time alone wears it down), and the joy days so far. */
   happy?: Happy | null
   joy?: { days: number; streak: number; best: number }
+  /** The name on chain, when it has one, whatever nickname it goes by here. */
+  realName?: string | null
   /** A real Axie's facts from Sky Mavis. */
   core?: { level: number | null; birthYear: number | null; breedCount: number | null; parts: { type: string; name: string; class: string | null; special: string | null }[] } | null
 }
@@ -126,7 +130,12 @@ export async function playResult(catches: number): Promise<{ line: string; happy
   return { line: p.line, happy: p.happy, catches: p.catches, rounds: p.rounds, counted: p.counted }
 }
 /** Play as any real Axie by its number. No wallet: it is a visit until a Ronin sign-in proves it is yours. */
-export async function visitAxie(axieId: string): Promise<{ lines: string[] }> { const p = await call<Payload>('/api/buddy/visit', { axieId }); apply(p); return { lines: p.lines || [] } }
+export async function visitAxie(axieId: string, nickname?: string): Promise<{ lines: string[] }> { const p = await call<Payload>('/api/buddy/visit', nickname ? { axieId, nickname } : { axieId }); apply(p); return { lines: p.lines || [] } }
+export type MeetCard = { id: string; name: string; class: string | null; level: number | null; image: string }
+/** Three real Axies to choose from; a new call is a new three. */
+export async function meetCards(): Promise<MeetCard[]> { return (await call<{ cards: MeetCard[] }>('/api/buddy/meet')).cards }
+/** What you call a real Axie, on top of its name on chain. */
+export async function nickname(name: string): Promise<void> { apply(await call<Payload>('/api/buddy/nickname', { name })) }
 /** The opposite of keeping it: drops the photo from the scrapbook and the feed. Bond already earned stays. */
 export async function unkeepPhoto(photoId: string): Promise<void> { apply(await call<Payload>('/api/buddy/photo/unkeep', { photoId })) }
 export async function beforeLine(ctx: { thing?: string; place?: string }): Promise<string | null> {

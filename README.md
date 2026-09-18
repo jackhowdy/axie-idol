@@ -4,8 +4,8 @@
 
 Play it: **https://axieidol.com** (phone or desktop, no wallet, no account)
 
-Axie Idol is a pet game. You hatch an Axie (or bring a real one), it rides along in your camera,
-and it talks: one line on every photo, about what it actually sees. The game is to **keep it
+Axie Idol is a pet game. You pick a real Axie (any Axie, by its number, or one you own), it rides
+along in your camera, and it talks: one line on every photo, about what it actually sees. The game is to **keep it
 happy**. Photos, new places, a caption, a pat, a treat and a game of catch lift its happiness; time alone
 wears it down. Get it to Overjoyed and the day is won. Leave it and it gets bored.
 
@@ -15,13 +15,14 @@ wears it down. Get it to Overjoyed and the day is won. Leave it and it gets bore
 
 You do not need a phone, a camera or a wallet.
 
-1. Open https://axieidol.com and press **Find an egg**.
-   Or skip the egg: **Play as any real Axie by its number** (try `2660`). It arrives with its real
-   parts, class and Axie Core level, and it knows them.
-2. Press **Snap**. On a desktop, or if the camera is blocked, a **sample photo** row appears in the
-   camera: pick one, drag the Axie where you want it, press the shutter, then **Post**.
-3. Five photos hatch the egg. Name it. From then on every photo comes back with the Axie's line
-   drawn on it, and the sheet says what the photo did for its happiness.
+1. Open https://axieidol.com and press **Meet your Axie**. Three real Axies are offered; pick one,
+   shuffle for three more, or type a favourite's number (try `2660`). It arrives as itself, with
+   its official art, its real parts, its class and its Axie Core level, and it knows them.
+2. Give it a nickname or keep its name, then press **Snap**. On a desktop, or if the camera is
+   blocked, a **sample photo** row appears in the camera: pick one, drag the Axie where you want
+   it, press the shutter, then **Post**.
+3. The photo comes back with the Axie's line drawn on it, and the sheet says what the photo did
+   for its happiness. Write a caption and it answers that too.
 4. On Home, watch the **Happiness** card. Pat it, give it a treat, play catch (tap when the star
    is over your Axie), and take photos of different things.
    Reaching 90 is the win for the day: a joy day, +3 bond, and the start of a streak.
@@ -66,23 +67,27 @@ phone. Ronin sign-in is optional and only adds: bring an Axie you own, keep your
 Axie Core is the Axie itself: a creature with real parts, a class, a history and an owner, that
 gets stronger the more it is cared for. Axie Idol is built on that and nothing else.
 
-- **Real Axies play as themselves.** Any Axie, by number, read-only from Sky Mavis: shown as its
-  official art (the picture its owner knows), cropped and gently animated, with the wardrobe placed
-  on it. Hatched Axies, which have no official art, are 3D in the Three.js Axie Mixer. Its class, its six
-  parts by name, its special genes, its birth year and its **Axie Core level** reach the voice, so
-  a level 60 Beast with a Mystic horn talks like one.
+- **Every Axie is a real Axie.** The game offers three real, grown Axies to meet (found among the
+  twelve million on Ronin), takes any Axie by number, and takes the ones you own. Each is read-only
+  from Sky Mavis and shown as its official art (the picture its owner knows), cropped and gently
+  animated, with the wardrobe placed on it. Its class, its six parts by name, its special genes,
+  its birth year and its **Axie Core level** reach the voice, so a level 60 Beast with a Mystic
+  horn talks like one.
 - **Ownership matters.** Ronin sign-in proves an Axie is yours; it is marked Owned on Home
   and on the ladder, and a visit becomes an owned Axie with everything it earned.
-- **Hatched Axies are made of real parts.** An egg rolls a class and six parts from the real part
-  catalogue, with rare and Mystic odds that improve the longer you carry it. Nothing is minted and
-  nothing is sold: a hatched Axie is a way in, a reason to want a real one.
+- **Nothing is minted and nothing is sold.** Playing with an Axie you do not own is a visit; a
+  Ronin signature is the only thing that marks one Owned. A visit is a reason to want the real
+  thing.
+- **Eggs are switched off.** An earlier build let you hatch your own Axie from real parts, drawn
+  by the Three.js Axie Mixer. Round 1 ships without it (every Axie is a real one); the code stays
+  behind `EGGS=1` / `VITE_EGGS=1`, and Axies hatched before the switch keep working.
 - **No wallet to play**, as the rules require.
 
 ## Product vision
 
 | Stage | What |
 |---|---|
-| **Round 1 (live)** | Egg and hatch, the voice on every photo, memory, happiness (pats, treats, a catching game), wishes, growth ladder, scrapbook, monthly Idol ladder, real Axies by number, Ronin sign-in. |
+| **Round 1 (live)** | Meet a real Axie (three offered, any by number, your own via Ronin), a nickname, the voice on every photo, memory, happiness (pats, treats, a catching game), wishes, growth ladder, scrapbook, monthly Idol ladder, real Axies by number, Ronin sign-in. |
 | **Round 2** | New games to play together, duo photos with a friend, part evolution that follows Axie Core (the same stage two parts, earned by bond), your whole Ronin collection playable, a morning nudge. |
 | **After** | Axies that stand higher in Axie Core come first: special props only they can wear, chat that opens up for them, a better place on the social wall. The social wall itself. Ladder seasons. Work with Sky Mavis so time spent here counts for the Axie, the way AXP does. |
 
@@ -110,15 +115,15 @@ npm install
 cp .env.example .env        # add your own keys; every key is optional
 npm run build
 npm start                   # http://localhost:5174
-npm test                    # 197 tests, no network needed
+npm test                    # 201 tests, no network needed
 ```
 
 Keys (all optional, all in `.env`, never committed): `GEMINI_API_KEY` for the voice (without it the
 written library speaks), `SKYMAVIS_API_KEY` for real Axies by number, `VITE_WAYPOINT_CLIENT_ID` for
 Ronin sign-in. The 3D part pack (about 500 MB) is not in the repository: clone
 [threejs-axie-mixer3d-public](https://github.com/jaatster/threejs-axie-mixer3d-public) and run
-`node scripts/copy-mixer-assets.mjs <path-to-clone>` to copy it into `public/assets/axie/`. Without it, real and hatched Axies
-fall back to a 2D stand-in and the game still plays. More in `docs/DEVELOPMENT.md`.
+`node scripts/copy-mixer-assets.mjs <path-to-clone>` to copy it into `public/assets/axie/`. It is only used
+for Axies hatched while eggs were on; real Axies never need it. More in `docs/DEVELOPMENT.md`.
 
 QA helper: `/?qa2d=2660,80,1234567` draws a contact sheet of real Axies in their official art with
 every wardrobe item on, using the production crop and placement code (`src/qa2d.ts`).
@@ -164,7 +169,7 @@ every wardrobe item on, using the production crop and placement code (`src/qa2d.
 
 **Pre-existing work.** Before the submission window the entrant had a prototype camera compositor
 (an Axie sticker over a camera view, a photo feed, quests). It was handed over on 5 September 2026
-and is documented in `docs/AUDIT-2026-09-05.md`. The Round 1 game (egg, hatch, voice, memory,
+and is documented in `docs/AUDIT-2026-09-05.md`. The Round 1 game (meeting real Axies, voice, memory,
 happiness, growth, ladder, real Axies, landing page, Worker hosting) was built after that.
 Git history shows all of it.
 

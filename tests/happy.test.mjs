@@ -8,7 +8,7 @@ import { characterBrief, coreFacts, memoryFacts } from '../server/voiceBrief.mjs
 const HOUR = 36e5
 const REAL = { id: '2660', name: 'Axie #2660', class: 'Beast', level: 60, birthDate: 1523510193, breedCount: 1, genes: '0x1', parts: [{ type: 'horn', name: 'Winter Branch', class: 'Beast', specialGenes: 'Mystic' }, { type: 'tail', name: 'Hatsune', class: 'Plant', specialGenes: null }] }
 
-function rig({ genes = async () => REAL, owned = async () => [], voice = null } = {}) {
+function rig({ genes = async () => REAL, owned = async () => [], voice = null, env = { BUDDY: '1', TALK: '1', EGGS: '1' } } = {}) {
   const state = {}
   const clock = { t: Date.parse('2026-09-18T02:00:00Z') }
   const storage = { get: (n, mk) => (state[n] ??= mk()), set: (n, v) => { state[n] = v } }
@@ -19,7 +19,7 @@ function rig({ genes = async () => REAL, owned = async () => [], voice = null } 
     manilaDayKey: (d) => new Date((d instanceof Date ? d.getTime() : clock.t)).toISOString().slice(0, 10),
     fetchAxieGenes: genes, fetchAllOwnerAxies: owned, normalizeAddress: (a) => String(a || '').toLowerCase(),
   }
-  const buddy = createBuddyModule({ storage, helpers, env: { BUDDY: '1', TALK: '1' }, now: () => clock.t, voice })
+  const buddy = createBuddyModule({ storage, helpers, env, now: () => clock.t, voice })
   const call = async (pathname, { method = 'POST', body, device = 'happy-dev' } = {}) => {
     const req = { method, headers: { get: () => null }, _body: body, _device: device }
     const res = {}
@@ -184,4 +184,25 @@ test('the catching game pays per star, three games a day, and never more than th
   assert.equal(fourth.body.counted, false); assert.equal(fourth.body.happy.delta, 0); assert.equal(fourth.body.active.happy.playsLeft, 0)
   const egg = rig(); await egg.call('/api/buddy/egg')
   assert.equal((await egg.call('/api/buddy/play', { body: { catches: 3 } })).status, 409)
+})
+
+test('eggs off (the Round 1 default): no egg, no retire, but meeting a real Axie and a nickname work', async () => {
+  const off = rig({ env: { BUDDY: '1' } })
+  assert.equal((await off.call('/api/buddy/egg')).status, 409)
+  assert.equal((await off.call('/api/buddy/retire')).status, 409)
+  const v = await off.call('/api/buddy/visit', { body: { axieId: '2660', nickname: 'Frosty' } })
+  assert.equal(v.status, 201); assert.equal(v.body.active.name, 'Frosty', 'a nickname at the meeting')
+  assert.equal(v.body.active.realName, null, 'no name on chain for #2660 in the test record')
+  const n = await off.call('/api/buddy/nickname', { body: { name: 'Snowball' } })
+  assert.equal(n.status, 200); assert.equal(n.body.active.name, 'Snowball')
+  assert.equal((await off.call('/api/buddy/nickname', { body: { name: 'x' } })).status, 400)
+  const wild = rig(); await wild.hatch()
+  assert.equal((await wild.call('/api/buddy/nickname', { body: { name: 'Nope' } })).status, 409, 'a hatched wild Axie was named at the hatch')
+})
+
+test('meet: three cards, each a real Axie with its picture', async () => {
+  const r = rig({ env: { BUDDY: '1', BUDDY_TEST_SKIP_CHAIN: '1' } })
+  const m = await r.call('/api/buddy/meet', { method: 'GET' })
+  assert.equal(m.status, 200); assert.equal(m.body.cards.length, 3)
+  for (const c of m.body.cards) { assert.match(c.id, /^\d+$/); assert.equal(c.image, `/api/image/${c.id}`); assert.ok(c.name) }
 })

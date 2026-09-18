@@ -6,15 +6,15 @@
  * `.buddy` / `#buddy-sheet`, and the API calls from `src/buddy.ts`.
  */
 import {
-  buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone, talkEnabled,
+  buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone, talkEnabled, eggsEnabled, meetCards, nickname,
   roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto, pet, treat, playResult, visitAxie, type HappyChange,
 } from './buddy'
 import {
-  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml, topBarHtml,
+  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml, topBarHtml, meetHtml, type MeetCardView,
   bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
-export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary' | 'talk' | 'account' | 'scrapbook' | 'welcome'
+export type BuddyScreen = 'auto' | 'egg' | 'hatch' | 'home' | 'claim' | 'ladder' | 'monthly' | 'diary' | 'talk' | 'account' | 'scrapbook' | 'welcome' | 'meet'
 export type BuddyNav = {
   goSnap: () => void
   showFace: (host: HTMLElement) => Promise<void>
@@ -40,7 +40,7 @@ export type BuddyUi = {
   showBootError: () => void
 }
 
-const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary', 'talk', 'account', 'scrapbook', 'welcome']
+const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary', 'talk', 'account', 'scrapbook', 'welcome', 'meet']
 
 export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   const sections = {} as Record<Exclude<BuddyScreen, 'auto'>, HTMLElement>
@@ -142,12 +142,19 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     // R1 ships without typed chat: the Axie speaks after photos instead.
     if (which === 'talk' && !talkEnabled) which = 'home'
 
+    // No eggs: the way in is meeting a real Axie, never an egg conjured for a fresh phone.
+    if (which === 'egg' && !buddyState.active && !eggsEnabled) which = 'meet'
     if (which === 'egg' && !buddyState.active) await startEgg()
     const el = sections[which]
     let html = ''
     if (which === 'egg') html = eggHtml(buddyState.active!, { buddies: buddyState.buddies })
     else if (which === 'hatch') html = hatchHtml(buddyState.active!, pendingLines)
-    else if (which === 'home') html = homeHtml(buddyState.active!, buddyState.greeting, { buddies: buddyState.buddies, address: buddyState.address, talk: talkEnabled })
+    else if (which === 'home') html = homeHtml(buddyState.active!, buddyState.greeting, { buddies: buddyState.buddies, address: buddyState.address, talk: talkEnabled, eggs: eggsEnabled })
+    else if (which === 'meet') {
+      let cards: MeetCardView[] = []
+      try { cards = await meetCards() } catch (err) { console.warn('[buddy] meet failed', err) }
+      html = meetHtml(cards, { address: buddyState.address, hasAxie: Boolean(buddyState.active?.hatchedAt) })
+    }
     else if (which === 'claim') {
       claimAxies = buddyState.address ? await ownedAxies().catch(() => []) : []
       if (claimPick && !claimAxies.some((a) => a.id === claimPick)) claimPick = null
@@ -156,13 +163,13 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     else if (which === 'monthly') html = monthlyHtml(await getJson<Monthly>('/api/ladder/monthly'))
     else if (which === 'diary') html = diaryHtml(await getJson<Diary>('/api/buddy/diary'), buddyState.active!)
     else if (which === 'talk') html = talkHtml(buddyState.active!, exchanges)
-    else if (which === 'account') html = accountHtml(buddyState.active, { buddies: buddyState.buddies, address: buddyState.address })
+    else if (which === 'account') html = accountHtml(buddyState.active, { buddies: buddyState.buddies, address: buddyState.address, eggs: eggsEnabled })
     else if (which === 'scrapbook') html = scrapbookHtml(buddyState.active!)
-    else if (which === 'welcome') html = welcomeHtml({ hasAxie: Boolean(buddyState.active), axieName: buddyState.active?.name, address: buddyState.address })
+    else if (which === 'welcome') html = welcomeHtml({ hasAxie: Boolean(buddyState.active), axieName: buddyState.active?.name, address: buddyState.address, eggs: eggsEnabled })
 
     // Every game screen carries the top bar. Home and the egg draw their own (they are rendered
     // without this module in tests); the homepage has its own header.
-    if (which !== 'welcome' && which !== 'home' && which !== 'egg') html = topBarHtml(which, Boolean(buddyState.active?.hatchedAt)) + html
+    if (which !== 'welcome' && which !== 'home' && which !== 'egg') html = topBarHtml(which, Boolean(buddyState.active?.hatchedAt), { eggs: eggsEnabled }) + html
 
     hideSheet()
     hideAll()
@@ -339,7 +346,16 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     if (act === 'account') { await show('account'); return }
     if (act === 'scrapbook') { await show('scrapbook'); return }
     if (act === 'about') { await show('welcome'); return }
-    if (act === 'start-egg') { await startEgg(); await show('egg'); return }
+    if (act === 'start-egg') { if (!eggsEnabled) { await show('meet'); return } await startEgg(); await show('egg'); return }
+    if (act === 'meet' || act === 'meet-shuffle') { await show('meet'); return }
+    // The hello screen's name box for a real Axie: the same name means nothing to send.
+    if (act === 'nickname-confirm') {
+      const input = document.querySelector<HTMLInputElement>('#bd-name')
+      const name = (input?.value || '').trim()
+      if (name && name !== b?.name) await nickname(name)
+      await show('home')
+      return
+    }
     // Sign in from the front door: the account may already hold an Axie, so land wherever it says.
     if (act === 'ronin-welcome') { await roninSignIn(); await show('auto'); return }
     if (act === 'photo') { if (b) sheet(photoViewHtml(b, a.dataset.id || '')); return }
@@ -366,6 +382,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       return
     }
     if (act === 'fresh-egg') {
+      if (!eggsEnabled) { await show('meet'); return }
       if (!confirm(`${b?.name || 'Your Axie'} will rest while you raise a new egg. You can switch back any time from Profile. Continue?`)) return
       await retire()
       await show('egg')

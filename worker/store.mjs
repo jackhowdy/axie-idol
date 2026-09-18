@@ -43,6 +43,7 @@ export class IdolStore extends DurableObject {
         GEMINI_MODEL: env.GEMINI_MODEL || '',
         // typed chat, off for R1
         TALK: env.TALK || '',
+        EGGS: env.EGGS || '',
       },
       log: console,
     })

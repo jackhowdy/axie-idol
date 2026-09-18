@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml, topBarHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml, topBarHtml, meetHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -152,6 +152,30 @@ test('the catching game: a track, a star, a Catch button, and a result that says
   const r = playResultHtml(miso, { line: 'That star had no chance.', catches: 2, rounds: 3, counted: true, happy: { delta: 6, value: 76, mood: 'Happy' } })
   assert.match(r, /2 of 3 caught/); assert.match(r, /That star had no chance/); assert.match(r, /\+6 happy · Happy 76/); assert.match(r, /data-action="play-done"/)
   assert.match(playResultHtml(miso, { line: 'x', catches: 3, rounds: 3, counted: false, happy: { delta: 0, value: 50, mood: 'Content' } }), /for fun/)
+})
+
+test('meet: three real Axies as cards, a shuffle, a number box, and the wallet way in', () => {
+  const cards = [{ id: '2660', name: 'Axie #2660', class: 'Beast', level: 60, image: '/api/image/2660' }, { id: '80', name: 'Bubbles', class: 'Aquatic', level: 34, image: '/api/image/80' }, { id: '9', name: 'Axie #9', class: 'Plant', level: null, image: '/api/image/9' }]
+  const html = meetHtml(cards, { address: null })
+  assert.match(html, /Every Axie here is a real one/)
+  assert.equal((html.match(/class="bd-card bd-meet-card" data-action="visit-go" data-id="/g) || []).length, 3)
+  assert.match(html, /src="\/api\/image\/80"/); assert.match(html, /Bubbles/); assert.match(html, /#2660 · Beast · Axie Core level 60/)
+  assert.match(html, /data-action="meet-shuffle"/); assert.match(html, /id="bd-visit-id"/); assert.match(html, /data-action="ronin-welcome"/)
+  assert.match(meetHtml(cards, { address: '0xabc' }), /data-action="claim"/)
+  assert.match(meetHtml([], {}), /Could not reach the Axies/)
+  assert.match(meetHtml(cards, { hasAxie: true }), /data-action="back"/, 'a player with an Axie can go back to it')
+  assert.match(topBarHtml('meet', false), /class="bd-top-link on" data-action="meet">Meet an Axie/)
+  assert.match(topBarHtml('egg', false, { eggs: true }), /My egg/)
+})
+
+test('hello: a real Axie can take a nickname and keeps its name on chain', () => {
+  const real = { ...miso, kind: 'visit', axieId: '80', name: 'Axie #80', realName: null, core: { level: 34, birthYear: 2018, breedCount: 0, parts: [] } }
+  const html = hatchHtml(real, ['Out. Finally.'])
+  assert.match(html, /What will you call it\?/); assert.match(html, /id="bd-name"[^>]*value="Axie #80"/)
+  assert.match(html, /data-action="nickname-confirm">Hello, <span data-name-echo>Axie #80/)
+  assert.match(html, /Meet another Axie any time from Home/)
+  assert.match(hatchHtml({ ...real, name: 'Bubbles', realName: 'Bubbles' }, []), /On chain it is Bubbles/)
+  assert.doesNotMatch(hatchHtml(miso, []), /nickname-confirm/, 'a hatched wild Axie was named at the hatch')
 })
 
 test('a real Axie played by its number says so, with its Axie Core level; the visit sheet needs no wallet', () => {
@@ -484,10 +508,12 @@ test('account: a guest sees Ronin sign-in and the recovery code; a wallet sees t
   assert.match(guest, /data-action="recovery"/)
   assert.match(guest, /data-action="recover"/)
   assert.match(guest, /data-action="claim"/)
-  assert.match(guest, /data-action="fresh-egg"/)
+  assert.match(guest, /data-action="meet">Meet another Axie/, 'eggs are off: another Axie is a real one')
+  assert.doesNotMatch(guest, /fresh-egg/)
+  assert.match(accountHtml(miso, { buddies: [miso], address: null, eggs: true }), /data-action="fresh-egg"/, 'with eggs on, another egg')
   assert.match(guest, /Miso/)
   assert.match(guest, /One is active at a time/)
-  assert.match(guest, /Hatch another egg/)
+  assert.match(guest, /Meet another Axie/)
   assert.match(guest, /Profile/)
   const wallet = accountHtml(miso, { buddies: [miso], address: '0x1234567890abcdef1234567890abcdef12345678' })
   assert.match(wallet, /Ronin Wallet/)
@@ -560,13 +586,13 @@ test('the front door: header with the mark, hero with a real photo and line, sec
   for (const mood of ['Bored', 'Restless', 'Content', 'Happy', 'Overjoyed']) assert.match(fresh, new RegExp(`<b>${mood}</b>`), mood)
   assert.match(fresh, /Win: a joy day/); assert.match(fresh, /Lose: a bored Axie/); assert.match(fresh, /It never blames you/)
   assert.match(fresh, /A treat, two a day/); assert.match(fresh, /Each star caught in a game of catch/)
-  assert.match(fresh, /Play as a real Axie/); assert.match(fresh, /How do I win\?/)
+  assert.match(fresh, /Meet your Axie/); assert.match(fresh, /How do I win\?/)
   assert.match(fresh, /data-action="visit"/, 'and a real Axie can be played from it')
   assert.match(fresh, /id="lp-road"/, 'the roadmap')
   for (const part of ['Round one', 'Round two', 'Next stage of the Vibeathon', 'After the Vibeathon']) assert.match(fresh, new RegExp(part), part)
   assert.equal((fresh.match(/class="lp-road-card/g) || []).length, 3, 'three parts')
   assert.equal((fresh.match(/class="lp-road-core"/g) || []).length, 3, 'every stage says how it fits Axie Core')
-  assert.match(fresh, /real Axie parts and classes/)
+  assert.match(fresh, /official art, its real parts/)
   assert.match(fresh, /Part evolution follows Axie Core/)
   const after = fresh.slice(fresh.indexOf('After the Vibeathon'))
   assert.match(after, /social wall/i, 'the wall launches after the Vibeathon')
@@ -577,10 +603,15 @@ test('the front door: header with the mark, hero with a real photo and line, sec
   assert.match(fresh, /welcome\/stairs\.jpg/, 'a real photo in the hero')
   assert.match(fresh, /That bench is far/, 'a real line on it')
   for (const id of ['lp-how', 'lp-voice', 'lp-grow', 'lp-hatch', 'lp-faq']) assert.match(fresh, new RegExp(`id="${id}"`), id)
-  assert.match(fresh, /Something moved in there\./, 'the egg voice on a real photo')
+  assert.match(fresh, /That yellow slide goes very high/, 'a real line on a real photo')
   assert.match(fresh, /Is it free\?/)
   assert.match(fresh, /Ten a day build bond/)
-  assert.equal((fresh.match(/data-action="start-egg"/g) || []).length, 3, 'header, hero and footer all start an egg')
+  assert.equal((fresh.match(/data-action="meet"/g) || []).length, 4, 'header, hero, the real-Axies card and footer all lead to meeting an Axie')
+  assert.doesNotMatch(fresh, /start-egg|hatch(?!")/i, 'no egg anywhere on the front door with eggs off (the section id stays for the nav)')
+  assert.match(fresh, /Every Axie here is a real Axie/); assert.match(fresh, /Pick a real Axie/)
+  const withEggs = welcomeHtml({ eggs: true })
+  assert.equal((withEggs.match(/data-action="start-egg"/g) || []).length, 3, 'with eggs on: header, hero and footer start an egg')
+  assert.match(withEggs, /The longer you carry the egg/)
   assert.match(fresh, /data-action="ronin-welcome"/)
   assert.match(fresh, /data-action="recover"/)
   assert.doesNotMatch(fresh, /data-action="back"/)
@@ -589,7 +620,7 @@ test('the front door: header with the mark, hero with a real photo and line, sec
   assert.doesNotMatch(signed, /ronin-welcome/)
   const about = welcomeHtml({ hasAxie: true, axieName: 'Pip' })
   assert.match(about, /data-action="back">Back to Pip/)
-  assert.doesNotMatch(about, /start-egg/, 'no second egg from the About page')
+  assert.doesNotMatch(about, /start-egg|data-action="meet"/, 'no way to start over from the About page')
   assert.doesNotMatch(about, /ronin-welcome|data-action="recover"/)
   assert.match(accountHtml(miso, { buddies: [miso], address: null }), /data-action="about"/)
 })

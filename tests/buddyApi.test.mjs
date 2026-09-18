@@ -28,7 +28,7 @@ after(async () => {
  * that would otherwise trip an unrelated ceiling (the post rate limit, the buddy route limits)
  * before reaching the behaviour under test.
  */
-function directModule({ env = { BUDDY: '1', TALK: '1' }, voice = null } = {}) {
+function directModule({ env = { BUDDY: '1', TALK: '1', EGGS: '1' }, voice = null } = {}) {
   const storeState = {}
   const storage = {
     get: (name, makeEmpty) => (storeState[name] ??= makeEmpty()),
@@ -197,7 +197,7 @@ test('daily cap holds across hatch: egg snaps and post-hatch snaps share the sam
     fetchAllOwnerAxies: async () => [],
     normalizeAddress: (a) => a,
   }
-  const buddy = createBuddyModule({ storage, helpers, env: { BUDDY: '1' } })
+  const buddy = createBuddyModule({ storage, helpers, env: { BUDDY: '1', EGGS: '1' } })
   const call = async (pathname, { method = 'GET', body } = {}) => {
     const req = { method, headers: { get: () => null }, _body: body, _device: 'unit-dev' }
     const res = {}
@@ -835,7 +835,7 @@ test('look without a model still puts a library line on the photo; before the ha
 })
 
 test('typed chat is off unless TALK=1: the route is simply not there', async () => {
-  const { buddy, call } = directModule({ env: { BUDDY: '1' } })
+  const { buddy, call } = directModule({ env: { BUDDY: '1', EGGS: '1' } })
   await call('/api/buddy/egg', { method: 'POST' })
   for (let i = 0; i < 6; i++) await buddy.recordSnap({ id: `e-${i}` }, { buddy: true, ownerKey: 'device:unit-dev', hour: 12 })
   await call('/api/buddy/hatch', { method: 'POST', body: { name: 'Cappy' } })

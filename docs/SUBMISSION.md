@@ -9,8 +9,8 @@ variants are underneath each one.
 
 ## One-sentence pitch
 
-Hatch an Axie (or bring a real one), take it everywhere in your camera, and keep it happy: it looks
-at every photo and talks back about what it actually sees.
+Pick a real Axie, take it everywhere in your camera, and keep it happy: it looks at every photo
+and talks back about what it actually sees.
 
 - Shorter (under 100 characters): *A pet Axie that lives in your camera, talks about your photos, and needs you to keep it happy.*
 
@@ -26,11 +26,11 @@ real parts and Axie Core level. No wallet needed.
 
 ## Full description
 
-**What it is.** Axie Idol turns an Axie into a companion instead of a fighter. You find an egg,
-carry it in your camera for five photos, and it hatches into an Axie nobody else has, built from
-real Axie parts and classes and shown in 3D with the official Axie Mixer. Or skip the egg and play
-as any real Axie by its number: it arrives as its official art, with its six parts by name, its
-class and its Axie Core level, and it knows them. A level 60 Beast with a Mystic horn talks like one.
+**What it is.** Axie Idol turns an Axie into a companion instead of a fighter. Every Axie in it is
+a real Axie. You meet three (found among the millions on Ronin), pick one or shuffle, or type a
+favourite's number, or sign in with Ronin and bring your own. It arrives as its official art, with
+its six parts by name, its class and its Axie Core level, and it knows them. A level 60 Beast with
+a Mystic horn talks like one. Give it a nickname, or keep the name it has on chain.
 
 **The voice.** After every photo the Axie says one line about what is actually in the picture, and
 the line is drawn onto the photo as a speech bubble. It names real things it can see, notices when
@@ -57,7 +57,8 @@ are collected as you find them.
 ownership and a reason to care about one Axie for a long time. Real Axies play as themselves from
 read-only Sky Mavis data, with no wallet. Ronin sign-in is optional and proves ownership: an owned
 Axie is marked as owned, and a visit becomes an owned Axie with everything it earned. Nothing is
-minted and nothing is sold. A hatched Axie is a way in: a reason to want a real one.
+minted and nothing is sold. Playing with an Axie you do not own is a visit, and a reason to want
+the real thing.
 
 **Where it goes.** Round 2: new games to play together, duo photos with a friend, part evolution
 that follows Axie Core (the same stage two parts, earned by bond), your whole Ronin collection
@@ -67,7 +68,7 @@ world; ladder seasons; and work with Sky Mavis so time spent here counts for the
 does. The roadmap is on the front page of the site.
 
 **Built with.** Vite, TypeScript and three.js in the browser; a Cloudflare Worker with one Durable
-Object behind it; 197 automated tests. Built by one person with Claude Code; Google Gemini looks at
+Object behind it; 201 automated tests. Built by one person with Claude Code; Google Gemini looks at
 the photos at run time. Full disclosures, known issues and run instructions are in the README.
 
 ## Thumbnail
@@ -97,13 +98,13 @@ Opens directly in a new tab. No sign-in, no wallet, no install. Works on a phone
 
 ## First-play instructions (about five minutes)
 
-1. Open https://axieidol.com and press **Find an egg**.
-   Or press **Play as any real Axie by its number** and try `2660` to skip the egg.
-2. Press **Snap**. Allow the camera, or on a desktop pick a **sample photo** at the bottom of the
-   camera. Drag the egg where you want it, press the shutter, then **Post**.
-3. Do that five times and the egg can hatch. Give your Axie a name.
-4. Take another photo. Your Axie's line comes back drawn on it, and the sheet shows what the photo
-   did for its happiness. Try writing a caption: it answers that too.
+1. Open https://axieidol.com and press **Meet your Axie**. Pick one of the three real Axies
+   offered, shuffle for three more, or type a favourite's number (`2660` is a good one).
+2. Keep its name or give it a nickname, then press **Hello**.
+3. Press **Snap**. Allow the camera, or on a desktop pick a **sample photo** at the bottom of the
+   camera. Drag the Axie where you want it, press the shutter, then **Post**.
+4. Your Axie's line comes back drawn on the photo, and the sheet shows what the photo did for its
+   happiness. Try writing a caption: it answers that too.
 5. On Home, look at the **Happiness** card. Pat it, give it a **Treat**, and press **Play** for the
    catching game. Get happiness to 90 to win the day (a joy day, +3 bond).
 6. Come back tomorrow: happiness has dropped while you were away. That is the game.

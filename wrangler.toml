@@ -19,6 +19,8 @@ SEED_POSTS = "0"
 # 1-in-N chance a post contains the Golden Axie (set to "1" for a demo day)
 GOLDEN_ODDS = "5000"
 BUDDY = "1"
+# Eggs (hatch your own Axie) are off in Round 1: every Axie is a real one. "1" brings them back.
+EGGS = "0"
 
 [[durable_objects.bindings]]
 name = "STORE"
