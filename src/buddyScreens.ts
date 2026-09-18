@@ -10,7 +10,7 @@ import {
   roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto, pet, treat, playResult, visitAxie, type HappyChange,
 } from './buddy'
 import {
-  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml, topBarHtml, meetHtml, fameHtml, type MeetCardView,
+  SCREEN_ROUTES as ROUTES, screenFromHash, eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml, topBarHtml, meetHtml, fameHtml, type MeetCardView,
   bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
@@ -38,6 +38,23 @@ export type BuddyUi = {
   hideSheet: () => void
   /** Boot could not reach the server: a retry card in place of a blank document. */
   showBootError: () => void
+}
+
+/**
+ * A refresh stays where you were. The screen you are on is kept in the address (`#homepage`,
+ * `#scrapbook`), and boot reads it back. Home has no hash: it is where `auto` lands anyway.
+ * Screens that are a step in a flow (hello, claim, the egg) are never restored.
+ */
+function rememberScreen(which: Exclude<BuddyScreen, 'auto'>, hasAxie: boolean): void {
+  try {
+    if (typeof history === 'undefined' || typeof location === 'undefined') return
+    // a fresh phone lands on the homepage by itself; only someone with an Axie needs it remembered
+    const slug = which === 'welcome' && !hasAxie ? '' : (ROUTES as Record<string, string>)[which] || ''
+    const keep = which === 'welcome' && location.hash.startsWith('#lp-')
+    if (keep) return
+    const url = location.pathname + location.search + (slug ? `#${slug}` : '')
+    if (url !== location.pathname + location.search + location.hash) history.replaceState(null, '', url)
+  } catch { /* an address bar we cannot write to is not worth failing a screen for */ }
 }
 
 const KEYS: Exclude<BuddyScreen, 'auto'>[] = ['egg', 'hatch', 'home', 'claim', 'ladder', 'monthly', 'diary', 'talk', 'account', 'scrapbook', 'welcome', 'meet']
@@ -177,6 +194,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     document.body.classList.toggle('bd-wide', which === 'welcome')
     el.innerHTML = html
     el.hidden = false
+    rememberScreen(which, Boolean(buddyState.active))
     const scroller = el.querySelector<HTMLElement>('.bd-scroll')
     if (scroller) scroller.scrollTop = which === 'talk' ? scroller.scrollHeight : 0
     if (which === 'talk') el.querySelector<HTMLInputElement>('#bd-talk-input')?.focus()
@@ -451,3 +469,5 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
 
   return { show, sheet, hideSheet, showBootError }
 }
+
+export { screenFromHash }

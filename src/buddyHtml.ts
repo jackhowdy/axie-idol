@@ -1387,3 +1387,18 @@ export function suggestName(cls: string | null | undefined): string {
   const pool = NAMES[cls || ''] || Object.values(NAMES).flat()
   return pool[Math.floor(Math.random() * pool.length)]
 }
+
+/** Which screens a refresh comes back to, and the word in the address for each. Home has none. */
+export const SCREEN_ROUTES: Record<string, string> = {
+  welcome: 'homepage', scrapbook: 'scrapbook', ladder: 'growth', monthly: 'ladder', diary: 'diary', account: 'profile', meet: 'meet',
+}
+export type RoutedScreen = 'auto' | 'welcome' | 'scrapbook' | 'ladder' | 'monthly' | 'diary' | 'account' | 'meet'
+export function screenFromHash(hash: string): RoutedScreen {
+  let slug = ''
+  try { slug = decodeURIComponent(String(hash || '').replace(/^#/, '')).split('&')[0] } catch { return 'auto' }
+  if (!slug) return 'auto'
+  // the homepage's own section links (#lp-how) are still the homepage
+  if (slug.startsWith('lp-')) return 'welcome'
+  const hit = Object.entries(SCREEN_ROUTES).find(([, s]) => s === slug)
+  return hit ? (hit[0] as RoutedScreen) : 'auto'
+}

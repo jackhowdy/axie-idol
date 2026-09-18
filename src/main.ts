@@ -19,7 +19,7 @@ import {
 import { fallbackAxieSvg } from './fallbackAxie'
 import { loadAxieArt, jointsFor2D, ITEM_ANCHORS_2D, BEHIND_2D, type Art2D } from './axie2d.ts'
 import { drawSpeechBubble, type BubbleAnchor } from './speechBubble'
-import { mountBuddyScreens } from './buddyScreens'
+import { mountBuddyScreens, screenFromHash } from './buddyScreens'
 import { reactionHtml, momentHtml, unlockHtml, joyHtml, vfChipHtml, wishPillHtml, frameTrayHtml, wardrobeTrayHtml, eggLine } from './buddyHtml.ts'
 import {
   FRAME_IDS, drawFrame, drawWardrobe, isFrameId, offsetJoints, preloadWardrobe, wardrobeSprite2D,
@@ -6977,7 +6977,8 @@ async function boot(): Promise<void> {
   // retry card: every screen is hidden by now, so anything else leaves a blank document.
   if (buddyEnabled) {
     try {
-      await buddyUi!.show('auto')
+      // a refresh stays on the screen you were on (the homepage, the scrapbook, the ladder)
+      await buddyUi!.show(screenFromHash(location.hash))
     } catch (err) {
       console.warn('[buddy] boot failed', err)
       buddyUi!.showBootError()

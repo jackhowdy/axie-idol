@@ -715,3 +715,12 @@ test('the egg has a voice: one line per photo, shown on the egg screen', () => {
   const egg = { ...miso, hatchedAt: null, egg: { snaps: 3, grids: ['a'], distanceKm: 0, foodSnaps: 0 } }
   assert.match(eggHtml(egg, {}), /class="bd-speech bd-speech-home bd-speech-egg">A tap\. From inside\./)
 })
+
+test('a refresh stays where you were: the address remembers the screen', async () => {
+  const { screenFromHash } = await import('../src/buddyHtml.ts')
+  assert.equal(screenFromHash(''), 'auto'); assert.equal(screenFromHash('#'), 'auto')
+  assert.equal(screenFromHash('#homepage'), 'welcome'); assert.equal(screenFromHash('#lp-road'), 'welcome', 'a section link is still the homepage')
+  assert.equal(screenFromHash('#scrapbook'), 'scrapbook'); assert.equal(screenFromHash('#growth'), 'ladder'); assert.equal(screenFromHash('#ladder'), 'monthly')
+  assert.equal(screenFromHash('#profile'), 'account'); assert.equal(screenFromHash('#meet'), 'meet'); assert.equal(screenFromHash('#diary'), 'diary')
+  assert.equal(screenFromHash('#hatch'), 'auto', 'a step in a flow is never restored'); assert.equal(screenFromHash('#nonsense'), 'auto')
+})
