@@ -790,25 +790,26 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
   // Three parts, in the order people ask: what is real today, what the next round adds, what comes after.
   const road: Array<{ when: string; title: string; state: string; items: string[]; core: string[] }> = [
     { when: 'Done', title: 'Round one', state: 'Live now', items: [
-      'Every Axie is a real Axie: pick one of three, type a number, or bring your own',
+      'Every Axie is a real Axie: meet three, pick a favourite by its number, or bring your own with Ronin',
+      'It arrives as itself, in its official art, and takes a nickname of your choosing',
       'A voice that looks at each photo and writes its line on the picture',
       'Memory: it knows when you are back somewhere, and it answers your caption',
-      'Ten steps of growth: hat, scarf, shades, cape, crown, the Mystic glow',
       'A happiness score: photos, pats, treats and a game of catch keep it happy; time alone bores it',
+      'Ten steps of growth: hat, scarf, shades, cape, crown, the Mystic glow',
       'A wish every day, a scrapbook, and the monthly Idol ladder',
-      'Play as any real Axie by its number, or sign in with Ronin and bring your own',
     ], core: [
-      'Any real Axie plays as itself: its official art, its real parts, and it knows its Axie Core level',
+      'Every Axie in the game exists on Ronin. None is invented',
+      'Each plays as itself: its real parts, its class and its Axie Core level reach its voice',
       'Real ownership shows: a Ronin sign-in marks an Axie Owned on Home and on the ladder',
       'Nothing to buy and nothing minted: the Axie is the point, not a token',
     ] },
     { when: 'Next', title: 'Round two', state: 'Next stage of the Vibeathon', items: [
+      'Its official art comes alive: it moves, reacts and poses in the official Axie Mixer',
       'New games to play together, and treats it has favourites among',
       'Duo photos: pair with a friend and both Axies are in the frame',
-      'Parts that evolve as bond grows: horn, then back, then tail',
       'A morning nudge, when your Axie wants to go out',
     ], core: [
-      'Part evolution follows Axie Core: the same stage two parts, earned by bond',
+      'The official Axie Mixer on screen, so each Axie moves as itself, not as a picture',
       'Your whole Ronin collection playable, each Axie with its own bond and voice',
       'An owned badge on photos and on the ladder, so real Axies stand out',
     ] },

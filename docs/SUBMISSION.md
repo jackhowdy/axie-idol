@@ -60,9 +60,8 @@ Axie is marked as owned, and a visit becomes an owned Axie with everything it ea
 minted and nothing is sold. Playing with an Axie you do not own is a visit, and a reason to want
 the real thing.
 
-**Where it goes.** Round 2: new games to play together, duo photos with a friend, part evolution
-that follows Axie Core (the same stage two parts, earned by bond), your whole Ronin collection
-playable. After the Vibeathon: Axies that stand higher in Axie Core come first, with special props
+**Where it goes.** Round 2: the official Axie Mixer on screen so each Axie moves as itself, new
+games to play together, duo photos with a friend, your whole Ronin collection playable. After the Vibeathon: Axies that stand higher in Axie Core come first, with special props
 only they can wear and chat that opens up for them; a social wall to see every Axie out in the
 world; ladder seasons; and work with Sky Mavis so time spent here counts for the Axie, the way AXP
 does. The roadmap is on the front page of the site.
