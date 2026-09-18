@@ -649,6 +649,8 @@ test('the front door: header with the mark, hero with a real photo and line, sec
   assert.match(fresh, /Joy days make a star/); assert.match(fresh, /How does it become an Idol\?/)
   assert.match(fresh, /Its class decides what makes it happiest/); assert.equal((fresh.match(/class="lp-class bd-class-/g) || []).length, 9, 'nine classes, nine loves')
   assert.match(fresh, /Something its class loves/); assert.match(fresh, /Fame belongs to the Axie/)
+  assert.match(fresh, /id="lp-prayer"/); assert.match(fresh, /The daily prayer, upgraded/); assert.match(fresh, /Press a button/); assert.match(fresh, /Play with an Axie/)
+  assert.match(fresh, /Does a joy day pay the prayer's rewards yet\?<\/dt><dd>Not yet/, 'the page never claims the rewards are wired')
   assert.match(fresh, /id="lp-why"/); assert.match(fresh, /Who cares if an Axie is an Idol\?/); assert.match(fresh, /Why does being an Idol matter\?/)
   assert.equal((fresh.match(/class="bd-card lp-why-card"/g) || []).length, 4, 'four reasons')
   assert.match(fresh, /It cannot be bought, only kept/); assert.match(fresh, /Stars win the month/)

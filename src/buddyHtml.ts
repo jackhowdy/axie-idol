@@ -330,7 +330,7 @@ export function happyCardHtml(b: Buddy, opts: { talk?: boolean } = {}): string {
   }
   // an older payload has no title yet: keep its plain streak pill; otherwise the road to Idol says it
   const streak = b.joy && b.joy.streak > 0 && !b.joy.title ? `<span class="bd-pill bd-pill-light">${b.joy.streak} joy day${b.joy.streak === 1 ? '' : 's'} in a row</span>` : ''
-  const goal = h.overjoyedToday ? 'Joy day won. Keep it up tomorrow.' : `Get to 90 for a joy day: +${b.joy?.joyBonus ?? 3} bond.`
+  const goal = h.overjoyedToday ? 'Joy day won. Keep it up tomorrow.' : `Get to 90 for a joy day, today's prayer earned: +${b.joy?.joyBonus ?? 3} bond.`
   const loves = b.loves ? `<p class="bd-love-line">${icon('heartFilled', 13)} <b>${esc(b.class ?? 'It')}s love ${esc(b.loves)}.</b> A photo with some is worth +5.</p>` : ''
   const birthday = b.birthday ? `<p class="bd-love-line bd-birthday">${icon('star', 13)} <b>Today is ${name}'s birthday.</b> A photo together is worth +10.</p>` : ''
   return `
@@ -397,7 +397,7 @@ export function joyHtml(h: { joyBonus: number; joyStreak: number; joy?: Buddy['j
     <div class="bd-moment">
       <span class="bd-moment-mark">${icon('heartFilled', 24)}</span>
       <div class="bd-hero-text">
-        <p class="bd-eyebrow">Joy day</p>
+        <p class="bd-eyebrow">Joy day · today's prayer, earned</p>
         <h2>${esc(b.name)} is overjoyed</h2>
         <p class="bd-small">You made its day. +${h.joyBonus} bond${h.joyStreak > 1 ? ` · ${h.joyStreak} joy days in a row` : ''}. Come back tomorrow and do it again: time alone wears happiness down.</p>
       </div>
@@ -900,6 +900,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'The official Axie Mixer on screen, so each Axie moves as itself, not as a picture',
       'Your whole Ronin collection playable, each Axie with its own bond and voice',
       'Ownership: sign in with Ronin and your Axie\'s level makes it easier to keep happy, and you see who took it out',
+      'Put the case to Sky Mavis with round one\'s numbers: a joy day in place of the daily tap',
     ] },
     { when: 'After', title: 'After the Vibeathon', state: 'Planned', items: [
       'The social wall: one place to see every Axie out in the world, and cheer',
@@ -909,7 +910,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
     ], core: [
       'Axies that stand higher in Axie Core come first: special props only they can wear, and a better place on the wall',
       'Chat opens up for them too: the higher an Axie stands in Axie Core, the more it has to say',
-      'A sturdier daily check-in: work with Sky Mavis so a joy day counts for that Axie, the way AXP does. A tap proves you opened an app; a joy day proves somebody took this Axie out',
+      'Make it official: a joy day pays the daily prayer\'s rewards, to the Axie that earned them. A tap proves you opened an app; a joy day proves somebody took this Axie out',
     ] },
   ]
   const roadCards = road.map((r, i) => `
@@ -935,7 +936,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       <header class="lp-header">
         <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(34)}${wordmarkSvg(24)}</a>
         <nav class="lp-nav" aria-label="Sections">
-          <a href="#lp-how">How it works</a><a href="#lp-happy">Happiness</a><a href="#lp-why">Why an Idol</a><a href="#lp-voice">The voice</a><a href="#lp-grow">Grow</a><a href="#lp-road">Roadmap</a><a href="#lp-faq">Questions</a>
+          <a href="#lp-prayer">The idea</a><a href="#lp-how">How it works</a><a href="#lp-happy">Happiness</a><a href="#lp-why">Why an Idol</a><a href="#lp-voice">The voice</a><a href="#lp-grow">Grow</a><a href="#lp-road">Roadmap</a><a href="#lp-faq">Questions</a>
         </nav>
         <div class="lp-header-cta">${primary}</div>
       </header>
@@ -944,12 +945,11 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <div class="lp-hero-copy">
           <p class="bd-eyebrow">Axie Vibeathon 2026 · Round one</p>
           <h1 class="lp-h1">Pick a real Axie. Make it a star.</h1>
-          <p class="lp-lede">${opts.eggs ? 'Hatch an Axie' : 'Choose any real Axie'} and take it everywhere in your camera. It talks about what it sees, it is happiest when you go places together, and enough happy days in a row turn it into an Idol.</p>
+          <p class="lp-lede"><b>The daily prayer, upgraded.</b> Instead of pressing a button once a day, you earn the day by playing with an Axie. ${opts.eggs ? 'Hatch an Axie' : 'Choose any real Axie'}, take it out in your camera, hear what it says, and make it happy. Enough happy days in a row turn it into an Idol.</p>
           <ul class="lp-goals">
             <li>${icon('camera', 15)}<span><b>Today:</b> take it somewhere and hear what it says</span></li>
-            <li>${icon('heartFilled', 15)}<span><b>Every day:</b> get its happiness to 90 for a joy day</span></li>
+            <li>${icon('heartFilled', 15)}<span><b>Every day:</b> get its happiness to 90 for a joy day. That is the day's prayer, earned by playing</span></li>
             <li>${icon('star', 15)}<span><b>The long game:</b> 3 joy days in a row is a Rising Star, 7 a Star, 14 an Idol, for as long as you keep the streak</span></li>
-            <li>${icon('trophy', 15)}<span><b>Where it goes:</b> a joy day as your Axie's daily check-in. Not one tap for an account, a real day out with one Axie. We want it to count for that Axie in Axie Core</span></li>
           </ul>
           <div class="lp-cta">${primary}${about ? '' : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
           ${about ? '' : `<p class="bd-small lp-alt">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
@@ -962,6 +962,35 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <span class="bd-w-tag">Your Axie. In your camera. With opinions.</span>
           <span class="lp-hero-happy">${icon('heartFilled', 14)} +15 happy · Happy</span>
         </div>
+      </section>
+
+      <section class="lp-section" id="lp-prayer">
+        <p class="bd-eyebrow">The idea</p>
+        <h2 class="lp-h2">The daily prayer, upgraded</h2>
+        <p class="lp-sub">Axie players already come back once a day to pray: one tap, and the streak pays. Axie Idol keeps the habit and replaces the tap with play. You do not press a button for the day's reward. You take an Axie out and make its day.</p>
+        <div class="lp-vs">
+          <div class="bd-card lp-vs-card lp-vs-old">
+            <p class="bd-eyebrow">The prayer today</p>
+            <b>Press a button</b>
+            <ul>
+              <li>One tap, once a day</li>
+              <li>Counts for an account, not for any Axie</li>
+              <li>The same tap whatever you own</li>
+              <li>A script can do it</li>
+            </ul>
+          </div>
+          <div class="bd-card lp-vs-card lp-vs-new">
+            <p class="bd-eyebrow">The prayer in Axie Idol</p>
+            <b>Play with an Axie</b>
+            <ul>
+              <li>A joy day: take one Axie out and get it to Overjoyed</li>
+              <li>Counts for that Axie, by its number, and its fame</li>
+              <li>Its class, level and parts shape the day</li>
+              <li>Needs real photos, each one looked at, with daily caps</li>
+            </ul>
+          </div>
+        </div>
+        <p class="bd-small lp-vs-note"><b>Where this stands.</b> The whole loop is live today: play, joy day, streak, titles. A joy day here pays bond, stardom and the month's crown. Paying the daily prayer's own rewards for a joy day is Sky Mavis's switch to flip. This is the thing worth flipping it for.</p>
       </section>
 
       <section class="lp-section" id="lp-how">
@@ -1089,6 +1118,8 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <dl class="lp-faq">
           <div><dt>Is it free?</dt><dd>Yes. There is nothing to buy and no ads.</dd></div>
           <div><dt>Do I need a wallet?</dt><dd>No. A wallet only matters if you want to bring an Axie you already own, or keep your Axies on an account across phones.</dd></div>
+          <div><dt>How is this an upgrade to the daily prayer?</dt><dd>The prayer is one tap a day. Here the day is earned: you play with an Axie until it is Overjoyed, which takes real photos and a little care. It is the same once-a-day habit, but it is about one Axie and it cannot be done by a script.</dd></div>
+          <div><dt>Does a joy day pay the prayer's rewards yet?</dt><dd>Not yet. Today a joy day pays bond, titles and the monthly crown inside Axie Idol. Paying the daily prayer's rewards for it needs Sky Mavis, and that is what we are asking for.</dd></div>
           <div><dt>How do I win?</dt><dd>Get your Axie's happiness to 90 in a day. That is a joy day. Joy days in a row are a streak.</dd></div>
           <div><dt>How does it become an Idol?</dt><dd>Joy days in a row. Three make a Rising Star, seven a Star, fourteen an Idol. It holds the title only as long as the streak lasts: miss a day and it starts again. It never blames you for it.</dd></div>
           <div><dt>Why does being an Idol matter?</dt><dd>Because it cannot be bought or kept by luck. An Idol is an Axie someone has made happy every single day for two weeks, and is still doing it today. Everyone sees it: in the Hall of Idols, in gold on the ladder, and on every photo it is in. And its joy days are worth double the bond, so Idols are the ones who win the month's crown.</dd></div>

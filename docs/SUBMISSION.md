@@ -9,15 +9,17 @@ variants are underneath each one.
 
 ## One-sentence pitch
 
-Pick a real Axie, take it everywhere in your camera, and keep it happy day after day until it
-becomes an Idol: it looks at every photo and talks back about what it actually sees.
+The daily prayer, upgraded: instead of pressing a button once a day, you earn the day by playing
+with a real Axie, taking it out in your camera, hearing what it says and keeping it happy until it
+becomes an Idol.
 
-- Shorter (under 100 characters): *Pick a real Axie, take it places, keep it happy, and raise it into an Idol.*
+- Shorter (under 100 characters): *The daily prayer, upgraded: earn the day by playing with a real Axie, not by tapping.*
 - Tagline: *Pick a real Axie. Make it a star.*
 
 ## Short description
 
-Axie Idol is a pet game you play with your camera. Your Axie rides along in every photo and answers
+Axie Idol is an upgrade to the daily prayer: the same once-a-day habit, earned by playing with an
+Axie instead of pressing a button. It is a pet game you play with your camera. Your Axie rides along in every photo and answers
 with one line about what it really sees, drawn onto the picture. The game is its happiness: photos,
 new places, captions, pats, treats and a quick game of catch lift it; time alone wears it down. Get
 it to Overjoyed to win the day; win days in a row and it becomes a Rising Star, a Star, then an
@@ -26,6 +28,13 @@ Idol, for as long as you keep the streak. Every Axie is a real one, with its rea
 - Shorter (under 200 characters): *A pet Axie in your camera. It talks about what it sees in your photos, remembers places, and gets bored if you leave it. Keep it happy to win the day. Any real Axie, no wallet.*
 
 ## Full description
+
+**The idea.** Axie players already come back once a day to pray: one tap, and the streak pays.
+Axie Idol keeps the habit and replaces the tap with play. The day is earned with a joy day: take
+one Axie out and get it to Overjoyed. That counts for a particular Axie instead of an account, its
+class and level shape the day, and it needs real photos, each one looked at, so a script cannot do
+it. The whole loop is live now and pays bond, titles and the monthly crown. Paying the daily
+prayer's own rewards for a joy day needs Sky Mavis, and that is the proposal.
 
 **What it is.** Axie Idol turns an Axie into a companion instead of a fighter. Every Axie in it is
 a real Axie. You meet three (found among the millions on Ronin), pick one or shuffle, or type a
@@ -74,9 +83,8 @@ the real thing.
 **Where it goes.** Round 2: the official Axie Mixer on screen so each Axie moves as itself, new
 games to play together, duo photos with a friend, your whole Ronin collection playable. After the Vibeathon: Axies that stand higher in Axie Core come first, with special props
 only they can wear and chat that opens up for them; a social wall to see every Axie out in the
-world; ladder seasons; and a sturdier daily check-in: work with Sky Mavis so a joy day counts for
-that Axie, the way AXP does. A tap proves you opened an app; a joy day proves somebody took this
-Axie out. The roadmap is on the front page of the site.
+world; ladder seasons; and making it official: a joy day pays the daily prayer's rewards, to the
+Axie that earned them. The roadmap is on the front page of the site.
 
 **Built with.** Vite, TypeScript and three.js in the browser; a Cloudflare Worker with one Durable
 Object behind it; 207 automated tests. Built by one person with Claude Code; Google Gemini looks at

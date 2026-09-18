@@ -4,6 +4,13 @@
 
 Play it: **https://axieidol.com** (phone or desktop, no wallet, no account)
 
+**The idea: the daily prayer, upgraded.** Axie players already come back once a day to pray: one
+tap, and the streak pays. Axie Idol keeps that habit and replaces the tap with play. The day is
+earned with a *joy day*: take one Axie out and get it to Overjoyed. It counts for a particular
+Axie, not an account; the Axie's class and level shape the day; and it takes real photos, each one
+looked at, so a script cannot do it. The loop is live and pays bond, titles and the monthly crown.
+Paying the daily prayer's own rewards for a joy day needs Sky Mavis, and that is the proposal.
+
 Axie Idol is a pet game. You pick a real Axie (any Axie, by its number, or one you own), it rides
 along in your camera, and it talks: one line on every photo, about what it actually sees. The game is to **keep it
 happy**. Photos, new places, a caption, a pat, a treat and a game of catch lift its happiness; time alone
@@ -112,7 +119,7 @@ gets stronger the more it is cared for. Axie Idol is built on that and nothing e
 |---|---|
 | **Round 1 (live)** | Meet a real Axie (three offered, any by number, your own via Ronin), a nickname, the voice on every photo, memory, happiness (pats, treats, a catching game), stardom (Rising Star, Star, Idol, the Hall of Idols), wishes, growth ladder, scrapbook, monthly Idol ladder. |
 | **Round 2** | Ownership that pays (sign in with Ronin and your Axie's level makes it easier to keep happy; see who took your Axie out), the official Axie Mixer on screen so each Axie moves as itself, new games to play together, duo photos with a friend, your whole Ronin collection playable, a morning nudge. |
-| **After** | Axies that stand higher in Axie Core come first: special props only they can wear, chat that opens up for them, a better place on the social wall. The social wall itself. Ladder seasons. A sturdier daily check-in: work with Sky Mavis so a joy day counts for that Axie, the way AXP does. |
+| **After** | Axies that stand higher in Axie Core come first: special props only they can wear, chat that opens up for them, a better place on the social wall. The social wall itself. Ladder seasons. Making it official: a joy day pays the daily prayer's rewards, to the Axie that earned them. |
 
 The same roadmap is on the front page of the site.
 
