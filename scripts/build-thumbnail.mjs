@@ -1,5 +1,5 @@
 // Renders the submission thumbnail (1280 x 720) from real pieces of the game: one of the entrant's
-// photos, the kit Axie sticker, a real line from the voice, and the wordmark from build-icons.mjs.
+// photos, a real Axie (#2660, its official art trimmed to the creature), a real line from the voice, and the wordmark from build-icons.mjs.
 // Run: node scripts/build-thumbnail.mjs
 import sharp from 'sharp'
 import { readFileSync } from 'node:fs'
@@ -47,7 +47,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.
     <rect x="-10" y="-10" width="392" height="652" rx="36" fill="#fff"/>
     <g clip-path="url(#card)">
       <image x="0" y="0" width="372" height="632" preserveAspectRatio="xMidYMid slice" xlink:href="data:image/jpeg;base64,${b64('public/samples/playground.jpg')}"/>
-      <image x="96" y="392" width="210" height="210" xlink:href="data:image/png;base64,${b64('public/stickers/kotaro.png')}"/>
+      <image x="80" y="420" width="240" height="205" preserveAspectRatio="xMidYMax meet" xlink:href="data:image/png;base64,${b64(process.env.THUMB_AXIE || 'public/samples/axie-2660.png')}"/>
     </g>
     <g transform="translate(26 236)">
       <path d="M150 120 l18 26 l18 -26z" fill="#fff" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>

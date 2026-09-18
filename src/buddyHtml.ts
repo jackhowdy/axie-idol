@@ -863,7 +863,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <div class="bd-w-shot lp-hero-shot" aria-hidden="true">
           <img class="bd-w-photo" src="/welcome/stairs.jpg" alt="">
           <div class="bd-w-bubbles">${bubbles}</div>
-          <img class="bd-w-axie" src="/stickers/kotaro.png" alt="">
+          <img class="bd-w-axie" src="/samples/axie-2660.png" alt="">
           <span class="bd-w-tag">A real photo, a real line</span>
           <span class="lp-hero-happy">${icon('heartFilled', 14)} +15 happy · Happy</span>
         </div>
