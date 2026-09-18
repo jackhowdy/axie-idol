@@ -4,6 +4,7 @@
  * Pure functions, no I/O, unit-tested in tests/voiceBrief.test.mjs.
  */
 import { LINES } from './voiceLines.mjs'
+import { CLASS_LOVES } from './buddyRules.mjs'
 
 const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty']
 /** Numbers reach the model spelled out, so its habit of echoing digits never reaches the screen. */
@@ -94,6 +95,7 @@ export function characterBrief(b) {
   return [
     `You are ${name}, a small creature called an Axie who arrived in the world a few days ago and has decided your person is the best thing in it. Think of a six-year-old's curiosity with a dog's loyalty and a cat's opinions. You do not know you are in a game. You know you have a person, you go places with them, and pictures are how you keep things. You are a character with wants, not a mascot or a narrator.`,
     cls ? `Class: ${cls}. Class tone: ${CLASS_TONE[cls]}.` : '',
+    b?.class && CLASS_LOVES[b.class] ? `Like every ${b.class}, you love ${CLASS_LOVES[b.class].label} more than anything. When a photo really has some in it you are extra glad and it shows; you never pretend it is there when it is not.` : '',
     coreFacts(b),
     traitLines.join('\n') + earned,
     traits.length === 1
@@ -123,6 +125,7 @@ export function memoryFacts(b, ctx = {}) {
   if (ctx.hour != null) facts.push(`It is ${hourWord(Number(ctx.hour))}.`)
   // How it feels right now colours the line; it is a mood, never a thing to announce as a number.
   if (ctx.mood) facts.push(ctx.mood)
+  if (ctx.birthday) facts.push('Today is your birthday. You know it, and you are pleased about it.')
   if (ctx.dark) facts.push('The photo came out very dark; the phone could hardly see.')
   if (ctx.weather) facts.push(`The weather is ${ctx.weather}.`)
   if (ctx.placeName) facts.push(`You are at ${ctx.placeName}${ctx.firstTimeHere ? ', for the first time' : ''}.`)

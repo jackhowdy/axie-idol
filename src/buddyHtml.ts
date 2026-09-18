@@ -270,7 +270,8 @@ export function hatchHtml(b: Buddy, lines: string[]): string {
       <div class="bd-card bd-center bd-hatch-card">
         <div class="bd-hero-3d bd-hero-3d-big" data-face="buddy"></div>
         ${b.class ? `<span class="bd-badge">${b.kind === 'owned' ? 'Owned' : b.kind === 'visit' ? 'Real Axie' : 'Wild'} · ${esc(b.class)}${coreLevel(b)}</span>` : ''}
-        <div class="bd-chips">${parts}</div>
+        <div class="bd-chips">${b.kind !== 'wild' ? coreMarksHtml(b.core) : parts}</div>
+        ${b.kind !== 'wild' && b.loves ? `<p class="bd-small bd-muted">${esc(b.class ?? 'It')}s love ${esc(b.loves)}: photos with some make it extra happy.</p>` : ''}
       </div>
       ${real ? nicknaming : hatched ? '' : naming}
     </div>
@@ -328,14 +329,16 @@ export function happyCardHtml(b: Buddy, opts: { talk?: boolean } = {}): string {
   }
   // an older payload has no title yet: keep its plain streak pill; otherwise the road to Idol says it
   const streak = b.joy && b.joy.streak > 0 && !b.joy.title ? `<span class="bd-pill bd-pill-light">${b.joy.streak} joy day${b.joy.streak === 1 ? '' : 's'} in a row</span>` : ''
-  const goal = h.overjoyedToday ? 'Joy day won. Keep it up tomorrow.' : `Get to 90 for a joy day: +3 bond.`
+  const goal = h.overjoyedToday ? 'Joy day won. Keep it up tomorrow.' : `Get to 90 for a joy day: +${b.joy?.joyBonus ?? 3} bond.`
+  const loves = b.loves ? `<p class="bd-love-line">${icon('heartFilled', 13)} <b>${esc(b.class ?? 'It')}s love ${esc(b.loves)}.</b> A photo with some is worth +5.</p>` : ''
+  const birthday = b.birthday ? `<p class="bd-love-line bd-birthday">${icon('star', 13)} <b>Today is ${name}'s birthday.</b> A photo together is worth +10.</p>` : ''
   return `
       <div class="bd-card bd-happy bd-happy-${esc(h.moodId)}">
         <div class="bd-happy-head"><span class="bd-label">Happiness</span><span class="bd-hearts">${hearts}</span></div>
         <div class="bd-meter-row"><b>${esc(h.mood)} · ${h.value}</b><span>${goal}</span></div>
         <div class="bd-meter bd-meter-happy"><i style="width:${Math.max(3, h.value)}%"></i><u style="left:90%"></u></div>
         <p class="bd-small">${say[h.moodId] || ''} ${streak}</p>
-        ${starProgressHtml(b.joy)}
+        ${starProgressHtml(b.joy)}${birthday}${loves}
         <div class="bd-happy-acts">
           <button type="button" class="bd-btn bd-btn-ghost" data-action="pet" title="Pat ${name}">${icon('heartFilled', 16)} Pat${h.petsLeft ? '' : ' <small>done</small>'}</button>
           <button type="button" class="bd-btn bd-btn-ghost" data-action="treat"${(h.treatsLeft ?? 2) > 0 ? '' : ' disabled'}>${icon('star', 16)} Treat <small>${h.treatsLeft ?? 2} left</small></button>
@@ -440,13 +443,46 @@ export function playResultHtml(b: Buddy, r: { line: string; catches: number; rou
  * shuffle, a number box for a favourite, and the wallet way in. The way into the game now that
  * eggs are off: every Axie here is a real one.
  */
-export type MeetCardView = { id: string; name: string; class: string | null; level: number | null; image: string }
+export type MeetCardView = { id: string; name: string; class: string | null; level: number | null; image: string; rank?: string | null; evolved?: number; special?: string[]; loves?: string | null; players?: number }
+
+/**
+ * Axie Core, as marks: what this Axie really is on Ronin, shown wherever it appears. Its rank word
+ * and level, how many of its parts have evolved, the special genes it carries, the year it was born.
+ */
+export function coreMarksHtml(c: { level?: number | null; rank?: string | null; evolved?: number; special?: string[]; birthYear?: number | null } | null | undefined): string {
+  if (!c) return ''
+  const chips: string[] = []
+  if (c.level) chips.push(`<span class="bd-chip bd-chip-core">${c.rank ? `${esc(c.rank)} · ` : ''}level ${c.level}</span>`)
+  if (c.evolved) chips.push(`<span class="bd-chip bd-chip-evolved">${icon('star', 10)} Evolved ×${c.evolved}</span>`)
+  for (const g of c.special || []) chips.push(`<span class="bd-chip bd-chip-mystic">${icon('star', 10)} ${esc(g)}</span>`)
+  if (c.birthYear) chips.push(`<span class="bd-chip">born ${c.birthYear}</span>`)
+  return chips.join('')
+}
+
+/** Fame belongs to the Axie: what everyone who plays this Axie number has done for its name. */
+export function fameHtml(f: { axieId: string; players: number; joyDays: number; photos: number; bestStreak: number; titles: { idol: number; star: number; rising: number }; names: string[] }, b: Buddy): string {
+  const reigning = [f.titles.idol ? `${f.titles.idol} Idol${f.titles.idol === 1 ? '' : 's'}` : '', f.titles.star ? `${f.titles.star} Star${f.titles.star === 1 ? '' : 's'}` : '', f.titles.rising ? `${f.titles.rising} Rising Star${f.titles.rising === 1 ? '' : 's'}` : ''].filter(Boolean).join(', ')
+  return `
+    <p class="bd-eyebrow">Axie #${esc(f.axieId)} · its fame</p>
+    <h2>Fame belongs to the Axie</h2>
+    <p class="bd-small">Everyone who plays Axie #${esc(f.axieId)} adds to the same Axie's name. This is what it has so far.</p>
+    <div class="lp-odds bd-fame">
+      <div class="lp-odd"><b>${f.players}</b><small>${f.players === 1 ? 'person plays it' : 'people play it'}</small></div>
+      <div class="lp-odd"><b>${f.joyDays}</b><small>joy days</small></div>
+      <div class="lp-odd"><b>${f.photos}</b><small>photos</small></div>
+      <div class="lp-odd"><b>${f.bestStreak}</b><small>best streak</small></div>
+    </div>
+    <p class="bd-small">${reigning ? `Right now it is ${esc(reigning)} with the people who play it.` : 'Nobody holds a title with it right now. Three joy days in a row would make it a Rising Star.'}${f.names.length ? ` People call it: ${f.names.map(esc).join(', ')}.` : ''}</p>
+    <p class="bd-small bd-muted">Next stage: if it is yours, signing in with Ronin will show you who took your Axie out.</p>
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="close-sheet">Back to ${esc(b.name)}</button></div>`
+}
 export function meetHtml(cards: MeetCardView[], opts: { address?: string | null; hasAxie?: boolean } = {}): string {
   const cardHtml = cards.map((c) => `
         <button type="button" class="bd-card bd-meet-card" data-action="visit-go" data-id="${esc(c.id)}">
           <span class="bd-meet-art"><img src="${esc(c.image)}" alt="" loading="lazy"></span>
           <b>${esc(c.name)}</b>
-          <span class="bd-muted">#${esc(c.id)}${c.class ? ` · ${esc(c.class)}` : ''}${c.level ? ` · Axie Core level ${c.level}` : ''}</span>
+          <span class="bd-muted">#${esc(c.id)}${c.class ? ` · ${esc(c.class)}` : ''}${c.loves ? ` · loves ${esc(c.loves)}` : ''}</span>
+          <span class="bd-chips bd-meet-marks">${coreMarksHtml(c)}${c.players ? `<span class="bd-chip">${c.players} playing</span>` : ''}</span>
           <span class="bd-pill bd-pill-ok">Play with ${esc(c.name.length > 12 ? 'this one' : c.name)}</span>
         </button>`).join('')
   return `
@@ -612,7 +648,8 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
           <div class="bd-hero-text">
             <b>${esc(levelTitle(b))}</b>
             <span class="bd-muted">${who} · ${b.snapCount} snaps · ${b.moments.length} of ${b.momentsTotal} moments</span>
-            <div class="bd-chips">${b.traits.map((t) => chipHtml(t)).join('')}${b.earnedTrait ? chipHtml(b.earnedTrait, 'earned') : ''}${b.mystic ? chipHtml('Mystic', 'mystic') : ''}</div>
+            <div class="bd-chips">${b.kind !== 'wild' ? coreMarksHtml(b.core) : `${b.traits.map((t) => chipHtml(t)).join('')}${b.mystic ? chipHtml('Mystic', 'mystic') : ''}`}${b.earnedTrait ? chipHtml(b.earnedTrait, 'earned') : ''}</div>
+            ${b.kind !== 'wild' && b.axieId ? `<a class="bd-link bd-small" data-action="fame">Axie #${esc(b.axieId)}'s fame ${icon('chevron', 11)}</a>` : ''}
           </div>
         </div>
         ${meter}
@@ -849,7 +886,8 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
     ], core: [
       'Every Axie in the game exists on Ronin. None is invented',
       'Each plays as itself: its real parts, its class and its Axie Core level reach its voice',
-      'Real ownership shows: a Ronin sign-in marks an Axie Owned on Home and on the ladder',
+      'Its class decides what makes it happiest; its level, evolved parts and special genes are marked on it everywhere',
+      'Fame belongs to the Axie: everyone who plays Axie #2660 adds to the same name',
       'Nothing to buy and nothing minted: the Axie is the point, not a token',
     ] },
     { when: 'Next', title: 'Round two', state: 'Next stage of the Vibeathon', items: [
@@ -860,7 +898,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
     ], core: [
       'The official Axie Mixer on screen, so each Axie moves as itself, not as a picture',
       'Your whole Ronin collection playable, each Axie with its own bond and voice',
-      'An owned badge on photos and on the ladder, so real Axies stand out',
+      'Ownership: sign in with Ronin and your Axie\'s level makes it easier to keep happy, and you see who took it out',
     ] },
     { when: 'After', title: 'After the Vibeathon', state: 'Planned', items: [
       'The social wall: one place to see every Axie out in the world, and cheer',
@@ -888,7 +926,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
   // The game in one glance: the same five moods and the same numbers the server plays by.
   const moods: Array<[string, string, string]> = [['bored', 'Bored', '0'], ['restless', 'Restless', '20'], ['content', 'Content', '45'], ['happy', 'Happy', '70'], ['overjoyed', 'Overjoyed', '90']]
   const moodRow = moods.map(([id, label, from]) => `<span class="lp-mood lp-mood-${id}"><b>${label}</b><small>from ${from}</small></span>`).join('')
-  const lifts: Array<[string, string]> = [['+10', 'A photo together'], ['+5', 'Something it has not seen lately'], ['+10', 'A place it has never been'], ['+20', 'Today\'s wish comes true'], ['+3', 'A caption: you told it about the photo'], ['+2', 'A pat, five a day'], ['+8', 'A treat, two a day'], ['+3', 'Each star caught in a game of catch'], ['+3', 'Dressing it up']]
+  const lifts: Array<[string, string]> = [['+10', 'A photo together'], ['+5', 'Something it has not seen lately'], ['+10', 'A place it has never been'], ['+20', 'Today\'s wish comes true'], ['+3', 'A caption: you told it about the photo'], ['+2', 'A pat, five a day'], ['+8', 'A treat, two a day'], ['+3', 'Each star caught in a game of catch'], ['+3', 'Dressing it up'], ['+5', 'Something its class loves: water for an Aquatic, sky for a Bird'], ['+10', 'A photo on its real birthday']]
   const liftRows = lifts.map(([n, what]) => `<li><b>${n}</b><span>${esc(what)}</span></li>`).join('')
   const heartsDemo = Array.from({ length: 5 }, (_, i) => `<span class="bd-heart${i < 4 ? ' on' : ''}">${icon(i < 4 ? 'heartFilled' : 'heart', 18)}</span>`).join('')
   return `
@@ -1019,9 +1057,14 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <div class="lp-odds">
           <div class="lp-odd"><b>3</b><small>to meet</small><span>We show you three real Axies. Pick one, or shuffle for three more.</span></div>
           <div class="lp-odd"><b>#</b><small>by number</small><span>Type a favourite's number and it comes as itself.</span></div>
-          <div class="lp-odd"><b>60</b><small>levels</small><span>Its Axie Core level, its class and its parts reach its voice.</span></div>
+          <div class="lp-odd"><b>60</b><small>levels</small><span>Its Axie Core level, evolved parts and special genes are marked on it everywhere, and it knows them.</span></div>
           <div class="lp-odd"><b>0</b><small>wallets needed</small><span>Ronin sign-in is only for bringing the Axies you own.</span></div>
         </div>`}
+        <div class="bd-card lp-classes">
+          <b>Its class decides what makes it happiest</b>
+          <span>Pick an Aquatic and you will be looking for water. Pick a Bird and you will be looking up. A photo with the thing its class loves is worth more happiness, so the Axie you choose changes where you go.</span>
+          <div class="lp-class-row">${([['Beast', 'open ground'], ['Aquatic', 'water'], ['Plant', 'growing things'], ['Bird', 'sky and high places'], ['Bug', 'small things'], ['Reptile', 'warm, sunny spots'], ['Dawn', 'morning light'], ['Dusk', 'evening light'], ['Mech', 'machines']] as Array<[string, string]>).map(([c, l]) => `<span class="lp-class bd-class-${c.toLowerCase()}"><b>${c}</b><small>${l}</small></span>`).join('')}</div>
+        </div>
         <div class="bd-card lp-real">
           <div><b>${opts.eggs ? 'Already love an Axie? Play as it.' : 'Its official art, its real self.'}</b>
           <span>${opts.eggs ? "Type any real Axie's number. It" : 'A real Axie'} arrives as itself, in its official art, with its real parts, its class and its Axie Core level, and it knows them. No wallet. If it is yours, sign in with Ronin later and it becomes your owned Axie with everything it earned.</span></div>

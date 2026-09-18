@@ -4288,3 +4288,31 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
   .lp-why-card > span:last-child { font-size: 14px; }
 }
 @media (min-width: 600px) and (max-width: 899px) { .lp-why { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---- Axie Core marks, class loves, fame ---- */
+.bd-chip-core { background: #E4F0FF; color: #0B5FC9; }
+.bd-chip-evolved { background: #FFF1CC; color: #8A5A00; }
+.bd-chip-evolved svg, .bd-chip-mystic svg { fill: currentColor; }
+.bd-meet-marks { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 2px; }
+.bd-love-line { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin: 0; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.bd-love-line svg { color: #E0355A; flex: 0 0 auto; }
+.bd-love-line b { color: var(--text); }
+.bd-birthday svg { color: #E89B12; fill: #FFC531; }
+.bd-fame { margin: 4px 0; }
+.lp-classes { gap: 8px; padding: 14px; margin-top: 6px; border-top: 4px solid #E0355A; }
+.lp-classes > b { font-family: var(--font-display); font-weight: 900; font-size: 15px; }
+.lp-classes > span { font-size: 13px; font-weight: 700; color: var(--muted); line-height: 1.45; }
+.lp-class-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.lp-class { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: 12px; background: var(--bg); border-left: 4px solid var(--border); }
+.lp-class b { font-size: 12.5px; }
+.lp-class small { font-size: 10.5px; font-weight: 800; color: var(--muted); line-height: 1.25; }
+.lp-class.bd-class-beast { border-left-color: #F6B04E; } .lp-class.bd-class-aquatic { border-left-color: #5FB7F5; } .lp-class.bd-class-plant { border-left-color: #8ED26B; }
+.lp-class.bd-class-bird { border-left-color: #F58AA8; } .lp-class.bd-class-bug { border-left-color: #F26D5B; } .lp-class.bd-class-reptile { border-left-color: #B08BE6; }
+.lp-class.bd-class-dawn { border-left-color: #A9B7F5; } .lp-class.bd-class-dusk { border-left-color: #2E8F8A; } .lp-class.bd-class-mech { border-left-color: #8C97A6; }
+@media (max-width: 599px) { .bd-meet-marks { justify-content: flex-start; } }
+@media (min-width: 900px) {
+  .lp-classes { padding: 22px; }
+  .lp-classes > b { font-size: 17px; } .lp-classes > span { font-size: 14px; }
+  .lp-class-row { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 8px; }
+  .lp-class b { font-size: 13.5px; } .lp-class small { font-size: 11px; }
+}

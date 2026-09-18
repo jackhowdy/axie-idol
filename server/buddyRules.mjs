@@ -238,6 +238,8 @@ export const HAPPY_DECAY_PER_HOUR = 1.5
 export const HAPPY = {
   photo: 10, sameAgain: 3, unclear: 2, newThings: 5, newPlace: 10, wish: 20,
   talk: 4, talksPerDay: 5, pet: 2, petsPerDay: 5, dressUp: 3,
+  // a photo with something its class loves; and a photo on its real birthday
+  classLove: 5, birthday: 10,
   // telling it about the photo (a caption), a treat, and the catching game
   caption: 3, treat: 8, treatsPerDay: 2, playCatch: 3, playRounds: 3, playsPerDay: 3,
   overjoyedAt: 90, joyBonus: 3,
@@ -259,7 +261,7 @@ export function decayed(value, hours) {
   return Math.max(0, Math.min(100, value - Math.max(0, hours) * HAPPY_DECAY_PER_HOUR))
 }
 /** What one photo is worth, and why, from what the Axie saw in it. */
-export function photoJoy({ labels = [], previous = [], recent = [], isNewPlace = false, wishDone = false, judged = true, caption = '' }) {
+export function photoJoy({ labels = [], previous = [], recent = [], isNewPlace = false, wishDone = false, judged = true, caption = '', cls = null, birthday = false }) {
   const reasons = []
   let delta
   if (judged && !labels.length) { delta = HAPPY.unclear; reasons.push('could not see much') }
@@ -270,6 +272,10 @@ export function photoJoy({ labels = [], previous = [], recent = [], isNewPlace =
   }
   if (isNewPlace) { delta += HAPPY.newPlace; reasons.push('a new place') }
   if (wishDone) { delta += HAPPY.wish; reasons.push('its wish came true') }
+  // Axie Core: its class decides what it loves, and its real birthday is a good day
+  const loved = classLove(cls, labels)
+  if (loved) { delta += HAPPY.classLove; reasons.push(`${cls}s love ${loved.label}`) }
+  if (birthday) { delta += HAPPY.birthday; reasons.push('it is its birthday') }
   // A caption is you telling it about the photo; two letters are not a sentence.
   if (String(caption || '').trim().length >= 3) { delta += HAPPY.caption; reasons.push('you told it about the photo') }
   return { delta, reasons }
@@ -299,4 +305,40 @@ export function titleFor({ streak = 0 } = {}) {
 export function nextTitle({ streak = 0 } = {}) {
   const next = STAR_TITLES[STAR_TITLES.indexOf(titleFor({ streak })) + 1]
   return next ? { id: next.id, name: next.name, needStreak: next.streak, haveStreak: Math.min(streak, next.streak) } : null
+}
+
+/**
+ * Axie Core in the game. An Axie's class decides what makes it happiest: a photo with one of the
+ * things its class loves is worth a little more, so which Axie you pick changes where you take it.
+ * `label` is how the screen says it; `words` are matched against the plain nouns the voice model
+ * reports seeing (whole words, so "plant" never matches "planter").
+ */
+export const CLASS_LOVES = {
+  Beast: { label: 'open ground', words: ['field', 'grass', 'park', 'playground', 'path', 'road', 'trail', 'hill', 'dog', 'ball', 'yard', 'pitch'] },
+  Aquatic: { label: 'water', words: ['water', 'sea', 'ocean', 'river', 'lake', 'pond', 'pool', 'fountain', 'puddle', 'rain', 'beach', 'boat', 'ferry', 'fish', 'tap', 'sink', 'bath'] },
+  Plant: { label: 'growing things', words: ['tree', 'plant', 'flower', 'bush', 'garden', 'leaf', 'leaves', 'grass', 'forest', 'hedge', 'vine', 'pot plant'] },
+  Bird: { label: 'sky and high places', words: ['sky', 'cloud', 'roof', 'rooftop', 'tower', 'bridge', 'balcony', 'bird', 'kite', 'plane', 'hilltop', 'mountain', 'stairs', 'steps'] },
+  Bug: { label: 'small things', words: ['insect', 'ant', 'bee', 'butterfly', 'snail', 'pebble', 'stone', 'coin', 'key', 'button', 'toy', 'crumb', 'shell', 'seed', 'bead'] },
+  Reptile: { label: 'warm, sunny spots', words: ['sun', 'sunlight', 'sunshine', 'rock', 'sand', 'beach', 'wall', 'bench', 'pavement', 'desert', 'heater', 'fire', 'lamp'] },
+  Dawn: { label: 'morning light', words: ['sunrise', 'window', 'light', 'sky', 'curtain', 'breakfast', 'coffee', 'tea'] },
+  Dusk: { label: 'evening light', words: ['sunset', 'night', 'moon', 'star', 'lamp', 'streetlight', 'shadow', 'candle', 'lantern', 'neon'] },
+  Mech: { label: 'machines', words: ['car', 'bus', 'train', 'tram', 'bike', 'bicycle', 'machine', 'robot', 'screen', 'computer', 'phone', 'wheel', 'engine', 'crane', 'escalator', 'lift'] },
+}
+/** The loved thing in what it saw, or null. */
+export function classLove(cls, labels = []) {
+  const loves = CLASS_LOVES[cls]
+  if (!loves) return null
+  for (const raw of labels) {
+    const words = String(raw || '').toLowerCase().split(/[^a-z]+/).filter(Boolean)
+    const text = words.join(' ')
+    const hit = loves.words.find((w) => (w.includes(' ') ? text.includes(w) : words.includes(w) || words.includes(w + 's')))
+    if (hit) return { thing: String(raw), label: loves.label }
+  }
+  return null
+}
+/** What an Axie Core level reads as: the rank word beside the number. */
+export function coreRank(level) {
+  const n = Number(level)
+  if (!Number.isFinite(n) || n < 1) return null
+  return n >= 50 ? 'Master' : n >= 30 ? 'Veteran' : n >= 10 ? 'Trained' : 'Rookie'
 }

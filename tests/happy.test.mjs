@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createBuddyModule } from '../server/buddy.mjs'
-import { HAPPY, HAPPY_START, moodFor, decayed, photoJoy, titleFor, nextTitle } from '../server/buddyRules.mjs'
+import { HAPPY, HAPPY_START, moodFor, decayed, photoJoy, titleFor, nextTitle, classLove, coreRank, CLASS_LOVES } from '../server/buddyRules.mjs'
 import { characterBrief, coreFacts, memoryFacts } from '../server/voiceBrief.mjs'
 
 const HOUR = 36e5
@@ -244,4 +244,38 @@ test('a run of joy days earns the titles and pays more bond; a missed day takes 
   assert.equal(m.body.idols.length, 1); assert.equal(m.body.idols[0].name, 'Sunny'); assert.equal(m.body.idols[0].streak, 14)
   r.clock.t += 3 * 24 * HOUR
   assert.deepEqual((await r.call('/api/ladder/monthly', { method: 'GET' })).body.idols, [], 'a lapsed Idol leaves the Hall')
+})
+
+test('Axie Core rules: a class loves its own things, whole words only, and a level reads as a rank', () => {
+  assert.deepEqual(classLove('Aquatic', ['bench', 'fountain']), { thing: 'fountain', label: 'water' })
+  assert.equal(classLove('Aquatic', ['slide', 'roof']), null)
+  assert.equal(classLove('Plant', ['planter box']), null, 'a planter is not a plant')
+  assert.ok(classLove('Plant', ['trees']), 'plurals count'); assert.ok(classLove('Plant', ['pot plant']))
+  assert.equal(classLove('Nope', ['water']), null)
+  assert.equal(Object.keys(CLASS_LOVES).length, 9, 'every class, the secret ones too')
+  const plain = photoJoy({ labels: ['fountain'] }).delta
+  const loved = photoJoy({ labels: ['fountain'], cls: 'Aquatic' })
+  assert.equal(loved.delta, plain + HAPPY.classLove); assert.ok(loved.reasons.includes('Aquatics love water'))
+  assert.equal(photoJoy({ labels: ['fountain'], cls: 'Bird' }).delta, plain, 'a Bird does not care about fountains')
+  assert.equal(photoJoy({ labels: ['slide'], birthday: true }).delta, photoJoy({ labels: ['slide'] }).delta + HAPPY.birthday)
+  assert.deepEqual([1, 9, 10, 29, 30, 49, 50, 60].map(coreRank), ['Rookie', 'Rookie', 'Trained', 'Trained', 'Veteran', 'Veteran', 'Master', 'Master'])
+  assert.equal(coreRank(null), null); assert.equal(coreRank(0), null)
+})
+
+test('a real Axie carries its marks, loves what its class loves, has a birthday, and its fame adds up across players', async () => {
+  const born = new Date('2018-09-18T06:00:00Z').getTime() / 1000 // the rig's clock is 18 September
+  const rec = { ...REAL, class: 'Aquatic', xp: 10, xpToLevelUp: 90, birthDate: born, parts: [{ type: 'horn', name: 'Winter Branch', class: 'Beast', stage: 2, specialGenes: 'Mystic' }, { type: 'tail', name: 'Hatsune', class: 'Plant', stage: 1, specialGenes: null }, { type: 'back', name: 'Anemone', class: 'Aquatic', stage: 2, specialGenes: 'NightmareShiny' }] }
+  const r = rig({ genes: async () => rec, env: { BUDDY: '1' } })
+  const v = await r.call('/api/buddy/visit', { body: { axieId: '2660' } })
+  const a = v.body.active
+  assert.equal(a.core.rank, 'Master'); assert.equal(a.core.evolved, 2); assert.deepEqual(a.core.special, ['Mystic', 'Nightmare Shiny'])
+  assert.equal(a.loves, 'water'); assert.equal(a.birthday, true)
+  const s = await r.snap('p1', { labels: ['fountain', 'bench'] })
+  assert.ok(s.happy.reasons.includes('Aquatics love water')); assert.ok(s.happy.reasons.includes('it is its birthday'))
+  await r.call('/api/buddy/visit', { body: { axieId: '2660' }, device: 'second-player' })
+  const f = await r.call('/api/buddy/fame', { method: 'GET' })
+  assert.equal(f.status, 200); assert.equal(f.body.axieId, '2660'); assert.equal(f.body.players, 2); assert.equal(f.body.photos, 1)
+  assert.deepEqual(f.body.titles, { idol: 0, star: 0, rising: 0 })
+  r.clock.t += 24 * HOUR
+  assert.equal((await r.call('/api/buddy', { method: 'GET' })).body.active.birthday, false, 'the day after is not its birthday')
 })

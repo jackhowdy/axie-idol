@@ -61,7 +61,11 @@ Idol ladder. Photos go in a scrapbook; rare moments (first rain, golden hour, a 
 are collected as you find them.
 
 **Axie Core fit.** The whole game is about the Axie itself: real parts, real classes, real
-ownership and a reason to care about one Axie for a long time. Real Axies play as themselves from
+ownership and a reason to care about one Axie for a long time. An Axie's class decides what makes
+it happiest (water for an Aquatic, sky for a Bird), so the Axie you pick changes where you go. Its
+Axie Core level, evolved parts, special genes and birthday are marked on it everywhere and reach
+its voice. And fame belongs to the Axie, not to one player: everyone who plays Axie #2660 adds to
+the same Axie's name. Real Axies play as themselves from
 read-only Sky Mavis data, with no wallet. Ronin sign-in is optional and proves ownership: an owned
 Axie is marked as owned, and a visit becomes an owned Axie with everything it earned. Nothing is
 minted and nothing is sold. Playing with an Axie you do not own is a visit, and a reason to want
@@ -74,7 +78,7 @@ world; ladder seasons; and work with Sky Mavis so time spent here counts for the
 does. The roadmap is on the front page of the site.
 
 **Built with.** Vite, TypeScript and three.js in the browser; a Cloudflare Worker with one Durable
-Object behind it; 204 automated tests. Built by one person with Claude Code; Google Gemini looks at
+Object behind it; 207 automated tests. Built by one person with Claude Code; Google Gemini looks at
 the photos at run time. Full disclosures, known issues and run instructions are in the README.
 
 ## Thumbnail

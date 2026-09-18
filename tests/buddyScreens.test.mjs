@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml, topBarHtml, meetHtml, starBadgeHtml, starProgressHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml, topBarHtml, meetHtml, starBadgeHtml, starProgressHtml, coreMarksHtml, fameHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -179,11 +179,12 @@ test('stardom on screen: the badge, the road to Idol, the title card, the Hall o
 })
 
 test('meet: three real Axies as cards, a shuffle, a number box, and the wallet way in', () => {
-  const cards = [{ id: '2660', name: 'Axie #2660', class: 'Beast', level: 60, image: '/api/image/2660' }, { id: '80', name: 'Bubbles', class: 'Aquatic', level: 34, image: '/api/image/80' }, { id: '9', name: 'Axie #9', class: 'Plant', level: null, image: '/api/image/9' }]
+  const cards = [{ id: '2660', name: 'Axie #2660', class: 'Beast', level: 60, rank: 'Master', evolved: 5, special: ['Mystic'], loves: 'open ground', players: 3, image: '/api/image/2660' }, { id: '80', name: 'Bubbles', class: 'Aquatic', level: 34, image: '/api/image/80' }, { id: '9', name: 'Axie #9', class: 'Plant', level: null, image: '/api/image/9' }]
   const html = meetHtml(cards, { address: null })
   assert.match(html, /Every Axie here is a real one/)
   assert.equal((html.match(/class="bd-card bd-meet-card" data-action="visit-go" data-id="/g) || []).length, 3)
-  assert.match(html, /src="\/api\/image\/80"/); assert.match(html, /Bubbles/); assert.match(html, /#2660 · Beast · Axie Core level 60/)
+  assert.match(html, /src="\/api\/image\/80"/); assert.match(html, /Bubbles/); assert.match(html, /#2660 · Beast · loves open ground/)
+  assert.match(html, /Master · level 60/); assert.match(html, /Evolved ×5/); assert.match(html, /Mystic/); assert.match(html, /3 playing/)
   assert.match(html, /data-action="meet-shuffle"/); assert.match(html, /id="bd-visit-id"/); assert.match(html, /data-action="ronin-welcome"/)
   assert.match(meetHtml(cards, { address: '0xabc' }), /data-action="claim"/)
   assert.match(meetHtml([], {}), /Could not reach the Axies/)
@@ -200,6 +201,23 @@ test('hello: a real Axie can take a nickname and keeps its name on chain', () =>
   assert.match(html, /Meet another Axie any time from Home/)
   assert.match(hatchHtml({ ...real, name: 'Bubbles', realName: 'Bubbles' }, []), /On chain it is Bubbles/)
   assert.doesNotMatch(hatchHtml(miso, []), /nickname-confirm/, 'a hatched wild Axie was named at the hatch')
+})
+
+test('Axie Core on screen: marks everywhere, what its class loves, its birthday, and its fame', () => {
+  const core = { level: 60, rank: 'Master', evolved: 5, special: ['Mystic', 'Nightmare Shiny'], birthYear: 2018, breedCount: 1, parts: [] }
+  const marks = coreMarksHtml(core)
+  assert.match(marks, /Master · level 60/); assert.match(marks, /Evolved ×5/); assert.match(marks, /Nightmare Shiny/); assert.match(marks, /born 2018/)
+  assert.equal(coreMarksHtml(null), ''); assert.doesNotMatch(coreMarksHtml({ level: 3, rank: 'Rookie', evolved: 0, special: [] }), /Evolved/)
+  const real = { ...miso, kind: 'visit', axieId: '80', class: 'Aquatic', core, loves: 'water', birthday: true, happy: { value: 60, mood: 'Content', moodId: 'content', talksLeft: 5, petsLeft: 5, overjoyedToday: false } }
+  const home = homeHtml(real, null)
+  assert.match(home, /Master · level 60/); assert.match(home, /Aquatics love water\.<\/b> A photo with some is worth \+5/)
+  assert.match(home, /Today is Miso's birthday/); assert.match(home, /data-action="fame">Axie #80's fame/)
+  assert.doesNotMatch(homeHtml(miso, null), /data-action="fame"/, 'a hatched Axie has no Axie number to be famous under')
+  assert.match(hatchHtml(real, []), /Aquatics love water/)
+  const fame = fameHtml({ axieId: '80', players: 9, joyDays: 41, photos: 120, bestStreak: 14, titles: { idol: 1, star: 2, rising: 0 }, names: ['Bubbles', 'Splash'] }, real)
+  assert.match(fame, /Fame belongs to the Axie/); assert.match(fame, /<b>9<\/b><small>people play it/); assert.match(fame, /<b>41<\/b><small>joy days/)
+  assert.match(fame, /1 Idol, 2 Stars/); assert.match(fame, /People call it: Bubbles, Splash/)
+  assert.match(fameHtml({ axieId: '80', players: 1, joyDays: 0, photos: 0, bestStreak: 0, titles: { idol: 0, star: 0, rising: 0 }, names: [] }, real), /person plays it/)
 })
 
 test('a real Axie played by its number says so, with its Axie Core level; the visit sheet needs no wallet', () => {
@@ -629,6 +647,8 @@ test('the front door: header with the mark, hero with a real photo and line, sec
   assert.equal((fresh.match(/<li>.*?<b>(Today|Every day|The long game):<\/b>/gs) || []).length, 3, 'three goals under the headline')
   assert.match(fresh, /Four steps from hello to Idol/); assert.match(fresh, /Make it a star/)
   assert.match(fresh, /Joy days make a star/); assert.match(fresh, /How does it become an Idol\?/)
+  assert.match(fresh, /Its class decides what makes it happiest/); assert.equal((fresh.match(/class="lp-class bd-class-/g) || []).length, 9, 'nine classes, nine loves')
+  assert.match(fresh, /Something its class loves/); assert.match(fresh, /Fame belongs to the Axie/)
   assert.match(fresh, /id="lp-why"/); assert.match(fresh, /Who cares if an Axie is an Idol\?/); assert.match(fresh, /Why does being an Idol matter\?/)
   assert.equal((fresh.match(/class="bd-card lp-why-card"/g) || []).length, 4, 'four reasons')
   assert.match(fresh, /It cannot be bought, only kept/); assert.match(fresh, /Stars win the month/)

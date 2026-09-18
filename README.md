@@ -86,6 +86,16 @@ gets stronger the more it is cared for. Axie Idol is built on that and nothing e
   animated, with the wardrobe placed on it. Its class, its six parts by name, its special genes,
   its birth year and its **Axie Core level** reach the voice, so a level 60 Beast with a Mystic
   horn talks like one.
+- **Its class decides what makes it happiest.** A photo with the thing its class loves is worth
+  more happiness: water for an Aquatic, sky and high places for a Bird, growing things for a Plant,
+  open ground for a Beast, small things for a Bug, warm sunny spots for a Reptile, and the three
+  secret classes too. Which Axie you pick changes where you take it, and the voice knows it.
+- **Axie Core is marked on it everywhere.** Its level with a rank word (Rookie, Trained, Veteran,
+  Master), how many of its parts have evolved, its special genes and its birth year show on the
+  Meet cards, the hello screen and Home. On its real birthday a photo together is worth +10.
+- **Fame belongs to the Axie.** Everyone who plays Axie #2660 adds to the same Axie's name: its
+  fame sheet counts the people who play it, their joy days and photos, its best streak, and the
+  titles it holds right now. Showing an owner who took their Axie out comes with ownership, next.
 - **Ownership matters.** Ronin sign-in proves an Axie is yours; it is marked Owned on Home
   and on the ladder, and a visit becomes an owned Axie with everything it earned.
 - **Nothing is minted and nothing is sold.** Playing with an Axie you do not own is a visit; a
@@ -101,7 +111,7 @@ gets stronger the more it is cared for. Axie Idol is built on that and nothing e
 | Stage | What |
 |---|---|
 | **Round 1 (live)** | Meet a real Axie (three offered, any by number, your own via Ronin), a nickname, the voice on every photo, memory, happiness (pats, treats, a catching game), stardom (Rising Star, Star, Idol, the Hall of Idols), wishes, growth ladder, scrapbook, monthly Idol ladder. |
-| **Round 2** | The official Axie Mixer on screen so each Axie moves as itself, new games to play together, duo photos with a friend, your whole Ronin collection playable, a morning nudge. |
+| **Round 2** | Ownership that pays (sign in with Ronin and your Axie's level makes it easier to keep happy; see who took your Axie out), the official Axie Mixer on screen so each Axie moves as itself, new games to play together, duo photos with a friend, your whole Ronin collection playable, a morning nudge. |
 | **After** | Axies that stand higher in Axie Core come first: special props only they can wear, chat that opens up for them, a better place on the social wall. The social wall itself. Ladder seasons. Work with Sky Mavis so time spent here counts for the Axie, the way AXP does. |
 
 The same roadmap is on the front page of the site.
@@ -128,7 +138,7 @@ npm install
 cp .env.example .env        # add your own keys; every key is optional
 npm run build
 npm start                   # http://localhost:5174
-npm test                    # 204 tests, no network needed
+npm test                    # 207 tests, no network needed
 ```
 
 Keys (all optional, all in `.env`, never committed): `GEMINI_API_KEY` for the voice (without it the

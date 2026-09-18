@@ -6,11 +6,11 @@
  * `.buddy` / `#buddy-sheet`, and the API calls from `src/buddy.ts`.
  */
 import {
-  buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone, talkEnabled, eggsEnabled, meetCards, nickname,
+  buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone, talkEnabled, eggsEnabled, meetCards, nickname, axieFame,
   roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto, pet, treat, playResult, visitAxie, type HappyChange,
 } from './buddy'
 import {
-  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml, topBarHtml, meetHtml, type MeetCardView,
+  eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml, topBarHtml, meetHtml, fameHtml, type MeetCardView,
   bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
@@ -312,6 +312,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       if (r.happy.overjoyed && buddyState.active) sheet(joyHtml(r.happy, buddyState.active))
       return
     }
+    if (act === 'fame') { if (b?.axieId) sheet(fameHtml(await axieFame(b.axieId), b)); return }
     if (act === 'treat') {
       const r = await treat()
       await show('home')

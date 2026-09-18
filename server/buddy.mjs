@@ -2,7 +2,7 @@
 import catalogueJson from './partCatalogue.json' with { type: 'json' }
 import {
   LADDER, LEVEL_NAMES, levelFor, nextStep, eggOdds, rollWild, rollTraits, traitsForOwned, normalizeTraits,
-  wishForToday, detectMoments, MOMENTS, HAPPY, HAPPY_START, moodFor, decayed, photoJoy, titleFor, nextTitle,
+  wishForToday, detectMoments, MOMENTS, HAPPY, HAPPY_START, moodFor, decayed, photoJoy, titleFor, nextTitle, CLASS_LOVES, coreRank,
 } from './buddyRules.mjs'
 import { pickLine, checkRules } from './voiceLines.mjs'
 import { createVoiceModel, splitImage } from './voiceModel.mjs'
@@ -226,11 +226,40 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
 
   /** The facts a real Axie knows about itself, from the record the host fetched from Sky Mavis. */
   function coreOf(rec) {
+    const parts = (rec.parts || []).filter((x) => x?.name)
     return {
+      // what the screen marks it with: a rank word, how many parts have evolved, which genes are special
+      rank: coreRank(rec.level),
+      xp: Number.isFinite(Number(rec.xp)) ? Number(rec.xp) : null,
+      xpToLevelUp: Number.isFinite(Number(rec.xpToLevelUp)) ? Number(rec.xpToLevelUp) : null,
+      evolved: parts.filter((x) => x.stage === 2).length,
+      special: [...new Set(parts.map((x) => x.specialGenes).filter(Boolean).map((g) => String(g).replace(/([a-z])([A-Z])/g, '$1 $2')))].slice(0, 3),
+      birthDate: Number(rec.birthDate) > 0 ? Number(rec.birthDate) : null,
       level: Number.isFinite(Number(rec.level)) ? Number(rec.level) : null,
       birthYear: Number.isFinite(Number(rec.birthDate)) && Number(rec.birthDate) > 0 ? new Date(Number(rec.birthDate) * 1000).getUTCFullYear() : null,
       breedCount: Number.isFinite(Number(rec.breedCount)) ? Number(rec.breedCount) : null,
-      parts: (rec.parts || []).filter((x) => x?.name).map((x) => ({ type: String(x.type || '').toLowerCase(), name: String(x.name).slice(0, 40), class: x.class || null, special: x.specialGenes || null })),
+      parts: parts.map((x) => ({ type: String(x.type || '').toLowerCase(), name: String(x.name).slice(0, 40), class: x.class || null, special: x.specialGenes || null, stage: x.stage === 2 ? 2 : 1 })),
+    }
+  }
+  /** Its real birthday (month and day on Ronin) is today, in the game's own day. */
+  function isBirthday(b) {
+    const ts = b?.core?.birthDate
+    if (!ts) return false
+    return manilaDayKey(new Date(ts * 1000)).slice(5) === manilaDayKey().slice(5)
+  }
+  /**
+   * Fame belongs to the Axie, not to one player's save: everyone who plays Axie #2660 adds to the
+   * same Axie's name. Counted across every record of that Axie number.
+   */
+  function fameOf(store, axieId) {
+    const all = Object.values(store.buddies).filter((x) => x && x.kind !== 'wild' && String(x.axieId) === String(axieId))
+    const titles = { idol: 0, star: 0, rising: 0 }
+    for (const x of all) { const t = publicJoy(x).title.id; if (titles[t] !== undefined) titles[t] += 1 }
+    return {
+      axieId: String(axieId), players: new Set(all.map((x) => x.ownerKey)).size,
+      joyDays: all.reduce((n, x) => n + (x.joy?.days || 0), 0), photos: all.reduce((n, x) => n + (x.snapCount || 0), 0),
+      bestStreak: all.reduce((n, x) => Math.max(n, x.joy?.best || 0), 0), titles,
+      names: [...new Set(all.map((x) => x.name).filter((n) => n && !/^Axie #/.test(n)))].slice(0, 6),
     }
   }
   /**
@@ -247,10 +276,10 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     let rec = null
     try { rec = await fetchAxieGenes(id) } catch { rec = null }
     if (!rec || rec.stage !== 4 || !rec.genes) return
-    pool.push({ id, name: rec.name && !/^Axie #\d+$/.test(rec.name) ? String(rec.name).slice(0, 24) : `Axie #${id}`, class: rec.class || null, level: Number.isFinite(Number(rec.level)) ? Number(rec.level) : null })
+    pool.push({ id, name: rec.name && !/^Axie #\d+$/.test(rec.name) ? String(rec.name).slice(0, 24) : `Axie #${id}`, class: rec.class || null, level: Number.isFinite(Number(rec.level)) ? Number(rec.level) : null, ...meetMarks(rec) })
   }
   async function meetCards(store) {
-    if (env.BUDDY_TEST_SKIP_CHAIN === '1') return [{ id: '2660', name: 'Axie #2660', class: 'Beast', level: 60 }, { id: '80', name: 'Axie #80', class: 'Aquatic', level: 34 }, { id: '9', name: 'Axie #9', class: 'Plant', level: 1 }].map((c) => ({ ...c, image: `/api/image/${c.id}` }))
+    if (env.BUDDY_TEST_SKIP_CHAIN === '1') return [{ id: '2660', name: 'Axie #2660', class: 'Beast', level: 60, evolved: 5, special: ['Mystic'] }, { id: '80', name: 'Axie #80', class: 'Aquatic', level: 34, evolved: 0, special: [] }, { id: '9', name: 'Axie #9', class: 'Plant', level: 1, evolved: 0, special: [] }].map((c) => ({ ...c, image: `/api/image/${c.id}`, rank: coreRank(c.level), loves: CLASS_LOVES[c.class].label, players: fameOf(store, c.id).players }))
     const meet = (store.meet ||= { pool: MEET_SEED.map(([id, cls]) => ({ id, name: `Axie #${id}`, class: cls, level: null })) })
     // grow the pool a little, and refresh a seed's name and level when it comes up
     if (meet.pool.length < MEET_POOL_CAP) await meetProbe(meet.pool)
@@ -258,13 +287,18 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const pool = [...meet.pool]
     while (picks.length < 3 && pool.length) picks.push(pool.splice(Math.floor(rng() * pool.length), 1)[0])
     for (const card of picks) {
-      if (card.level != null && card.name !== `Axie #${card.id}`) continue
+      if (card.level != null && card.name !== `Axie #${card.id}` && card.evolved !== undefined) continue
       try {
         const rec = await fetchAxieGenes(card.id)
-        if (rec) { card.name = rec.name && !/^Axie #\d+$/.test(rec.name) ? String(rec.name).slice(0, 24) : card.name; card.level = Number.isFinite(Number(rec.level)) ? Number(rec.level) : card.level; card.class = rec.class || card.class }
+        if (rec) { card.name = rec.name && !/^Axie #\d+$/.test(rec.name) ? String(rec.name).slice(0, 24) : card.name; card.level = Number.isFinite(Number(rec.level)) ? Number(rec.level) : card.level; card.class = rec.class || card.class; Object.assign(card, meetMarks(rec)) }
       } catch { /* the seed's own facts do */ }
     }
-    return picks.map((c) => ({ ...c, image: `/api/image/${c.id}` }))
+    return picks.map((c) => ({ ...c, image: `/api/image/${c.id}`, rank: coreRank(c.level), loves: c.class && CLASS_LOVES[c.class] ? CLASS_LOVES[c.class].label : null, players: fameOf(store, c.id).players }))
+  }
+  /** The marks a Meet card shows, from the Sky Mavis record. */
+  function meetMarks(rec) {
+    const c = coreOf(rec)
+    return { evolved: c.evolved, special: c.special }
   }
 
   /** A real Axie joins the account already hatched: it has a name, a body and a past. */
@@ -298,6 +332,8 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       // Photos still in the book: every counted snap minus the ones the owner chose not to keep.
       photoCount: Math.max(0, b.snapCount - (b.unkeptCount || 0)),
       happy: publicHappy(b), joy: publicJoy(b),
+      // Axie Core in the game: what its class loves, and whether today is its real birthday
+      loves: b.class && CLASS_LOVES[b.class] ? CLASS_LOVES[b.class].label : null, birthday: isBirthday(b),
       eggOdds: b.hatchedAt ? null : eggOdds(b.egg.snaps, b.egg.grids.length),
       momentsTotal: MOMENTS.length, ladder: LADDER, bondToday: b.bondByDay[manilaDayKey()] || 0, snapsToday: snapsToday(b), dailyCap: DAILY_CAP,
       streak: streakFor(b),
@@ -349,7 +385,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     }
     return line
   }
-  const talkCtx = (b, extra = {}) => ({ dayCount: b.hatchedAt ? daysSince(b.hatchedAt) : undefined, dayKey: manilaDayKey(), mood: moodFeel(b), ...extra })
+  const talkCtx = (b, extra = {}) => ({ dayCount: b.hatchedAt ? daysSince(b.hatchedAt) : undefined, dayKey: manilaDayKey(), mood: moodFeel(b), birthday: isBirthday(b), ...extra })
   /** How often the Axie has stood on this grid square before, and how long ago the first time was. */
   function placeMemory(b, grid, alreadyCounted = 0) {
     const p = grid ? b.places?.[grid] : null
@@ -510,7 +546,7 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const districtsToday = new Set(Object.values(b.places).filter((p) => p.district && p.count).map((p) => p.district)).size
     const found = detectMoments({ hour, weather: ctx.weather, placeType: ctx.placeType, labels, isNewPlace, isNewDistrict: Boolean(ctx.district), districtsToday, snapCount: b.snapCount, hatchGrid: b.hatchGrid, grid }, b.moments.map((m) => m.id))
     for (const id of found) { b.moments.push({ id, at: b.lastSnapAt, photoId: post.id }); const m = addBond(b, 2); unlocks.push(...m.unlocks) }
-    const joyOf = photoJoy({ labels, previous: previousSeen, recent: recentSeen, isNewPlace, wishDone: Boolean(wishDone), judged, caption: ctx.caption })
+    const joyOf = photoJoy({ labels, previous: previousSeen, recent: recentSeen, isNewPlace, wishDone: Boolean(wishDone), judged, caption: ctx.caption, cls: b.class, birthday: isBirthday(b) })
     const happy = addHappy(b, joyOf.delta, joyOf.reasons)
     unlocks.push(...happy.unlocks)
     // Only real nouns go into slots. With nothing seen or named, lines that need {thing} or
@@ -669,7 +705,15 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const active = store.buddies[acc.activeBuddyId] || null
     const p = url.pathname
 
+    if (p === '/api/buddy/fame' && req.method === 'GET') {
+      const axieId = String(url.searchParams.get('axieId') || active?.axieId || '').replace(/[^0-9]/g, '')
+      if (!axieId) { sendJson(res, 400, { error: 'axieId required' }); return true }
+      sendJson(res, 200, fameOf(store, axieId)); return true
+    }
     if (p === '/api/buddy' && req.method === 'GET') {
+      if (active && active.kind !== 'wild' && active.axieId && active.core && active.core.evolved === undefined && env.BUDDY_TEST_SKIP_CHAIN !== '1') {
+        try { const rec = await fetchAxieGenes(active.axieId); if (rec) { active.core = coreOf(rec); save(store) } } catch { /* the marks can wait for the next open */ }
+      }
       if (active?.hatchedAt) { ensureWish(active, { weather: url.searchParams.get('weather'), hour: url.searchParams.get('hour') }); save(store) }
       // Numeric slots are spelled: a template line that reached a digit would break the voice rule
       // ("no numbers") the moment the trait pools ran dry and `{count}`/`{days}` were filled.

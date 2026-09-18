@@ -62,7 +62,18 @@ export type Buddy = {
   /** The name on chain, when it has one, whatever nickname it goes by here. */
   realName?: string | null
   /** A real Axie's facts from Sky Mavis. */
-  core?: { level: number | null; birthYear: number | null; breedCount: number | null; parts: { type: string; name: string; class: string | null; special: string | null }[] } | null
+  core?: {
+    level: number | null; birthYear: number | null; breedCount: number | null
+    /** Rookie, Trained, Veteran or Master, from its Axie Core level. */
+    rank?: string | null
+    /** How many of its six parts have evolved (stage two), and which special genes it carries. */
+    evolved?: number; special?: string[]
+    parts: { type: string; name: string; class: string | null; special: string | null; stage?: number }[]
+  } | null
+  /** What its class loves ("water", "small things"): a photo with some is worth more happiness. */
+  loves?: string | null
+  /** Today is its real birthday on Ronin. */
+  birthday?: boolean
 }
 /** Stardom: joy days, the live streak, and the title that streak holds (for as long as it lasts). */
 export type Joy = {
@@ -142,7 +153,10 @@ export async function playResult(catches: number): Promise<{ line: string; happy
 }
 /** Play as any real Axie by its number. No wallet: it is a visit until a Ronin sign-in proves it is yours. */
 export async function visitAxie(axieId: string, nickname?: string): Promise<{ lines: string[] }> { const p = await call<Payload>('/api/buddy/visit', nickname ? { axieId, nickname } : { axieId }); apply(p); return { lines: p.lines || [] } }
-export type MeetCard = { id: string; name: string; class: string | null; level: number | null; image: string }
+export type MeetCard = { id: string; name: string; class: string | null; level: number | null; image: string; rank?: string | null; evolved?: number; special?: string[]; loves?: string | null; players?: number }
+/** Fame belongs to the Axie: everyone who plays this Axie number adds to the same name. */
+export type Fame = { axieId: string; players: number; joyDays: number; photos: number; bestStreak: number; titles: { idol: number; star: number; rising: number }; names: string[] }
+export async function axieFame(axieId?: string): Promise<Fame> { return call<Fame>(`/api/buddy/fame${axieId ? `?axieId=${encodeURIComponent(axieId)}` : ''}`) }
 /** Three real Axies to choose from; a new call is a new three. */
 export async function meetCards(): Promise<MeetCard[]> { return (await call<{ cards: MeetCard[] }>('/api/buddy/meet')).cards }
 /** What you call a real Axie, on top of its name on chain. */
