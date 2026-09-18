@@ -4270,6 +4270,7 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 .lp-goals li svg { flex: 0 0 auto; margin-top: 2px; color: var(--accent-hot); }
 .lp-goals li:nth-child(2) svg { color: #E0355A; }
 .lp-goals li:nth-child(3) svg { color: #E89B12; fill: #FFC531; }
+.lp-goals li:nth-child(4) svg { color: var(--accent); }
 .lp-goals b { color: var(--text); }
 @media (min-width: 900px) { .lp-goals li { font-size: 16px; } .lp-goals { gap: 8px; margin-top: 4px; } }
 

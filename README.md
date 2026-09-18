@@ -112,7 +112,7 @@ gets stronger the more it is cared for. Axie Idol is built on that and nothing e
 |---|---|
 | **Round 1 (live)** | Meet a real Axie (three offered, any by number, your own via Ronin), a nickname, the voice on every photo, memory, happiness (pats, treats, a catching game), stardom (Rising Star, Star, Idol, the Hall of Idols), wishes, growth ladder, scrapbook, monthly Idol ladder. |
 | **Round 2** | Ownership that pays (sign in with Ronin and your Axie's level makes it easier to keep happy; see who took your Axie out), the official Axie Mixer on screen so each Axie moves as itself, new games to play together, duo photos with a friend, your whole Ronin collection playable, a morning nudge. |
-| **After** | Axies that stand higher in Axie Core come first: special props only they can wear, chat that opens up for them, a better place on the social wall. The social wall itself. Ladder seasons. Work with Sky Mavis so time spent here counts for the Axie, the way AXP does. |
+| **After** | Axies that stand higher in Axie Core come first: special props only they can wear, chat that opens up for them, a better place on the social wall. The social wall itself. Ladder seasons. A sturdier daily check-in: work with Sky Mavis so a joy day counts for that Axie, the way AXP does. |
 
 The same roadmap is on the front page of the site.
 

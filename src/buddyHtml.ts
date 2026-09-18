@@ -909,7 +909,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
     ], core: [
       'Axies that stand higher in Axie Core come first: special props only they can wear, and a better place on the wall',
       'Chat opens up for them too: the higher an Axie stands in Axie Core, the more it has to say',
-      'Work with Sky Mavis so time spent here counts for the Axie, the way AXP does',
+      'A sturdier daily check-in: work with Sky Mavis so a joy day counts for that Axie, the way AXP does. A tap proves you opened an app; a joy day proves somebody took this Axie out',
     ] },
   ]
   const roadCards = road.map((r, i) => `
@@ -949,6 +949,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
             <li>${icon('camera', 15)}<span><b>Today:</b> take it somewhere and hear what it says</span></li>
             <li>${icon('heartFilled', 15)}<span><b>Every day:</b> get its happiness to 90 for a joy day</span></li>
             <li>${icon('star', 15)}<span><b>The long game:</b> 3 joy days in a row is a Rising Star, 7 a Star, 14 an Idol, for as long as you keep the streak</span></li>
+            <li>${icon('trophy', 15)}<span><b>Where it goes:</b> a joy day as your Axie's daily check-in. Not one tap for an account, a real day out with one Axie. We want it to count for that Axie in Axie Core</span></li>
           </ul>
           <div class="lp-cta">${primary}${about ? '' : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
           ${about ? '' : `<p class="bd-small lp-alt">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>

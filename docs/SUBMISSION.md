@@ -74,8 +74,9 @@ the real thing.
 **Where it goes.** Round 2: the official Axie Mixer on screen so each Axie moves as itself, new
 games to play together, duo photos with a friend, your whole Ronin collection playable. After the Vibeathon: Axies that stand higher in Axie Core come first, with special props
 only they can wear and chat that opens up for them; a social wall to see every Axie out in the
-world; ladder seasons; and work with Sky Mavis so time spent here counts for the Axie, the way AXP
-does. The roadmap is on the front page of the site.
+world; ladder seasons; and a sturdier daily check-in: work with Sky Mavis so a joy day counts for
+that Axie, the way AXP does. A tap proves you opened an app; a joy day proves somebody took this
+Axie out. The roadmap is on the front page of the site.
 
 **Built with.** Vite, TypeScript and three.js in the browser; a Cloudflare Worker with one Durable
 Object behind it; 207 automated tests. Built by one person with Claude Code; Google Gemini looks at
