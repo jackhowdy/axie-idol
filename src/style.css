@@ -4216,3 +4216,12 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
   .bd-meet-card b { font-size: 17px; }
   .bd-meet-card > .bd-muted { font-size: 13px; }
 }
+/* phones: one real Axie per row, art beside the words, so nothing is squeezed into a third of the screen */
+@media (max-width: 599px) {
+  .bd-meet { grid-template-columns: 1fr; gap: 10px; }
+  .bd-meet-card { display: grid; grid-template-columns: 96px 1fr; grid-template-rows: auto auto auto; column-gap: 12px; row-gap: 3px; text-align: left; align-items: center; padding: 10px 12px 10px 10px; }
+  .bd-meet-art { grid-row: 1 / span 3; width: 96px; }
+  .bd-meet-card b { font-size: 15px; }
+  .bd-meet-card > .bd-muted { font-size: 12px; }
+  .bd-meet-card .bd-pill { justify-self: start; margin-top: 2px; }
+}
