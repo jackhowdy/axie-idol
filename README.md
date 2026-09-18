@@ -55,10 +55,14 @@ phone. Ronin sign-in is optional and only adds: bring an Axie you own, keep your
 - **Win:** reach Overjoyed (90). Once a day that pays +3 bond and counts a **joy day**; joy days on
   consecutive days are a streak.
 - **The long game, stardom:** 3 joy days in a row make a **Rising Star** (a badge on Home and the
-  ladder), 7 a **Star** (a gold star on every photo's speech bubble), and 14 in a row, or 30 in
-  all, an **Idol** (the Hall of Idols for good, a gold photo frame, its name in gold). A title is
-  for life: a missed day only dims the star until the next joy day. Home shows the road from minute
-  one ("1 of 3 joy days in a row to Rising Star").
+  ladder), 7 a **Star** (a gold star on every photo's speech bubble), and 14 an **Idol** (the Hall
+  of Idols, a gold photo frame, its name in gold). A title lasts exactly as long as the streak:
+  miss a day and it is a Newcomer again, with the title there to win back. Home shows the road
+  from minute one ("1 of 3 joy days in a row to Rising Star").
+- **Why an Idol matters:** it cannot be bought, only kept, so every Idol on screen is an Axie being
+  cared for right now; everyone sees it (the Hall, gold on the ladder, a gold star on every photo);
+  and a title pays: a joy day is worth 3 bond to a Newcomer, 4 to a Rising Star, 5 to a Star and 6
+  to an Idol, so the best-kept Axies are the ones that win the month's crown.
 - **Lose:** miss a day and the streak lapses; leave it two days and it is Bored. The Axie never
   guilts you for it (a rule of its voice); it just wants to do something.
 - **Growth:** every photo builds bond (ten a day count): how close you are, from Just met to

@@ -23,7 +23,7 @@ export type MonthlyRow = {
   kind: 'wild' | 'owned' | 'visit'; traits: string[]; level: number; monthlyBond: number; rarity: number
   title?: string; shining?: boolean
 }
-export type HallIdol = { buddyId: string; name: string; class: string | null; kind: string; axieId: string | null; joyDays: number; best: number }
+export type HallIdol = { buddyId: string; name: string; class: string | null; kind: string; axieId: string | null; joyDays: number; streak?: number; best: number }
 export type Monthly = {
   month: string; endsAt: string; rows: MonthlyRow[]
   you: { rank: number; monthlyBond: number; toNextTier: number } | null
@@ -346,23 +346,25 @@ export function happyCardHtml(b: Buddy, opts: { talk?: boolean } = {}): string {
       </div>`
 }
 
-const STAR_PATH: Array<[string, string, string]> = [['newcomer', 'Newcomer', 'day one'], ['rising', 'Rising Star', '3 joy days in a row'], ['star', 'Star', '7 in a row'], ['idol', 'Idol', '14 in a row, or 30 in all']]
+const STAR_PATH: Array<[string, string, string]> = [['newcomer', 'Newcomer', 'day one'], ['rising', 'Rising Star', '3 joy days in a row'], ['star', 'Star', '7 in a row'], ['idol', 'Idol', '14 in a row']]
 
-/** The title as a badge: gold while the streak is alive, quiet when it has lapsed. Nothing for a Newcomer. */
+/** The title as a gold badge. It is there exactly as long as the streak is: nothing for a Newcomer. */
 export function starBadgeHtml(joy: Buddy['joy'] | undefined, size = 12): string {
   const t = joy?.title
   if (!t || t.id === 'newcomer') return ''
-  return `<span class="bd-star bd-star-${esc(t.id)}${joy?.shining ? ' shining' : ''}" title="${joy?.shining ? 'Shining: the joy streak is alive' : 'A title is for life. A joy day makes it shine again.'}">${icon('star', size)} ${esc(t.name)}</span>`
+  return `<span class="bd-star bd-star-${esc(t.id)} shining" title="Held by the joy streak. Miss a day and it goes.">${icon('star', size)} ${esc(t.name)}</span>`
 }
 
 /** Where it stands on the road to Idol, in one line with pips: "Joy day 2 of 3 to Rising Star". */
 export function starProgressHtml(joy: Buddy['joy'] | undefined): string {
   if (!joy || !joy.title) return ''
   const n = joy.next
-  if (!n) return `<p class="bd-star-line">${icon('star', 13)} <b>Idol.</b> ${joy.shining ? 'Shining.' : 'A joy day makes it shine again.'} ${joy.days} joy days so far.</p>`
+  if (!n) return `<p class="bd-star-line">${icon('star', 13)} <b>Idol, ${joy.streak} joy days in a row.</b> It reigns as long as the streak does. Miss a day and the crown passes on.</p>`
   const pips = Array.from({ length: n.needStreak }, (_, i) => `<i class="${i < n.haveStreak ? 'on' : ''}"></i>`).join('')
-  const total = n.needTotal != null ? ` · or ${n.haveTotal} of ${n.needTotal} joy days in all` : ''
-  return `<p class="bd-star-line">${icon('star', 13)} <b>${n.haveStreak} of ${n.needStreak}</b> joy days in a row to <b>${esc(n.name)}</b>${total}<span class="bd-star-pips">${pips}</span></p>`
+  // a streak that ended took the title with it: say what there is to win back, never whose fault it was
+  const back = joy.fallen ? ` It was ${/^[AEIOU]/.test(joy.fallen) ? 'an' : 'a'} ${esc(joy.fallen)}. Win it back.` : ''
+  const holds = joy.title.id !== 'newcomer' ? ` Miss a day and ${esc(joy.title.name)} goes.` : ''
+  return `<p class="bd-star-line">${icon('star', 13)} <b>${n.haveStreak} of ${n.needStreak}</b> joy days in a row to <b>${esc(n.name)}</b><span class="bd-star-pips">${pips}</span></p>${back || holds ? `<p class="bd-small bd-muted bd-star-note">${(back + holds).trim()}</p>` : ''}`
 }
 
 /** The win: the first time in a day it becomes Overjoyed. */
@@ -372,7 +374,7 @@ export function joyHtml(h: { joyBonus: number; joyStreak: number; joy?: Buddy['j
     const perk: Record<string, string> = {
       rising: 'A star badge on Home and on the Idol ladder.',
       star: 'A gold star on the speech bubble of every photo from now on.',
-      idol: 'A place in the Hall of Idols for good, a gold frame for photos, and its name in gold.',
+      idol: 'A place in the Hall of Idols, a gold frame for photos, and its name in gold.',
     }
     return `
     <div class="bd-moment bd-moment-star">
@@ -383,7 +385,7 @@ export function joyHtml(h: { joyBonus: number; joyStreak: number; joy?: Buddy['j
       </div>
     </div>
     <div class="bd-speech">${esc(h.newTitle.line)}</div>
-    <p class="bd-small">${perk[h.newTitle.id] || ''} A title is for life. The star shines while the streak is alive. +${h.joyBonus} bond for today.</p>
+    <p class="bd-small">${perk[h.newTitle.id] || ''} Every joy day is now worth +${h.joyBonus} bond, so it climbs the ladder faster. It holds the title as long as the streak lasts: miss a day and it goes.</p>
     ${starProgressHtml(h.joy)}
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="sheet-next">A star is born</button></div>`
   }
@@ -841,7 +843,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'A voice that looks at each photo and writes its line on the picture',
       'Memory: it knows when you are back somewhere, and it answers your caption',
       'A happiness score: photos, pats, treats and a game of catch keep it happy; time alone bores it',
-      'Joy days make a star: Rising Star, Star, then Idol, with a Hall of Idols for good',
+      'Joy days in a row make a Rising Star, a Star, then an Idol, for as long as the streak lasts',
       'Ten steps of growth: hat, scarf, shades, cape, crown, the Mystic glow',
       'A wish every day, a scrapbook, and the monthly Idol ladder',
     ], core: [
@@ -894,7 +896,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       <header class="lp-header">
         <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(34)}${wordmarkSvg(24)}</a>
         <nav class="lp-nav" aria-label="Sections">
-          <a href="#lp-how">How it works</a><a href="#lp-happy">Happiness</a><a href="#lp-voice">The voice</a><a href="#lp-grow">Grow</a><a href="#lp-road">Roadmap</a><a href="#lp-faq">Questions</a>
+          <a href="#lp-how">How it works</a><a href="#lp-happy">Happiness</a><a href="#lp-why">Why an Idol</a><a href="#lp-voice">The voice</a><a href="#lp-grow">Grow</a><a href="#lp-road">Roadmap</a><a href="#lp-faq">Questions</a>
         </nav>
         <div class="lp-header-cta">${primary}</div>
       </header>
@@ -907,7 +909,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <ul class="lp-goals">
             <li>${icon('camera', 15)}<span><b>Today:</b> take it somewhere and hear what it says</span></li>
             <li>${icon('heartFilled', 15)}<span><b>Every day:</b> get its happiness to 90 for a joy day</span></li>
-            <li>${icon('star', 15)}<span><b>The long game:</b> 3 joy days in a row is a Rising Star, 7 a Star, 14 an Idol</span></li>
+            <li>${icon('star', 15)}<span><b>The long game:</b> 3 joy days in a row is a Rising Star, 7 a Star, 14 an Idol, for as long as you keep the streak</span></li>
           </ul>
           <div class="lp-cta">${primary}${about ? '' : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
           ${about ? '' : `<p class="bd-small lp-alt">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
@@ -933,7 +935,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
             : `<li><b>Pick a real Axie</b><span>One of three we show you, a favourite by its number, or one you own on Ronin. It arrives as itself, and you can give it a nickname.</span></li>
           <li><b>Take it places, and it talks</b><span>It rides along in your camera. After every photo it says one line about what it actually sees, and its words go on the picture.</span></li>`}
           <li><b>Keep it happy</b><span>Photos, new places, a pat, a treat, a game of catch. Get it to Overjoyed and the day is won. Leave it alone and it gets bored.</span></li>
-          <li><b>Make it a star</b><span>Win the day again and again. Three joy days in a row make a Rising Star, seven a Star, fourteen an Idol, for life.</span></li>
+          <li><b>Make it a star</b><span>Win the day again and again. Three joy days in a row make a Rising Star, seven a Star, fourteen an Idol. Miss a day and the star goes out.</span></li>
         </ol>
       </section>
 
@@ -955,9 +957,9 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           </div>
           <div class="bd-card lp-stars">
             <b>Joy days make a star</b>
-            <span>Keep it happy day after day and it earns a title, for life. The star shines while the streak is alive.</span>
+            <span>Keep it happy day after day and it earns a title. It holds the title exactly as long as the streak lasts: miss a day and it is a Newcomer again.</span>
             <ol class="lp-star-path">${STAR_PATH.map(([id, label, how]) => `<li class="lp-star-step lp-star-${id}">${id === 'newcomer' ? '' : icon('star', 16)}<b>${label}</b><small>${how}</small></li>`).join('')}</ol>
-            <span>A Rising Star gets a badge. A Star gets a gold star on every photo. An Idol goes in the Hall of Idols for good, with a gold frame and its name in gold.</span>
+            <span>A Rising Star gets a badge. A Star gets a gold star on every photo. An Idol reigns in the Hall of Idols, with a gold frame and its name in gold. Each title makes a joy day worth more bond.</span>
           </div>
           <div class="lp-happy-ends">
             <div class="bd-card lp-end lp-end-win">
@@ -969,6 +971,18 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
               <span>Happiness falls a little every hour you are apart. A day away and it is still fine. Two days and it is bored, and the streak is gone. It never blames you. It just wants to go out.</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="lp-section" id="lp-why">
+        <p class="bd-eyebrow">Why an Idol</p>
+        <h2 class="lp-h2">Who cares if an Axie is an Idol? Everyone who sees it.</h2>
+        <p class="lp-sub">In most games an Axie is somebody because it wins fights. Here it is somebody because someone shows up for it, every day, and the whole game can see that.</p>
+        <div class="lp-why">
+          <div class="bd-card lp-why-card"><span class="lp-why-ico">${icon('star', 20)}</span><b>It cannot be bought, only kept</b><span>An Idol is fourteen happy days in a row, and it is only an Idol while the streak lasts. Every Idol you see is being looked after right now. That is why there are so few.</span></div>
+          <div class="bd-card lp-why-card"><span class="lp-why-ico">${icon('user', 20)}</span><b>Everyone sees it</b><span>The Hall of Idols sits on top of the ladder. An Idol's name is gold wherever it appears, and every photo it is in carries a gold star, so the status travels with every picture you share.</span></div>
+          <div class="bd-card lp-why-card"><span class="lp-why-ico">${icon('trophy', 20)}</span><b>Stars win the month</b><span>A joy day is worth three bond to a Newcomer, four to a Rising Star, five to a Star and six to an Idol. The monthly crown goes to the most bond, so the Axies that are cared for best are the ones that win it.</span></div>
+          <div class="bd-card lp-why-card"><span class="lp-why-ico">${icon('heartFilled', 20)}</span><b>It makes a real Axie somebody</b><span>Every Axie here exists on Ronin. If it is yours, its name in the Hall is your Axie's fame, earned outside battle. Next: Idols first on the social wall, seasons with something to win, and an Idol card.</span></div>
         </div>
       </section>
 
@@ -1031,7 +1045,8 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <div><dt>Is it free?</dt><dd>Yes. There is nothing to buy and no ads.</dd></div>
           <div><dt>Do I need a wallet?</dt><dd>No. A wallet only matters if you want to bring an Axie you already own, or keep your Axies on an account across phones.</dd></div>
           <div><dt>How do I win?</dt><dd>Get your Axie's happiness to 90 in a day. That is a joy day. Joy days in a row are a streak.</dd></div>
-          <div><dt>How does it become an Idol?</dt><dd>Joy days. Three in a row makes a Rising Star, seven a Star, and fourteen in a row (or thirty in all) an Idol. A title is for life; a missed day only dims the star until the next joy day.</dd></div>
+          <div><dt>How does it become an Idol?</dt><dd>Joy days in a row. Three make a Rising Star, seven a Star, fourteen an Idol. It holds the title only as long as the streak lasts: miss a day and it starts again. It never blames you for it.</dd></div>
+          <div><dt>Why does being an Idol matter?</dt><dd>Because it cannot be bought or kept by luck. An Idol is an Axie someone has made happy every single day for two weeks, and is still doing it today. Everyone sees it: in the Hall of Idols, in gold on the ladder, and on every photo it is in. And its joy days are worth double the bond, so Idols are the ones who win the month's crown.</dd></div>
           <div><dt>What if I stop playing?</dt><dd>It gets bored, never sad, and the streak lapses. Nothing else is lost: its bond, its wardrobe and its photos stay. One good day and it is happy again.</dd></div>
           <div><dt>How many photos count?</dt><dd>Ten a day build bond. Wishes and moments add a little on top. The rest still go in the book.</dd></div>
           <div><dt>Where do my photos go?</dt><dd>Into your Axie's scrapbook. To find its line, each photo is looked at once by an AI model (Google Gemini). If you allow location, we keep roughly where a photo was taken, so your Axie knows when it is back somewhere. Nothing is sold and there are no ads.</dd></div>
@@ -1218,10 +1233,10 @@ export function monthlyHtml(data: Monthly): string {
         <span class="bd-round bd-round-ghost"></span>
       </header>
       <div class="bd-card bd-hall">
-        <div class="bd-card-head"><span class="bd-label">${icon('star', 12)} Hall of Idols</span><span class="bd-link">for good</span></div>
+        <div class="bd-card-head"><span class="bd-label">${icon('star', 12)} Hall of Idols</span><span class="bd-link">reigning now</span></div>
         ${(data.idols || []).length
-          ? `<div class="bd-hall-row">${(data.idols || []).map((i) => `<span class="bd-hall-idol"><b class="bd-gold">${esc(i.name)}</b><small>${i.joyDays} joy days</small></span>`).join('')}</div>`
-          : '<p class="bd-small bd-muted">Nobody yet. Fourteen joy days in a row, or thirty in all, and an Axie is an Idol for good. The first name here could be yours.</p>'}
+          ? `<div class="bd-hall-row">${(data.idols || []).map((i) => `<span class="bd-hall-idol"><b class="bd-gold">${esc(i.name)}</b><small>${i.streak ?? i.joyDays} joy days in a row</small></span>`).join('')}</div>`
+          : '<p class="bd-small bd-muted">Nobody reigns yet. Fourteen joy days in a row make an Idol, and it stays here only while the streak lasts. The first name here could be yours.</p>'}
       </div>
       <div class="bd-card bd-note">${icon('trophy', 18)}<p class="bd-small">This month's ladder: the Axie with the most bond this month wears the crown in every photo until the next month ends. Only bond earned this month counts, so a new Axie can win.</p></div>
       <div class="bd-card-head"><span class="bd-label">Ladder · ${data.rows.length} axies</span><span class="bd-link">Bond this month</span></div>

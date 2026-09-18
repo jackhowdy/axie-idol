@@ -21,7 +21,7 @@ Axie Idol is a pet game you play with your camera. Your Axie rides along in ever
 with one line about what it really sees, drawn onto the picture. The game is its happiness: photos,
 new places, captions, pats, treats and a quick game of catch lift it; time alone wears it down. Get
 it to Overjoyed to win the day; win days in a row and it becomes a Rising Star, a Star, then an
-Idol, for life. Every Axie is a real one, with its real parts and Axie Core level. No wallet needed.
+Idol, for as long as you keep the streak. Every Axie is a real one, with its real parts and Axie Core level. No wallet needed.
 
 - Shorter (under 200 characters): *A pet Axie in your camera. It talks about what it sees in your photos, remembers places, and gets bored if you leave it. Keep it happy to win the day. Any real Axie, no wallet.*
 
@@ -48,8 +48,11 @@ speaks instead, so no photo goes without a line.
 - Win: reach Overjoyed. Once a day that makes a joy day, pays bond, and joy days on consecutive
   days build a streak.
 - The long game: 3 joy days in a row make a Rising Star, 7 a Star (a gold star on every photo),
-  14 in a row or 30 in all an Idol (the Hall of Idols, a gold frame, its name in gold). A title is
-  for life; a missed day only dims the star.
+  14 an Idol (the Hall of Idols, a gold frame, its name in gold). A title lasts exactly as long
+  as the streak: miss a day and it is a Newcomer again, with the title there to win back.
+- Why an Idol matters: it cannot be bought, only kept, so every Idol you see is being cared for
+  right now; everyone sees it, on the ladder and on every photo; and a title pays (a joy day is
+  worth 3 bond to a Newcomer and 6 to an Idol), so the best-kept Axies win the month's crown.
 - Lose: miss a day and the streak lapses. The Axie never blames you for it. It just wants to go out.
 
 **Growing up.** Every photo builds bond. Ten bond levels unlock a hat, a scarf, shades, a pose, a

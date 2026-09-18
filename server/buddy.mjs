@@ -186,19 +186,22 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const h = happyOf(b)
     const before = h.value
     h.value = Math.max(0, Math.min(100, h.value + delta))
-    let overjoyed = false; let unlocks = []; let newTitle = null
+    let overjoyed = false; let unlocks = []; let newTitle = null; let joyBonus = 0
     if (before < HAPPY.overjoyedAt && h.value >= HAPPY.overjoyedAt && !h.joyPaid) {
       h.joyPaid = true; overjoyed = true
       const j = b.joy; const yesterday = manilaDayKey(new Date(now() - 864e5))
-      const titleBefore = titleFor(j)
+      // a streak that lapsed holds no title any more: the day starts from Newcomer
+      const titleBefore = titleFor({ streak: j.lastDay === yesterday || j.lastDay === h.day ? j.streak : 0 })
       j.streak = j.lastDay === yesterday ? j.streak + 1 : j.lastDay === h.day ? j.streak : 1
       j.lastDay = h.day; j.days += 1; j.best = Math.max(j.best, j.streak)
-      unlocks = addBond(b, HAPPY.joyBonus).unlocks
-      // a joy day can be the one that earns a title: Rising Star, Star, Idol
+      // a joy day can be the one that earns a title: Rising Star, Star, Idol; and a title pays,
+      // so a star's joy days are worth more bond than a newcomer's
       const titleAfter = titleFor(j)
-      if (titleAfter.id !== titleBefore.id) newTitle = { id: titleAfter.id, name: titleAfter.name, line: say(b, 'star') }
+      joyBonus = HAPPY.joyBonus + titleAfter.joyBonus
+      unlocks = addBond(b, joyBonus).unlocks
+      if (titleAfter.streak > titleBefore.streak) newTitle = { id: titleAfter.id, name: titleAfter.name, line: say(b, 'star') }
     }
-    return { delta: Math.round(h.value - before), value: Math.round(h.value), mood: moodFor(h.value).name, reasons, overjoyed, joyBonus: overjoyed ? HAPPY.joyBonus : 0, joyStreak: b.joy.streak, joy: publicJoy(b), newTitle, unlocks }
+    return { delta: Math.round(h.value - before), value: Math.round(h.value), mood: moodFor(h.value).name, reasons, overjoyed, joyBonus, joyStreak: b.joy.streak, joy: publicJoy(b), newTitle, unlocks }
   }
   function publicHappy(b) {
     if (!b.hatchedAt) return null
@@ -213,9 +216,11 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const j = b.joy || { days: 0, streak: 0, best: 0, lastDay: null }
     const live = j.lastDay === manilaDayKey() || j.lastDay === manilaDayKey(new Date(now() - 864e5))
     const streak = live ? j.streak : 0
-    const t = titleFor(j)
-    // the star shines while the streak is alive; a title, once earned, is never taken away
-    return { days: j.days, streak, best: j.best, title: { id: t.id, name: t.name }, shining: t.id !== 'newcomer' && streak > 0, next: nextTitle({ best: j.best, days: j.days, streak }) }
+    // the title is the live streak's and nothing else: a lapsed streak is a Newcomer again, and
+    // `fallen` remembers the best it ever held so the screen can say what there is to win back
+    const t = titleFor({ streak })
+    const was = titleFor({ streak: j.best })
+    return { days: j.days, streak, best: j.best, title: { id: t.id, name: t.name }, shining: t.id !== 'newcomer', joyBonus: HAPPY.joyBonus + t.joyBonus, fallen: was.streak > t.streak ? was.name : null, next: nextTitle({ streak }) }
   }
   const moodFeel = (b) => (b.hatchedAt ? moodFor(publicHappy(b).value).feel : undefined)
 
@@ -961,13 +966,14 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const rows = Object.values(store.buddies)
         .filter((b) => b.hatchedAt && !b.retiredAt && b.monthly.key === key && b.monthly.bond > 0)
         .sort((a, b) => b.monthly.bond - a.monthly.bond || Date.parse(a.hatchedAt) - Date.parse(b.hatchedAt))
-        .map((b, i) => ({ rank: i + 1, buddyId: b.id, name: b.name, class: b.class, kind: b.kind, traits: b.traits, level: levelFor(b.bond), monthlyBond: b.monthly.bond, rarity: rarityFor(b), title: titleFor(b.joy || {}).id, shining: publicJoy(b).shining }))
-      // The Hall of Idols is for good: every Axie that ever earned the title, most joy days first.
+        .map((b, i) => ({ rank: i + 1, buddyId: b.id, name: b.name, class: b.class, kind: b.kind, traits: b.traits, level: levelFor(b.bond), monthlyBond: b.monthly.bond, rarity: rarityFor(b), title: publicJoy(b).title.id, shining: publicJoy(b).shining }))
+      // The Hall of Idols is who reigns right now: every Axie whose live streak holds the title,
+      // longest streak first. A lapsed streak leaves the hall.
       const idols = Object.values(store.buddies)
-        .filter((b) => b.hatchedAt && titleFor(b.joy || {}).id === 'idol')
-        .sort((a, b) => (b.joy?.days || 0) - (a.joy?.days || 0))
+        .filter((b) => b.hatchedAt && !b.retiredAt && publicJoy(b).title.id === 'idol')
+        .sort((a, b) => publicJoy(b).streak - publicJoy(a).streak)
         .slice(0, 24)
-        .map((b) => ({ buddyId: b.id, name: b.name, class: b.class, kind: b.kind, axieId: b.axieId || null, joyDays: b.joy?.days || 0, best: b.joy?.best || 0 }))
+        .map((b) => ({ buddyId: b.id, name: b.name, class: b.class, kind: b.kind, axieId: b.axieId || null, joyDays: b.joy?.days || 0, streak: publicJoy(b).streak, best: b.joy?.best || 0 }))
       const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 50))
       const mine = active ? rows.find((r) => r.buddyId === active.id) : null
       const tierAbove = mine ? rows.filter((r) => r.rank < mine.rank).at(-1) : null

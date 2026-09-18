@@ -64,12 +64,16 @@ export type Buddy = {
   /** A real Axie's facts from Sky Mavis. */
   core?: { level: number | null; birthYear: number | null; breedCount: number | null; parts: { type: string; name: string; class: string | null; special: string | null }[] } | null
 }
-/** Stardom: joy days, the streak, the title they earned (for life) and whether the star is shining. */
+/** Stardom: joy days, the live streak, and the title that streak holds (for as long as it lasts). */
 export type Joy = {
   days: number; streak: number; best: number
   title?: { id: 'newcomer' | 'rising' | 'star' | 'idol'; name: string }
   shining?: boolean
-  next?: { id: string; name: string; needStreak: number; haveStreak: number; needTotal: number | null; haveTotal: number | null } | null
+  /** What a joy day is worth in bond at this title: a star's is worth more than a newcomer's. */
+  joyBonus?: number
+  /** The best title it ever held, when the streak that held it has ended: what there is to win back. */
+  fallen?: string | null
+  next?: { id: string; name: string; needStreak: number; haveStreak: number } | null
 }
 export type Happy = { value: number; mood: string; moodId: string; talksLeft: number; petsLeft: number; treatsLeft?: number; playsLeft?: number; overjoyedToday: boolean }
 /** What one action did to its happiness. `overjoyed` is the win: the first time in a day it gets there. */

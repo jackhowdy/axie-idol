@@ -4272,3 +4272,19 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 .lp-goals li:nth-child(3) svg { color: #E89B12; fill: #FFC531; }
 .lp-goals b { color: var(--text); }
 @media (min-width: 900px) { .lp-goals li { font-size: 16px; } .lp-goals { gap: 8px; margin-top: 4px; } }
+
+/* ---- Landing: why an Idol matters ---- */
+.lp-why { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 4px; }
+.lp-why-card { gap: 6px; padding: 14px; border-top: 4px solid #FFC531; }
+.lp-why-card b { font-family: var(--font-display); font-weight: 900; font-size: 15px; }
+.lp-why-card > span:last-child { font-size: 13px; font-weight: 700; color: var(--muted); line-height: 1.45; }
+.lp-why-ico { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(180deg, #FFE38A 0%, #FFC531 100%); color: #6B4300; }
+.lp-why-ico svg { fill: currentColor; }
+.bd-star-note { margin: 0; }
+@media (min-width: 900px) {
+  .lp-why { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .lp-why-card { padding: 22px; }
+  .lp-why-card b { font-size: 17px; }
+  .lp-why-card > span:last-child { font-size: 14px; }
+}
+@media (min-width: 600px) and (max-width: 899px) { .lp-why { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

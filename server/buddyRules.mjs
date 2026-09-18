@@ -277,26 +277,26 @@ export function photoJoy({ labels = [], previous = [], recent = [], isNewPlace =
 
 /**
  * Stardom: what the name of the game promises. A joy day is a day the Axie reached Overjoyed;
- * joy days in a row earn titles. A title is for life (it is read off the best streak ever and the
- * total, neither of which goes down), so a lapsed streak never demotes anyone: the star only stops
- * shining until the streak is alive again. Idol has two doors, a long streak or a long haul, so
- * a player who misses a weekend is not locked out.
+ * joy days in a row earn titles, and a title lasts exactly as long as the streak does. Miss a day
+ * and the star goes out: every Idol you see is being looked after right now, which is what makes
+ * one worth being. The Axie never blames anyone for it (voice rule six); the star is simply there
+ * to be won back. A title also pays: the higher it stands, the more bond a joy day is worth, so
+ * stars climb the monthly ladder faster.
  */
 export const STAR_TITLES = [
-  { id: 'newcomer', name: 'Newcomer', streak: 0, total: 0 },
-  { id: 'rising', name: 'Rising Star', streak: 3, total: null },
-  { id: 'star', name: 'Star', streak: 7, total: null },
-  { id: 'idol', name: 'Idol', streak: 14, total: 30 },
+  { id: 'newcomer', name: 'Newcomer', streak: 0, joyBonus: 0 },
+  { id: 'rising', name: 'Rising Star', streak: 3, joyBonus: 1 },
+  { id: 'star', name: 'Star', streak: 7, joyBonus: 2 },
+  { id: 'idol', name: 'Idol', streak: 14, joyBonus: 3 },
 ]
-export function titleFor({ best = 0, days = 0 } = {}) {
+/** The title a live streak of this many joy days holds. */
+export function titleFor({ streak = 0 } = {}) {
   let t = STAR_TITLES[0]
-  for (const row of STAR_TITLES) if (best >= row.streak || (row.total != null && days >= row.total)) t = row
+  for (const row of STAR_TITLES) if (streak >= row.streak) t = row
   return t
 }
-/** The next title and how far away it is, by streak and (for Idol) by total; null at the top. */
-export function nextTitle({ best = 0, days = 0, streak = 0 } = {}) {
-  const at = STAR_TITLES.indexOf(titleFor({ best, days }))
-  const next = STAR_TITLES[at + 1]
-  if (!next) return null
-  return { id: next.id, name: next.name, needStreak: next.streak, haveStreak: Math.min(streak, next.streak), needTotal: next.total, haveTotal: next.total == null ? null : Math.min(days, next.total) }
+/** The next title and how far away it is; null at the top. */
+export function nextTitle({ streak = 0 } = {}) {
+  const next = STAR_TITLES[STAR_TITLES.indexOf(titleFor({ streak })) + 1]
+  return next ? { id: next.id, name: next.name, needStreak: next.streak, haveStreak: Math.min(streak, next.streak) } : null
 }
