@@ -21,10 +21,13 @@ export type OwnedAxie = { id: string; name: string; class: string | null }
 export type MonthlyRow = {
   rank: number; buddyId: string; name: string; class: string | null
   kind: 'wild' | 'owned' | 'visit'; traits: string[]; level: number; monthlyBond: number; rarity: number
+  title?: string; shining?: boolean
 }
+export type HallIdol = { buddyId: string; name: string; class: string | null; kind: string; axieId: string | null; joyDays: number; best: number }
 export type Monthly = {
   month: string; endsAt: string; rows: MonthlyRow[]
   you: { rank: number; monthlyBond: number; toNextTier: number } | null
+  idols?: HallIdol[]
 }
 export type DiaryEntry = { day: number; dayKey: string; title: string; line: string; photoId: string | null }
 export type Diary = { week: number; entries: DiaryEntry[]; anniversary: string | null; next: string }
@@ -55,16 +58,16 @@ export function dayCount(b: Pick<Buddy, 'createdAt' | 'hatchedAt'>, now: number 
  * printed "Bond 1" twice — once on the badge, once as the title. Server value wins when set.
  */
 const LEVEL_TITLES: Record<number, string> = {
-  1: 'Just hatched',
+  1: 'Just met',
   2: 'Getting to know you',
   3: 'Good friends',
   4: 'Buddies',
   5: 'Close',
   6: 'Inseparable',
   7: 'Best friends',
-  8: 'Legends',
-  9: 'Famous',
-  10: 'Idol',
+  8: 'Partners in crime',
+  9: 'Family',
+  10: 'Soulmates',
 }
 export function levelTitle(b: Pick<Buddy, 'level' | 'levelName'>): string {
   return b.levelName || LEVEL_TITLES[b.level] || `Bond ${b.level}`
@@ -323,7 +326,8 @@ export function happyCardHtml(b: Buddy, opts: { talk?: boolean } = {}): string {
     happy: `${name} is happy. Nearly overjoyed.`,
     overjoyed: `${name} is overjoyed. Today is a joy day.`,
   }
-  const streak = b.joy && b.joy.streak > 0 ? `<span class="bd-pill bd-pill-light">${b.joy.streak} joy day${b.joy.streak === 1 ? '' : 's'} in a row</span>` : ''
+  // an older payload has no title yet: keep its plain streak pill; otherwise the road to Idol says it
+  const streak = b.joy && b.joy.streak > 0 && !b.joy.title ? `<span class="bd-pill bd-pill-light">${b.joy.streak} joy day${b.joy.streak === 1 ? '' : 's'} in a row</span>` : ''
   const goal = h.overjoyedToday ? 'Joy day won. Keep it up tomorrow.' : `Get to 90 for a joy day: +3 bond.`
   return `
       <div class="bd-card bd-happy bd-happy-${esc(h.moodId)}">
@@ -331,6 +335,7 @@ export function happyCardHtml(b: Buddy, opts: { talk?: boolean } = {}): string {
         <div class="bd-meter-row"><b>${esc(h.mood)} · ${h.value}</b><span>${goal}</span></div>
         <div class="bd-meter bd-meter-happy"><i style="width:${Math.max(3, h.value)}%"></i><u style="left:90%"></u></div>
         <p class="bd-small">${say[h.moodId] || ''} ${streak}</p>
+        ${starProgressHtml(b.joy)}
         <div class="bd-happy-acts">
           <button type="button" class="bd-btn bd-btn-ghost" data-action="pet" title="Pat ${name}">${icon('heartFilled', 16)} Pat${h.petsLeft ? '' : ' <small>done</small>'}</button>
           <button type="button" class="bd-btn bd-btn-ghost" data-action="treat"${(h.treatsLeft ?? 2) > 0 ? '' : ' disabled'}>${icon('star', 16)} Treat <small>${h.treatsLeft ?? 2} left</small></button>
@@ -341,8 +346,47 @@ export function happyCardHtml(b: Buddy, opts: { talk?: boolean } = {}): string {
       </div>`
 }
 
+const STAR_PATH: Array<[string, string, string]> = [['newcomer', 'Newcomer', 'day one'], ['rising', 'Rising Star', '3 joy days in a row'], ['star', 'Star', '7 in a row'], ['idol', 'Idol', '14 in a row, or 30 in all']]
+
+/** The title as a badge: gold while the streak is alive, quiet when it has lapsed. Nothing for a Newcomer. */
+export function starBadgeHtml(joy: Buddy['joy'] | undefined, size = 12): string {
+  const t = joy?.title
+  if (!t || t.id === 'newcomer') return ''
+  return `<span class="bd-star bd-star-${esc(t.id)}${joy?.shining ? ' shining' : ''}" title="${joy?.shining ? 'Shining: the joy streak is alive' : 'A title is for life. A joy day makes it shine again.'}">${icon('star', size)} ${esc(t.name)}</span>`
+}
+
+/** Where it stands on the road to Idol, in one line with pips: "Joy day 2 of 3 to Rising Star". */
+export function starProgressHtml(joy: Buddy['joy'] | undefined): string {
+  if (!joy || !joy.title) return ''
+  const n = joy.next
+  if (!n) return `<p class="bd-star-line">${icon('star', 13)} <b>Idol.</b> ${joy.shining ? 'Shining.' : 'A joy day makes it shine again.'} ${joy.days} joy days so far.</p>`
+  const pips = Array.from({ length: n.needStreak }, (_, i) => `<i class="${i < n.haveStreak ? 'on' : ''}"></i>`).join('')
+  const total = n.needTotal != null ? ` · or ${n.haveTotal} of ${n.needTotal} joy days in all` : ''
+  return `<p class="bd-star-line">${icon('star', 13)} <b>${n.haveStreak} of ${n.needStreak}</b> joy days in a row to <b>${esc(n.name)}</b>${total}<span class="bd-star-pips">${pips}</span></p>`
+}
+
 /** The win: the first time in a day it becomes Overjoyed. */
-export function joyHtml(h: { joyBonus: number; joyStreak: number }, b: Buddy): string {
+export function joyHtml(h: { joyBonus: number; joyStreak: number; joy?: Buddy['joy']; newTitle?: { id: string; name: string; line: string } | null }, b: Buddy): string {
+  // a joy day that earns a title is the bigger news: the card is about the title
+  if (h.newTitle) {
+    const perk: Record<string, string> = {
+      rising: 'A star badge on Home and on the Idol ladder.',
+      star: 'A gold star on the speech bubble of every photo from now on.',
+      idol: 'A place in the Hall of Idols for good, a gold frame for photos, and its name in gold.',
+    }
+    return `
+    <div class="bd-moment bd-moment-star">
+      <span class="bd-moment-mark">${icon('star', 24)}</span>
+      <div class="bd-hero-text">
+        <p class="bd-eyebrow">${h.joyStreak} joy days in a row</p>
+        <h2>${esc(b.name)} is ${h.newTitle.id === 'idol' ? 'an' : 'a'} ${esc(h.newTitle.name)}</h2>
+      </div>
+    </div>
+    <div class="bd-speech">${esc(h.newTitle.line)}</div>
+    <p class="bd-small">${perk[h.newTitle.id] || ''} A title is for life. The star shines while the streak is alive. +${h.joyBonus} bond for today.</p>
+    ${starProgressHtml(h.joy)}
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="sheet-next">A star is born</button></div>`
+  }
   return `
     <div class="bd-moment">
       <span class="bd-moment-mark">${icon('heartFilled', 24)}</span>
@@ -352,6 +396,7 @@ export function joyHtml(h: { joyBonus: number; joyStreak: number }, b: Buddy): s
         <p class="bd-small">You made its day. +${h.joyBonus} bond${h.joyStreak > 1 ? ` · ${h.joyStreak} joy days in a row` : ''}. Come back tomorrow and do it again: time alone wears happiness down.</p>
       </div>
     </div>
+    ${starProgressHtml(h.joy)}
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="sheet-next">Lovely</button></div>`
 }
 
@@ -437,6 +482,7 @@ const FRAME_LABELS: Record<string, string> = {
   polaroid: 'Polaroid',
   film: 'Film',
   postcard: 'Postcard',
+  gold: 'Idol gold',
 }
 
 /**
@@ -511,7 +557,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
   const meter = b.next
     ? `<div class="bd-meter-row"><span>Bond ${b.next.level} in ${b.next.remaining} snap${b.next.remaining === 1 ? '' : 's'}</span><b class="bd-hot">${esc(b.next.reward)}</b></div>
        <div class="bd-meter"><i style="width:${pct((b.bond - floorBond) / Math.max(1, b.next.bond - floorBond))}%"></i></div>`
-    : `<div class="bd-meter-row"><span>Top of the ladder</span><b class="bd-hot">Idol</b></div><div class="bd-meter"><i style="width:100%"></i></div>`
+    : `<div class="bd-meter-row"><span>Top of the ladder</span><b class="bd-hot">Soulmates</b></div><div class="bd-meter"><i style="width:100%"></i></div>`
   const ladderByUnlock = new Map(b.ladder.map((r) => [r.unlock, r]))
   const wardrobe = WEARABLES.map((it) => {
     const unlocked = b.wardrobe.unlocked.includes(it)
@@ -546,8 +592,8 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
   return `${topBarHtml('home', true)}
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
-        <div><p class="bd-eyebrow">Day ${dayCount(b)} · my Axie</p><h1>${esc(b.name)}</h1></div>
-        <span class="bd-head-actions"><span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.streak}-day streak</span></span>
+        <div><p class="bd-eyebrow">Day ${dayCount(b)} · my Axie</p><h1${b.joy?.title?.id === 'idol' ? ' class="bd-gold"' : ''}>${esc(b.name)}</h1>${starBadgeHtml(b.joy, 13)}</div>
+        <span class="bd-head-actions"><span class="bd-pill bd-pill-light">${icon('heartFilled', 14)} ${b.joy ? `${b.joy.streak} joy day${b.joy.streak === 1 ? '' : 's'} in a row` : `${b.streak}-day streak`}</span></span>
       </header>
       <div class="bd-cols"><div class="bd-col">
       <div class="bd-card bd-ask">
@@ -795,6 +841,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'A voice that looks at each photo and writes its line on the picture',
       'Memory: it knows when you are back somewhere, and it answers your caption',
       'A happiness score: photos, pats, treats and a game of catch keep it happy; time alone bores it',
+      'Joy days make a star: Rising Star, Star, then Idol, with a Hall of Idols for good',
       'Ten steps of growth: hat, scarf, shades, cape, crown, the Mystic glow',
       'A wish every day, a scrapbook, and the monthly Idol ladder',
     ], core: [
@@ -816,7 +863,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
     { when: 'After', title: 'After the Vibeathon', state: 'Planned', items: [
       'The social wall: one place to see every Axie out in the world, and cheer',
       'Seasons on the Idol ladder, with something to win',
-      'A collectible card for every Axie that reaches Idol',
+      'A collectible card for every Idol',
       'An app you can install, with notifications',
     ], core: [
       'Axies that stand higher in Axie Core come first: special props only they can wear, and a better place on the wall',
@@ -855,8 +902,13 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       <section class="lp-hero">
         <div class="lp-hero-copy">
           <p class="bd-eyebrow">Axie Vibeathon 2026 · Round one</p>
-          <h1 class="lp-h1">Your Axie. In your camera. With opinions.</h1>
-          <p class="lp-lede">${opts.eggs ? 'Hatch an Axie' : 'Pick a real Axie'}, take it everywhere, and keep it happy. It talks about every photo you take together, and it gets bored if you leave it alone.</p>
+          <h1 class="lp-h1">Pick a real Axie. Make it a star.</h1>
+          <p class="lp-lede">${opts.eggs ? 'Hatch an Axie' : 'Choose any real Axie'} and take it everywhere in your camera. It talks about what it sees, it is happiest when you go places together, and enough happy days in a row turn it into an Idol.</p>
+          <ul class="lp-goals">
+            <li>${icon('camera', 15)}<span><b>Today:</b> take it somewhere and hear what it says</span></li>
+            <li>${icon('heartFilled', 15)}<span><b>Every day:</b> get its happiness to 90 for a joy day</span></li>
+            <li>${icon('star', 15)}<span><b>The long game:</b> 3 joy days in a row is a Rising Star, 7 a Star, 14 an Idol</span></li>
+          </ul>
           <div class="lp-cta">${primary}${about ? '' : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
           ${about ? '' : `<p class="bd-small lp-alt">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
           <p class="bd-small lp-alt"><b>Have a favourite Axie?</b> <a class="bd-link" data-action="visit">Play as it, by its number</a>. No wallet.</p>`}
@@ -865,29 +917,29 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <img class="bd-w-photo" src="/welcome/stairs.jpg" alt="">
           <div class="bd-w-bubbles">${bubbles}</div>
           <img class="bd-w-axie" src="/samples/axie-2660.png" alt="">
-          <span class="bd-w-tag">A real photo, a real line</span>
+          <span class="bd-w-tag">Your Axie. In your camera. With opinions.</span>
           <span class="lp-hero-happy">${icon('heartFilled', 14)} +15 happy · Happy</span>
         </div>
       </section>
 
       <section class="lp-section" id="lp-how">
         <p class="bd-eyebrow">How it works</p>
-        <h2 class="lp-h2">${opts.eggs ? 'Hatch it, then keep it happy' : 'Pick one, then keep it happy'}</h2>
+        <h2 class="lp-h2">${opts.eggs ? 'Hatch it, keep it happy, make it a star' : 'Four steps from hello to Idol'}</h2>
         <ol class="lp-steps">
           ${opts.eggs
             ? `<li><b>Find an egg</b><span>It rides along in your camera, in every photo you take.</span></li>
           <li><b>Take it places</b><span>Five photos and it can hatch. Carry it further for a rarer Axie.</span></li>
           <li><b>It hatches, and it talks</b><span>A one-of-a-kind Axie with a voice. It says one line after every photo, and its words go on the picture.</span></li>`
-            : `<li><b>Pick a real Axie</b><span>One of three we show you, a favourite by its number, or one you own on Ronin. It arrives as itself.</span></li>
-          <li><b>Take it places</b><span>It rides along in your camera, in every photo you take.</span></li>
-          <li><b>It talks</b><span>One line after every photo, about what it actually sees, and its words go on the picture.</span></li>`}
-          <li><b>Keep it happy</b><span>That is the game. Everything you do together makes it happier. Get it to Overjoyed and the day is won. Leave it alone and it gets bored.</span></li>
+            : `<li><b>Pick a real Axie</b><span>One of three we show you, a favourite by its number, or one you own on Ronin. It arrives as itself, and you can give it a nickname.</span></li>
+          <li><b>Take it places, and it talks</b><span>It rides along in your camera. After every photo it says one line about what it actually sees, and its words go on the picture.</span></li>`}
+          <li><b>Keep it happy</b><span>Photos, new places, a pat, a treat, a game of catch. Get it to Overjoyed and the day is won. Leave it alone and it gets bored.</span></li>
+          <li><b>Make it a star</b><span>Win the day again and again. Three joy days in a row make a Rising Star, seven a Star, fourteen an Idol, for life.</span></li>
         </ol>
       </section>
 
       <section class="lp-section" id="lp-happy">
         <p class="bd-eyebrow">The game</p>
-        <h2 class="lp-h2">Keep it happy. Win the day.</h2>
+        <h2 class="lp-h2">Keep it happy. Win the day. Raise an Idol.</h2>
         <p class="lp-sub">Your Axie has a happiness score from nothing to a hundred. What you do together pushes it up. Time apart pulls it down. Reach Overjoyed and today is a joy day.</p>
         <div class="lp-happy">
           <div class="bd-card lp-happy-demo" aria-hidden="true">
@@ -900,6 +952,12 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <div class="bd-card lp-happy-list">
             <b>What makes it happier</b>
             <ul>${liftRows}</ul>
+          </div>
+          <div class="bd-card lp-stars">
+            <b>Joy days make a star</b>
+            <span>Keep it happy day after day and it earns a title, for life. The star shines while the streak is alive.</span>
+            <ol class="lp-star-path">${STAR_PATH.map(([id, label, how]) => `<li class="lp-star-step lp-star-${id}">${id === 'newcomer' ? '' : icon('star', 16)}<b>${label}</b><small>${how}</small></li>`).join('')}</ol>
+            <span>A Rising Star gets a badge. A Star gets a gold star on every photo. An Idol goes in the Hall of Idols for good, with a gold frame and its name in gold.</span>
           </div>
           <div class="lp-happy-ends">
             <div class="bd-card lp-end lp-end-win">
@@ -973,6 +1031,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
           <div><dt>Is it free?</dt><dd>Yes. There is nothing to buy and no ads.</dd></div>
           <div><dt>Do I need a wallet?</dt><dd>No. A wallet only matters if you want to bring an Axie you already own, or keep your Axies on an account across phones.</dd></div>
           <div><dt>How do I win?</dt><dd>Get your Axie's happiness to 90 in a day. That is a joy day. Joy days in a row are a streak.</dd></div>
+          <div><dt>How does it become an Idol?</dt><dd>Joy days. Three in a row makes a Rising Star, seven a Star, and fourteen in a row (or thirty in all) an Idol. A title is for life; a missed day only dims the star until the next joy day.</dd></div>
           <div><dt>What if I stop playing?</dt><dd>It gets bored, never sad, and the streak lapses. Nothing else is lost: its bond, its wardrobe and its photos stay. One good day and it is happy again.</dd></div>
           <div><dt>How many photos count?</dt><dd>Ten a day build bond. Wishes and moments add a little on top. The rest still go in the book.</dd></div>
           <div><dt>Where do my photos go?</dt><dd>Into your Axie's scrapbook. To find its line, each photo is looked at once by an AI model (Google Gemini). If you allow location, we keep roughly where a photo was taken, so your Axie knows when it is back somewhere. Nothing is sold and there are no ads.</dd></div>
@@ -1118,11 +1177,11 @@ export function ladderHtml(b: Buddy): string {
         <p class="bd-eyebrow">Growth ladder</p>
         <span class="bd-round bd-round-ghost"></span>
       </header>
-      <div class="bd-head"><h1>Egg to Idol in 120 snaps</h1><p class="bd-muted">Every level changes the next photo. Wishes add bond on top, so a daily player reaches Idol in about a month.</p></div>
+      <div class="bd-head"><h1>From hello to soulmates in 120 snaps</h1><p class="bd-muted">Bond is how close you are. Every level changes the next photo. Wishes add bond on top, so a daily player gets there in about a month. Stardom is a different road: joy days.</p></div>
       <div class="bd-steps">${rows}</div>
       <div class="bd-card">
         <div class="bd-card-head"><span class="bd-label">Rules</span></div>
-        <p class="bd-small">One photo is one bond, and only the first ${b.dailyCap} photos of a day count, so nobody grinds to Idol in an afternoon. Wishes add one or two and moments add two, on top.</p>
+        <p class="bd-small">One photo is one bond, and only the first ${b.dailyCap} photos of a day count, so nobody grinds to the top in an afternoon. Wishes add one or two and moments add two, on top.</p>
         <p class="bd-small">Wallet owners skip the egg and start at Hatch with their own Axie.</p>
       </div>
     </div>
@@ -1144,7 +1203,7 @@ export function monthlyHtml(data: Monthly): string {
     <div class="bd-rank${data.you && data.you.rank === r.rank ? ' me' : ''}">
       <b class="bd-rank-n">${r.rank}</b>
       <span class="bd-rank-art bd-class-${esc(String(r.class || 'wild').toLowerCase())}"></span>
-      <span class="bd-hero-text"><b>${esc(r.name)}${r.kind === 'owned' ? ' <span class="bd-badge">Owned</span>' : r.kind === 'visit' ? ' <span class="bd-badge">Real</span>' : ''}</b><span class="bd-muted">Bond ${r.level} · rarity top ${pct(r.rarity)}%</span></span>
+      <span class="bd-hero-text"><b${r.title === 'idol' ? ' class="bd-gold"' : ''}>${esc(r.name)}${r.title && r.title !== 'newcomer' ? ` <span class="bd-star bd-star-${esc(r.title)}${r.shining ? ' shining' : ''}">${icon('star', 10)}</span>` : ''}${r.kind === 'owned' ? ' <span class="bd-badge">Owned</span>' : r.kind === 'visit' ? ' <span class="bd-badge">Real</span>' : ''}</b><span class="bd-muted">Bond ${r.level} · rarity top ${pct(r.rarity)}%</span></span>
       <b>${r.monthlyBond}</b>
     </div>`).join('') || '<p class="bd-small bd-muted">Nobody has earned bond this month yet. Be first.</p>'
   const days = Math.max(0, Math.ceil((Date.parse(data.endsAt) - Date.now()) / 864e5))
@@ -1158,7 +1217,13 @@ export function monthlyHtml(data: Monthly): string {
         <p class="bd-eyebrow">${esc(monthLabel(data.month))} Idols · ends in ${days} day${days === 1 ? '' : 's'}</p>
         <span class="bd-round bd-round-ghost"></span>
       </header>
-      <div class="bd-card bd-note">${icon('trophy', 18)}<p class="bd-small">The month's Idol wears the crown in every photo until the next month ends. Only bond earned this month counts, so a new Axie can win.</p></div>
+      <div class="bd-card bd-hall">
+        <div class="bd-card-head"><span class="bd-label">${icon('star', 12)} Hall of Idols</span><span class="bd-link">for good</span></div>
+        ${(data.idols || []).length
+          ? `<div class="bd-hall-row">${(data.idols || []).map((i) => `<span class="bd-hall-idol"><b class="bd-gold">${esc(i.name)}</b><small>${i.joyDays} joy days</small></span>`).join('')}</div>`
+          : '<p class="bd-small bd-muted">Nobody yet. Fourteen joy days in a row, or thirty in all, and an Axie is an Idol for good. The first name here could be yours.</p>'}
+      </div>
+      <div class="bd-card bd-note">${icon('trophy', 18)}<p class="bd-small">This month's ladder: the Axie with the most bond this month wears the crown in every photo until the next month ends. Only bond earned this month counts, so a new Axie can win.</p></div>
       <div class="bd-card-head"><span class="bd-label">Ladder · ${data.rows.length} axies</span><span class="bd-link">Bond this month</span></div>
       <div class="bd-ranks">${rows}</div>
       ${you}

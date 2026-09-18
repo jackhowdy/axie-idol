@@ -2,7 +2,7 @@
 import catalogueJson from './partCatalogue.json' with { type: 'json' }
 import {
   LADDER, LEVEL_NAMES, levelFor, nextStep, eggOdds, rollWild, rollTraits, traitsForOwned, normalizeTraits,
-  wishForToday, detectMoments, MOMENTS, HAPPY, HAPPY_START, moodFor, decayed, photoJoy,
+  wishForToday, detectMoments, MOMENTS, HAPPY, HAPPY_START, moodFor, decayed, photoJoy, titleFor, nextTitle,
 } from './buddyRules.mjs'
 import { pickLine, checkRules } from './voiceLines.mjs'
 import { createVoiceModel, splitImage } from './voiceModel.mjs'
@@ -186,15 +186,19 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const h = happyOf(b)
     const before = h.value
     h.value = Math.max(0, Math.min(100, h.value + delta))
-    let overjoyed = false; let unlocks = []
+    let overjoyed = false; let unlocks = []; let newTitle = null
     if (before < HAPPY.overjoyedAt && h.value >= HAPPY.overjoyedAt && !h.joyPaid) {
       h.joyPaid = true; overjoyed = true
       const j = b.joy; const yesterday = manilaDayKey(new Date(now() - 864e5))
+      const titleBefore = titleFor(j)
       j.streak = j.lastDay === yesterday ? j.streak + 1 : j.lastDay === h.day ? j.streak : 1
       j.lastDay = h.day; j.days += 1; j.best = Math.max(j.best, j.streak)
       unlocks = addBond(b, HAPPY.joyBonus).unlocks
+      // a joy day can be the one that earns a title: Rising Star, Star, Idol
+      const titleAfter = titleFor(j)
+      if (titleAfter.id !== titleBefore.id) newTitle = { id: titleAfter.id, name: titleAfter.name, line: say(b, 'star') }
     }
-    return { delta: Math.round(h.value - before), value: Math.round(h.value), mood: moodFor(h.value).name, reasons, overjoyed, joyBonus: overjoyed ? HAPPY.joyBonus : 0, joyStreak: b.joy.streak, unlocks }
+    return { delta: Math.round(h.value - before), value: Math.round(h.value), mood: moodFor(h.value).name, reasons, overjoyed, joyBonus: overjoyed ? HAPPY.joyBonus : 0, joyStreak: b.joy.streak, joy: publicJoy(b), newTitle, unlocks }
   }
   function publicHappy(b) {
     if (!b.hatchedAt) return null
@@ -208,7 +212,10 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
   function publicJoy(b) {
     const j = b.joy || { days: 0, streak: 0, best: 0, lastDay: null }
     const live = j.lastDay === manilaDayKey() || j.lastDay === manilaDayKey(new Date(now() - 864e5))
-    return { days: j.days, streak: live ? j.streak : 0, best: j.best }
+    const streak = live ? j.streak : 0
+    const t = titleFor(j)
+    // the star shines while the streak is alive; a title, once earned, is never taken away
+    return { days: j.days, streak, best: j.best, title: { id: t.id, name: t.name }, shining: t.id !== 'newcomer' && streak > 0, next: nextTitle({ best: j.best, days: j.days, streak }) }
   }
   const moodFeel = (b) => (b.hatchedAt ? moodFor(publicHappy(b).value).feel : undefined)
 
@@ -954,14 +961,20 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const rows = Object.values(store.buddies)
         .filter((b) => b.hatchedAt && !b.retiredAt && b.monthly.key === key && b.monthly.bond > 0)
         .sort((a, b) => b.monthly.bond - a.monthly.bond || Date.parse(a.hatchedAt) - Date.parse(b.hatchedAt))
-        .map((b, i) => ({ rank: i + 1, buddyId: b.id, name: b.name, class: b.class, kind: b.kind, traits: b.traits, level: levelFor(b.bond), monthlyBond: b.monthly.bond, rarity: rarityFor(b) }))
+        .map((b, i) => ({ rank: i + 1, buddyId: b.id, name: b.name, class: b.class, kind: b.kind, traits: b.traits, level: levelFor(b.bond), monthlyBond: b.monthly.bond, rarity: rarityFor(b), title: titleFor(b.joy || {}).id, shining: publicJoy(b).shining }))
+      // The Hall of Idols is for good: every Axie that ever earned the title, most joy days first.
+      const idols = Object.values(store.buddies)
+        .filter((b) => b.hatchedAt && titleFor(b.joy || {}).id === 'idol')
+        .sort((a, b) => (b.joy?.days || 0) - (a.joy?.days || 0))
+        .slice(0, 24)
+        .map((b) => ({ buddyId: b.id, name: b.name, class: b.class, kind: b.kind, axieId: b.axieId || null, joyDays: b.joy?.days || 0, best: b.joy?.best || 0 }))
       const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 50))
       const mine = active ? rows.find((r) => r.buddyId === active.id) : null
       const tierAbove = mine ? rows.filter((r) => r.rank < mine.rank).at(-1) : null
       const you = mine ? { rank: mine.rank, monthlyBond: mine.monthlyBond, toNextTier: tierAbove ? tierAbove.monthlyBond - mine.monthlyBond + 1 : 0 } : null
       const [y, m] = key.split('-').map(Number)
       const endsAt = new Date(Date.UTC(y, m, 1) - 8 * 3600 * 1000).toISOString()
-      sendJson(res, 200, { month: key, endsAt, rows: rows.slice(0, limit), you }); return true
+      sendJson(res, 200, { month: key, endsAt, rows: rows.slice(0, limit), you, idols }); return true
     }
     if (p === '/api/buddy/diary' && req.method === 'GET') {
       if (!active) { sendJson(res, 200, { entries: [] }); return true }

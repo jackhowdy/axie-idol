@@ -173,8 +173,9 @@ test('drawFrame stretches the frame over the whole canvas, and skips "none"', ()
   }
 })
 
-test('frame ids are the four R1 choices and are validated', () => {
-  assert.deepEqual([...FRAME_IDS], ['none', 'polaroid', 'film', 'postcard'])
+test('frame ids are the four R1 choices plus the Idol gold frame, and are validated', () => {
+  assert.deepEqual([...FRAME_IDS], ['none', 'polaroid', 'film', 'postcard', 'gold'])
+  assert.equal(isFrameId('gold'), true)
   assert.equal(isFrameId('film'), true)
   assert.equal(isFrameId('none'), true)
   assert.equal(isFrameId('sparkle'), false)

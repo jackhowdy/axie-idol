@@ -1,13 +1,14 @@
 # Axie Idol
 
-**Your Axie. In your camera. With opinions.** An entry for Axie Vibeathon 2026, Round 1.
+**Pick a real Axie. Make it a star.** An entry for Axie Vibeathon 2026, Round 1.
 
 Play it: **https://axieidol.com** (phone or desktop, no wallet, no account)
 
 Axie Idol is a pet game. You pick a real Axie (any Axie, by its number, or one you own), it rides
 along in your camera, and it talks: one line on every photo, about what it actually sees. The game is to **keep it
 happy**. Photos, new places, a caption, a pat, a treat and a game of catch lift its happiness; time alone
-wears it down. Get it to Overjoyed and the day is won. Leave it and it gets bored.
+wears it down. Get it to Overjoyed and the day is won. Win enough days in a row and it becomes a
+Rising Star, a Star, then an Idol. Leave it and it gets bored.
 
 ---
 
@@ -26,7 +27,9 @@ You do not need a phone, a camera or a wallet.
 4. On Home, watch the **Happiness** card. Pat it, give it a treat, play catch (tap when the star
    is over your Axie), and take photos of different things.
    Reaching 90 is the win for the day: a joy day, +3 bond, and the start of a streak.
-5. Losing is slow on purpose: happiness falls 1.5 points an hour, so an Axie left alone is Content
+5. The road to Idol is on the Happiness card from the start. `tests/happy.test.mjs` plays
+   twenty-one days of it in a second.
+6. Losing is slow on purpose: happiness falls 1.5 points an hour, so an Axie left alone is Content
    after a day and Bored after about two. `tests/happy.test.mjs` shows the whole curve in a second.
 
 ## Controls and supported devices
@@ -51,10 +54,16 @@ phone. Ronin sign-in is optional and only adds: bring an Axie you own, keep your
 - **What wears it down:** time alone, 1.5 an hour.
 - **Win:** reach Overjoyed (90). Once a day that pays +3 bond and counts a **joy day**; joy days on
   consecutive days are a streak.
+- **The long game, stardom:** 3 joy days in a row make a **Rising Star** (a badge on Home and the
+  ladder), 7 a **Star** (a gold star on every photo's speech bubble), and 14 in a row, or 30 in
+  all, an **Idol** (the Hall of Idols for good, a gold photo frame, its name in gold). A title is
+  for life: a missed day only dims the star until the next joy day. Home shows the road from minute
+  one ("1 of 3 joy days in a row to Rising Star").
 - **Lose:** miss a day and the streak lapses; leave it two days and it is Bored. The Axie never
   guilts you for it (a rule of its voice); it just wants to do something.
-- **Growth:** every photo builds bond (ten a day count). Ten bond levels unlock a hat, scarf,
-  shades, a pose, a cape, tricks, a crown and a Mystic glow. Bond earned this month ranks every
+- **Growth:** every photo builds bond (ten a day count): how close you are, from Just met to
+  Soulmates. Ten bond levels unlock a hat, scarf, shades, a pose, a cape, tricks, a crown and a
+  Mystic glow. Bond earned this month ranks every
   Axie on the Idol ladder.
 - **The voice:** a vision model looks at each photo once and answers in the Axie's character,
   under ten written rules (`docs/voice-bible.md`). Every line is checked against those rules in
@@ -87,7 +96,7 @@ gets stronger the more it is cared for. Axie Idol is built on that and nothing e
 
 | Stage | What |
 |---|---|
-| **Round 1 (live)** | Meet a real Axie (three offered, any by number, your own via Ronin), a nickname, the voice on every photo, memory, happiness (pats, treats, a catching game), wishes, growth ladder, scrapbook, monthly Idol ladder. |
+| **Round 1 (live)** | Meet a real Axie (three offered, any by number, your own via Ronin), a nickname, the voice on every photo, memory, happiness (pats, treats, a catching game), stardom (Rising Star, Star, Idol, the Hall of Idols), wishes, growth ladder, scrapbook, monthly Idol ladder. |
 | **Round 2** | The official Axie Mixer on screen so each Axie moves as itself, new games to play together, duo photos with a friend, your whole Ronin collection playable, a morning nudge. |
 | **After** | Axies that stand higher in Axie Core come first: special props only they can wear, chat that opens up for them, a better place on the social wall. The social wall itself. Ladder seasons. Work with Sky Mavis so time spent here counts for the Axie, the way AXP does. |
 
@@ -115,7 +124,7 @@ npm install
 cp .env.example .env        # add your own keys; every key is optional
 npm run build
 npm start                   # http://localhost:5174
-npm test                    # 201 tests, no network needed
+npm test                    # 204 tests, no network needed
 ```
 
 Keys (all optional, all in `.env`, never committed): `GEMINI_API_KEY` for the voice (without it the

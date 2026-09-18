@@ -2,7 +2,7 @@
 // Rules (checkRules): no digits, no game words, no emoji, at most three short sentences, one loud word.
 // Lines with {slots} are used only when the app has a real noun for the slot; everything else works
 // anywhere, so an Axie on a staircase never talks about waves.
-export const SITUATIONS = ['hatch', 'morning', 'wish', 'before', 'after', 'bedtime', 'return', 'big', 'moment', 'unlock', 'talk', 'talk-warm', 'talk-curious', 'pet', 'treat', 'play-win', 'play-miss']
+export const SITUATIONS = ['hatch', 'morning', 'wish', 'before', 'after', 'bedtime', 'return', 'big', 'moment', 'unlock', 'talk', 'talk-warm', 'talk-curious', 'pet', 'treat', 'play-win', 'play-miss', 'star']
 
 export const LINES = {
   Explorer: {
@@ -378,6 +378,14 @@ export const LINES = {
 
 /** Trait-neutral lines for each situation. Used when every trait line is spent or needs a slot we do not have. */
 export const GENERIC = {
+  // The day it earns a title: Rising Star, Star, Idol.
+  star: [
+    'I feel shiny. Is that a star? Is it MINE?',
+    'Everyone can see me glowing, right? Good.',
+    'We did that. You and me. Look at us.',
+    'I am a star now. I would still like a snack.',
+    'Do stars get to pick where we go next? I pick everywhere.',
+  ],
   // A treat on Home, twice a day.
   treat: [
     'A treat. For me? Yes.',
@@ -470,6 +478,7 @@ export const GENERIC = {
 
 /** Lines with slots, used only when the app has a real noun for every slot. */
 export const TEMPLATES = {
+  star: ['I feel shiny. Is that a star?'],
   treat: ['A treat. For me? Yes.'],
   'play-win': ['Got it! Again!'],
   'play-miss': ['Nearly. Again?'],

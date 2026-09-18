@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440" fill="none" preserveAspectRatio="none">
+  <!-- Idol gold: a gold mount with a dark keyline and a star in each corner. Transparent window. -->
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE38A"/><stop offset=".5" stop-color="#FFC531"/><stop offset="1" stop-color="#E89B12"/></linearGradient></defs>
+  <path fill-rule="evenodd" fill="url(#g)" d="M0 0 H1080 V1440 H0 Z M64 64 H1016 V1376 H64 Z"/>
+  <path fill-rule="evenodd" fill="#1A2B3C" fill-opacity="0.7" d="M52 52 H1028 V1388 H52 Z M64 64 H1016 V1376 H64 Z"/>
+  <path fill-rule="evenodd" fill="#FFFFFF" fill-opacity="0.55" d="M10 10 H1070 V1430 H10 Z M18 18 H1062 V1422 H18 Z"/>
+  <g fill="#FFFFFF" stroke="#1A2B3C" stroke-width="5" stroke-linejoin="round">
+    <path id="s" d="M32 6 39 25 59 25 43 37 49 57 32 45 15 57 21 37 5 25 25 25Z"/>
+    <use href="#s" x="1016"/><use href="#s" y="1376"/><use href="#s" x="1016" y="1376"/>
+  </g>
+</svg>

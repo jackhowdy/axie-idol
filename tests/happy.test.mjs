@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createBuddyModule } from '../server/buddy.mjs'
-import { HAPPY, HAPPY_START, moodFor, decayed, photoJoy } from '../server/buddyRules.mjs'
+import { HAPPY, HAPPY_START, moodFor, decayed, photoJoy, titleFor, nextTitle } from '../server/buddyRules.mjs'
 import { characterBrief, coreFacts, memoryFacts } from '../server/voiceBrief.mjs'
 
 const HOUR = 36e5
@@ -75,7 +75,10 @@ test('reaching Overjoyed is the win: once a day it pays bond and counts a joy da
   const g = await r.call('/api/buddy', { method: 'GET' })
   assert.equal(g.body.active.happy.mood, 'Overjoyed')
   assert.equal(g.body.active.happy.overjoyedToday, true)
-  assert.deepEqual(g.body.active.joy, { days: 1, streak: 1, best: 1 })
+  const joy = g.body.active.joy
+  assert.deepEqual([joy.days, joy.streak, joy.best], [1, 1, 1])
+  assert.equal(joy.title.id, 'newcomer'); assert.equal(joy.shining, false)
+  assert.deepEqual([joy.next.name, joy.next.haveStreak, joy.next.needStreak], ['Rising Star', 1, 3])
   // dipping and coming back the same day does not pay twice
   r.clock.t += 10 * HOUR
   const again = await r.snap('later')
@@ -205,4 +208,35 @@ test('meet: three cards, each a real Axie with its picture', async () => {
   const m = await r.call('/api/buddy/meet', { method: 'GET' })
   assert.equal(m.status, 200); assert.equal(m.body.cards.length, 3)
   for (const c of m.body.cards) { assert.match(c.id, /^\d+$/); assert.equal(c.image, `/api/image/${c.id}`); assert.ok(c.name) }
+})
+
+test('titles: three joy days in a row is a Rising Star, seven a Star, fourteen (or thirty in all) an Idol, for life', () => {
+  assert.equal(titleFor({ best: 0, days: 0 }).id, 'newcomer'); assert.equal(titleFor({ best: 2, days: 2 }).id, 'newcomer')
+  assert.equal(titleFor({ best: 3, days: 3 }).id, 'rising'); assert.equal(titleFor({ best: 7, days: 9 }).id, 'star')
+  assert.equal(titleFor({ best: 14, days: 14 }).id, 'idol'); assert.equal(titleFor({ best: 4, days: 30 }).id, 'idol', 'the long haul is a door too')
+  assert.equal(titleFor({ best: 7, days: 8, streak: 0 }).id, 'star', 'a lapsed streak never demotes: the title reads the best streak ever')
+  assert.deepEqual(nextTitle({ best: 7, days: 12, streak: 2 }), { id: 'idol', name: 'Idol', needStreak: 14, haveStreak: 2, needTotal: 30, haveTotal: 12 })
+  assert.equal(nextTitle({ best: 14, days: 14, streak: 14 }), null)
+})
+
+test('a run of joy days earns the titles, a missed day dims the star, and the ladder carries both', async () => {
+  const r = rig()
+  await r.hatch()
+  const winDay = async (tag) => { let won = null; for (let i = 0; i < 12 && !won; i++) { const s = await r.snap(`${tag}-${i}`, { lat: Math.random() * 50, lng: Math.random() * 50 }); if (s.happy.overjoyed) won = s.happy } assert.ok(won, `joy day ${tag}`); return won }
+  let last = null
+  for (let day = 1; day <= 3; day++) { last = await winDay(`d${day}`); if (day < 3) { assert.equal(last.newTitle, null); r.clock.t += 24 * HOUR } }
+  assert.equal(last.newTitle.id, 'rising'); assert.ok(last.newTitle.line); assert.equal(last.joy.shining, true)
+  for (let day = 4; day <= 7; day++) { r.clock.t += 24 * HOUR; last = await winDay(`d${day}`) }
+  assert.equal(last.newTitle.id, 'star')
+  r.clock.t += 5 * 24 * HOUR // five days away
+  const away = (await r.call('/api/buddy', { method: 'GET' })).body.active.joy
+  assert.equal(away.title.id, 'star', 'still a Star'); assert.equal(away.shining, false, 'but not shining'); assert.equal(away.streak, 0)
+  const back = await winDay('back')
+  assert.equal(back.joy.shining, true); assert.equal(back.newTitle, null, 'coming back relights the star, it is not a new title')
+  const m = await r.call('/api/ladder/monthly', { method: 'GET' })
+  assert.equal(m.body.rows[0].title, 'star'); assert.equal(m.body.rows[0].shining, true); assert.deepEqual(m.body.idols, [])
+  for (let day = 2; day <= 14; day++) { r.clock.t += 24 * HOUR; last = await winDay(`r${day}`) }
+  assert.equal(last.newTitle.id, 'idol')
+  const hall = (await r.call('/api/ladder/monthly', { method: 'GET' })).body.idols
+  assert.equal(hall.length, 1); assert.equal(hall[0].name, 'Sunny'); assert.ok(hall[0].joyDays >= 21)
 })

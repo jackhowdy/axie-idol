@@ -108,7 +108,7 @@ function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
 }
 
 /** Draw the bubble onto `ctx` (the composite). Returns false when there was nothing to draw. */
-export function drawSpeechBubble(ctx: CanvasRenderingContext2D, text: string, anchor: BubbleAnchor, family = 'Nunito, system-ui, sans-serif'): boolean {
+export function drawSpeechBubble(ctx: CanvasRenderingContext2D, text: string, anchor: BubbleAnchor, family = 'Nunito, system-ui, sans-serif', opts: { star?: boolean } = {}): boolean {
   const W = ctx.canvas.width
   const H = ctx.canvas.height
   const probeFont = (px: number) => `800 ${px}px ${family}`
@@ -150,6 +150,25 @@ export function drawSpeechBubble(ctx: CanvasRenderingContext2D, text: string, an
   layout.lines.forEach((line, i) => {
     ctx.fillText(line, layout.x + layout.w / 2, layout.y + pad + layout.lineH * (i + 0.5))
   })
+  // A Star's photos carry a gold star on the corner of the bubble.
+  if (opts.star) {
+    const R = layout.fontPx * 0.95
+    const cx = layout.x + layout.w - R * 0.15
+    const cy = layout.y + R * 0.1
+    ctx.beginPath()
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? R : R * 0.45
+      const a = -Math.PI / 2 + (i * Math.PI) / 5 + 0.2
+      ctx[i === 0 ? 'moveTo' : 'lineTo'](cx + Math.cos(a) * r, cy + Math.sin(a) * r)
+    }
+    ctx.closePath()
+    ctx.fillStyle = '#FFC531'
+    ctx.strokeStyle = ink
+    ctx.lineWidth = stroke
+    ctx.lineJoin = 'round'
+    ctx.fill()
+    ctx.stroke()
+  }
   ctx.restore()
   return true
 }

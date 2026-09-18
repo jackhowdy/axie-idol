@@ -9,18 +9,19 @@ variants are underneath each one.
 
 ## One-sentence pitch
 
-Pick a real Axie, take it everywhere in your camera, and keep it happy: it looks at every photo
-and talks back about what it actually sees.
+Pick a real Axie, take it everywhere in your camera, and keep it happy day after day until it
+becomes an Idol: it looks at every photo and talks back about what it actually sees.
 
-- Shorter (under 100 characters): *A pet Axie that lives in your camera, talks about your photos, and needs you to keep it happy.*
+- Shorter (under 100 characters): *Pick a real Axie, take it places, keep it happy, and raise it into an Idol.*
+- Tagline: *Pick a real Axie. Make it a star.*
 
 ## Short description
 
 Axie Idol is a pet game you play with your camera. Your Axie rides along in every photo and answers
 with one line about what it really sees, drawn onto the picture. The game is its happiness: photos,
 new places, captions, pats, treats and a quick game of catch lift it; time alone wears it down. Get
-it to Overjoyed to win the day and build a streak. Play as any real Axie by its number, with its
-real parts and Axie Core level. No wallet needed.
+it to Overjoyed to win the day; win days in a row and it becomes a Rising Star, a Star, then an
+Idol, for life. Every Axie is a real one, with its real parts and Axie Core level. No wallet needed.
 
 - Shorter (under 200 characters): *A pet Axie in your camera. It talks about what it sees in your photos, remembers places, and gets bored if you leave it. Keep it happy to win the day. Any real Axie, no wallet.*
 
@@ -46,6 +47,9 @@ speaks instead, so no photo goes without a line.
   days leaves it Bored.
 - Win: reach Overjoyed. Once a day that makes a joy day, pays bond, and joy days on consecutive
   days build a streak.
+- The long game: 3 joy days in a row make a Rising Star, 7 a Star (a gold star on every photo),
+  14 in a row or 30 in all an Idol (the Hall of Idols, a gold frame, its name in gold). A title is
+  for life; a missed day only dims the star.
 - Lose: miss a day and the streak lapses. The Axie never blames you for it. It just wants to go out.
 
 **Growing up.** Every photo builds bond. Ten bond levels unlock a hat, a scarf, shades, a pose, a
@@ -67,7 +71,7 @@ world; ladder seasons; and work with Sky Mavis so time spent here counts for the
 does. The roadmap is on the front page of the site.
 
 **Built with.** Vite, TypeScript and three.js in the browser; a Cloudflare Worker with one Durable
-Object behind it; 201 automated tests. Built by one person with Claude Code; Google Gemini looks at
+Object behind it; 204 automated tests. Built by one person with Claude Code; Google Gemini looks at
 the photos at run time. Full disclosures, known issues and run instructions are in the README.
 
 ## Thumbnail
@@ -105,7 +109,8 @@ Opens directly in a new tab. No sign-in, no wallet, no install. Works on a phone
 4. Your Axie's line comes back drawn on the photo, and the sheet shows what the photo did for its
    happiness. Try writing a caption: it answers that too.
 5. On Home, look at the **Happiness** card. Pat it, give it a **Treat**, and press **Play** for the
-   catching game. Get happiness to 90 to win the day (a joy day, +3 bond).
+   catching game. Get happiness to 90 to win the day (a joy day, +3 bond). The card shows how many
+   joy days in a row are left to the next title.
 6. Come back tomorrow: happiness has dropped while you were away. That is the game.
 
 Camera and location permissions are optional. Without the camera, use sample photos; without

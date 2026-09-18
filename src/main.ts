@@ -803,13 +803,21 @@ function activeFrame(): FrameId {
 
 /** Frames arrive with the cape, at bond level 5. */
 function framesUnlocked(): boolean {
-  return buddyEnabled && Boolean(buddyState.active?.wardrobe.unlocked.includes('cape'))
+  return buddyEnabled && (Boolean(buddyState.active?.wardrobe.unlocked.includes('cape')) || isIdol())
+}
+/** Stardom, from the joy days: an Idol has the gold frame, a Star or an Idol a gold star on its photos. */
+function isIdol(): boolean { return buddyState.active?.joy?.title?.id === 'idol' }
+function hasPhotoStar(): boolean { const t = buddyState.active?.joy?.title?.id; return t === 'star' || t === 'idol' }
+/** The frames on offer: the three everyone earns with the cape, and gold for an Idol. */
+function offeredFrames(): readonly string[] {
+  const capeFrames = buddyState.active?.wardrobe.unlocked.includes('cape')
+  return FRAME_IDS.filter((id) => id === 'none' || (id === 'gold' ? isIdol() : capeFrames))
 }
 
 function syncFrameTray(): void {
   if (!frameTray) return
   const on = framesUnlocked()
-  frameTray.innerHTML = on ? frameTrayHtml(FRAME_IDS, activeFrame()) : ''
+  frameTray.innerHTML = on ? frameTrayHtml(offeredFrames(), activeFrame()) : ''
   frameTray.hidden = !on
 }
 
@@ -2382,7 +2390,7 @@ async function bubbleOnto(plain: Blob, line: string, anchor: BubbleAnchor | null
   URL.revokeObjectURL(src)
   const family = getComputedStyle(document.body).getPropertyValue('--font-display').trim() || 'Nunito, system-ui, sans-serif'
   const at = anchor || { x: canvas.width / 2, y: canvas.height * 0.52, halfW: canvas.width * 0.15, halfH: canvas.height * 0.08 }
-  if (!drawSpeechBubble(ctx, line, at, family)) return null
+  if (!drawSpeechBubble(ctx, line, at, family, { star: hasPhotoStar() })) return null
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 0.95))
 }
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml, topBarHtml, meetHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml, topBarHtml, meetHtml, starBadgeHtml, starProgressHtml } from '../src/buddyHtml.ts'
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -152,6 +152,29 @@ test('the catching game: a track, a star, a Catch button, and a result that says
   const r = playResultHtml(miso, { line: 'That star had no chance.', catches: 2, rounds: 3, counted: true, happy: { delta: 6, value: 76, mood: 'Happy' } })
   assert.match(r, /2 of 3 caught/); assert.match(r, /That star had no chance/); assert.match(r, /\+6 happy · Happy 76/); assert.match(r, /data-action="play-done"/)
   assert.match(playResultHtml(miso, { line: 'x', catches: 3, rounds: 3, counted: false, happy: { delta: 0, value: 50, mood: 'Content' } }), /for fun/)
+})
+
+test('stardom on screen: the badge, the road to Idol, the title card, the Hall of Idols', () => {
+  const rising = { days: 3, streak: 3, best: 3, title: { id: 'rising', name: 'Rising Star' }, shining: true, next: { id: 'star', name: 'Star', needStreak: 7, haveStreak: 3, needTotal: null, haveTotal: null } }
+  assert.match(starBadgeHtml(rising), /bd-star bd-star-rising shining/); assert.match(starBadgeHtml(rising), /Rising Star/)
+  assert.doesNotMatch(starBadgeHtml({ ...rising, shining: false }), /shining"/, 'a lapsed streak dims the star, the title stays')
+  assert.equal(starBadgeHtml({ days: 1, streak: 1, best: 1, title: { id: 'newcomer', name: 'Newcomer' }, shining: false, next: null }), '')
+  const line = starProgressHtml(rising)
+  assert.match(line, /<b>3 of 7<\/b> joy days in a row to <b>Star<\/b>/); assert.equal((line.match(/<i class="on">/g) || []).length, 3)
+  const toIdol = starProgressHtml({ days: 12, streak: 2, best: 7, title: { id: 'star', name: 'Star' }, shining: true, next: { id: 'idol', name: 'Idol', needStreak: 14, haveStreak: 2, needTotal: 30, haveTotal: 12 } })
+  assert.match(toIdol, /or 12 of 30 joy days in all/, 'Idol has two doors')
+  assert.match(starProgressHtml({ days: 40, streak: 0, best: 14, title: { id: 'idol', name: 'Idol' }, shining: false, next: null }), /A joy day makes it shine again/)
+  assert.equal(starProgressHtml({ days: 2, streak: 2, best: 2 }), '', 'an older payload without a title draws nothing')
+  const home = homeHtml({ ...miso, happy: { value: 95, mood: 'Overjoyed', moodId: 'overjoyed', talksLeft: 5, petsLeft: 5, overjoyedToday: true }, joy: rising }, null)
+  assert.match(home, /bd-star-rising shining/); assert.match(home, /joy days in a row to <b>Star/)
+  assert.match(homeHtml({ ...miso, joy: { days: 30, streak: 1, best: 14, title: { id: 'idol', name: 'Idol' }, shining: true, next: null } }, null), /<h1 class="bd-gold">Miso/, 'an Idol has its name in gold')
+  const card = joyHtml({ joyBonus: 3, joyStreak: 3, joy: rising, newTitle: { id: 'rising', name: 'Rising Star', line: 'I feel shiny.' } }, miso)
+  assert.match(card, /Miso is a Rising Star/); assert.match(card, /I feel shiny\./); assert.match(card, /A title is for life/); assert.match(card, /data-action="sheet-next"/)
+  assert.match(joyHtml({ joyBonus: 3, joyStreak: 14, joy: rising, newTitle: { id: 'idol', name: 'Idol', line: 'x' } }, miso), /Miso is an Idol/)
+  const ladder = monthlyHtml({ month: '2026-09', endsAt: new Date(Date.now() + 5 * 864e5).toISOString(), you: null, rows: [{ rank: 1, buddyId: 'a', name: 'Nova', class: 'Bird', kind: 'visit', traits: [], level: 5, monthlyBond: 40, rarity: 0.5, title: 'idol', shining: true }], idols: [{ buddyId: 'a', name: 'Nova', class: 'Bird', kind: 'visit', axieId: '9', joyDays: 31, best: 14 }] })
+  assert.match(ladder, /Hall of Idols/); assert.match(ladder, /<b class="bd-gold">Nova<\/b><small>31 joy days/); assert.match(ladder, /bd-star bd-star-idol shining/)
+  assert.match(monthlyHtml({ month: '2026-09', endsAt: new Date().toISOString(), you: null, rows: [] }), /The first name here could be yours/)
+  assert.match(ladderHtml(miso), /From hello to soulmates/); assert.doesNotMatch(ladderHtml(miso), /Egg|Idol in/)
 })
 
 test('meet: three real Axies as cards, a shuffle, a number box, and the wallet way in', () => {
@@ -414,9 +437,10 @@ test('home offers a wallet entry point, worded for the connected state', () => {
 
 test('every bond level has its own title, so the hero never says Bond 1 twice', () => {
   const hero = (b) => /<b>([^<]*)<\/b>/.exec(homeHtml(b, null).split('bd-hero-text')[1])[1]
-  assert.equal(hero({ ...miso, level: 1, levelName: null }), 'Just hatched')
+  assert.equal(hero({ ...miso, level: 1, levelName: null }), 'Just met')
   assert.equal(hero({ ...miso, level: 2, levelName: null }), 'Getting to know you')
-  assert.equal(hero({ ...miso, level: 8, levelName: null }), 'Legends')
+  assert.equal(hero({ ...miso, level: 8, levelName: null }), 'Partners in crime')
+  assert.equal(hero({ ...miso, level: 10, levelName: null }), 'Soulmates', 'Idol is a title earned with joy days, not a bond level')
   // the server still wins where it names a level
   assert.equal(hero({ ...miso, level: 3, levelName: 'Good friends' }), 'Good friends')
   // the badge still reads "Bond 1" — the title beside it must not repeat it
@@ -599,7 +623,12 @@ test('the front door: header with the mark, hero with a real photo and line, sec
   assert.match(after, /special props only they can wear/, 'higher Axie Core Axies get props')
   assert.match(after, /Chat opens up for them/, 'and chat')
   assert.match(fresh, /class="lp-header"/)
-  assert.match(fresh, /Your Axie\. In your camera\. With opinions\./)
+  assert.match(fresh, /<h1 class="lp-h1">Pick a real Axie\. Make it a star\.<\/h1>/, 'the headline is the whole game in six words')
+  assert.match(fresh, /Your Axie\. In your camera\. With opinions\./, 'the old line lives on the hero photo')
+  assert.equal((fresh.match(/<li>.*?<b>(Today|Every day|The long game):<\/b>/gs) || []).length, 3, 'three goals under the headline')
+  assert.match(fresh, /Four steps from hello to Idol/); assert.match(fresh, /Make it a star/)
+  assert.match(fresh, /Joy days make a star/); assert.match(fresh, /How does it become an Idol\?/)
+  for (const step of ['Newcomer', 'Rising Star', 'Star', 'Idol']) assert.match(fresh, new RegExp(`<b>${step}</b>`), step)
   assert.match(fresh, /welcome\/stairs\.jpg/, 'a real photo in the hero')
   assert.match(fresh, /That bench is far/, 'a real line on it')
   for (const id of ['lp-how', 'lp-voice', 'lp-grow', 'lp-hatch', 'lp-faq']) assert.match(fresh, new RegExp(`id="${id}"`), id)

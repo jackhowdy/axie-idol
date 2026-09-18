@@ -19,7 +19,8 @@
 export const WEARABLE_IDS = ['hat', 'scarf', 'shades', 'cape', 'crown'] as const
 export type WearableId = (typeof WEARABLE_IDS)[number]
 
-export const FRAME_IDS = ['none', 'polaroid', 'film', 'postcard'] as const
+// 'gold' is the Idol's frame: offered only to an Axie that has earned the title (see main.ts)
+export const FRAME_IDS = ['none', 'polaroid', 'film', 'postcard', 'gold'] as const
 export type FrameId = (typeof FRAME_IDS)[number]
 
 export const JOINT_NAMES = ['head', 'eyeL', 'eyeR', 'neck', 'chest', 'back'] as const

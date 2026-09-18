@@ -4225,3 +4225,50 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
   .bd-meet-card > .bd-muted { font-size: 12px; }
   .bd-meet-card .bd-pill { justify-self: start; margin-top: 2px; }
 }
+
+/* ---- Stardom: the title badge, the road to Idol, the Hall of Idols ---- */
+.bd-star { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); border: 1px solid var(--border); vertical-align: middle; }
+.bd-star.shining { background: linear-gradient(180deg, #FFE38A 0%, #FFC531 100%); color: #6B4300; border-color: #E89B12; box-shadow: 0 0 0 3px rgba(255, 197, 49, 0.25); }
+.bd-star svg { fill: currentColor; }
+.bd-rank .bd-star { padding: 2px 4px; }
+.bd-gold { color: #B7790A; }
+.bd-star-line { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin: 2px 0 0; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.bd-star-line svg { color: #E89B12; fill: #FFC531; flex: 0 0 auto; }
+.bd-star-line b { color: var(--text); }
+.bd-star-pips { display: inline-flex; gap: 3px; margin-left: 4px; }
+.bd-star-pips i { width: 9px; height: 9px; border-radius: 50%; background: var(--border); }
+.bd-star-pips i.on { background: #FFC531; box-shadow: 0 0 0 1px #E89B12; }
+.bd-moment-star .bd-moment-mark { background: linear-gradient(180deg, #FFE38A 0%, #FFC531 100%); color: #6B4300; }
+.bd-moment-star .bd-moment-mark svg { fill: currentColor; }
+.bd-hall { gap: 8px; padding: 12px; border: 2px solid #E89B12; background: linear-gradient(180deg, #FFF6DA 0%, var(--bg-2) 70%); }
+.bd-hall .bd-label { display: inline-flex; align-items: center; gap: 5px; color: #B7790A; }
+.bd-hall .bd-label svg { fill: #FFC531; }
+.bd-hall-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.bd-hall-idol { display: inline-flex; flex-direction: column; padding: 6px 10px; border-radius: 12px; background: #FFFFFF; border: 1px solid #F1D48A; }
+.bd-hall-idol small { font-size: 10.5px; font-weight: 800; color: var(--muted); }
+.lp-stars { gap: 8px; padding: 14px; border-top: 4px solid #FFC531; }
+.lp-stars > b { font-family: var(--font-display); font-weight: 900; font-size: 15px; }
+.lp-stars > span { font-size: 13px; font-weight: 700; color: var(--muted); line-height: 1.4; }
+.lp-star-path { list-style: none; margin: 2px 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.lp-star-step { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 8px 4px; border-radius: 12px; background: var(--bg); }
+.lp-star-step svg { color: #E89B12; fill: #FFC531; }
+.lp-star-step b { font-size: 12px; }
+.lp-star-step small { font-size: 10px; font-weight: 800; color: var(--muted); line-height: 1.25; }
+.lp-star-idol { background: linear-gradient(180deg, #FFE38A 0%, #FFC531 100%); }
+.lp-star-idol small { color: #6B4300; }
+@media (min-width: 900px) {
+  .lp-happy { grid-template-areas: "demo list" "stars list" "ends ends"; }
+  .lp-stars { grid-area: stars; padding: 22px; }
+  .lp-star-step b { font-size: 14px; }
+  .lp-star-step small { font-size: 11.5px; }
+  .lp-stars > span { font-size: 14px; }
+}
+
+/* ---- Landing hero: the three goals, short enough to read before the button ---- */
+.lp-goals { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.lp-goals li { display: flex; align-items: flex-start; gap: 8px; font-size: 13.5px; font-weight: 700; color: var(--muted); line-height: 1.35; }
+.lp-goals li svg { flex: 0 0 auto; margin-top: 2px; color: var(--accent-hot); }
+.lp-goals li:nth-child(2) svg { color: #E0355A; }
+.lp-goals li:nth-child(3) svg { color: #E89B12; fill: #FFC531; }
+.lp-goals b { color: var(--text); }
+@media (min-width: 900px) { .lp-goals li { font-size: 16px; } .lp-goals { gap: 8px; margin-top: 4px; } }

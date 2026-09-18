@@ -58,15 +58,22 @@ export type Buddy = {
   rareIds: string[]
   /** The game: how happy it is right now (time alone wears it down), and the joy days so far. */
   happy?: Happy | null
-  joy?: { days: number; streak: number; best: number }
+  joy?: Joy
   /** The name on chain, when it has one, whatever nickname it goes by here. */
   realName?: string | null
   /** A real Axie's facts from Sky Mavis. */
   core?: { level: number | null; birthYear: number | null; breedCount: number | null; parts: { type: string; name: string; class: string | null; special: string | null }[] } | null
 }
+/** Stardom: joy days, the streak, the title they earned (for life) and whether the star is shining. */
+export type Joy = {
+  days: number; streak: number; best: number
+  title?: { id: 'newcomer' | 'rising' | 'star' | 'idol'; name: string }
+  shining?: boolean
+  next?: { id: string; name: string; needStreak: number; haveStreak: number; needTotal: number | null; haveTotal: number | null } | null
+}
 export type Happy = { value: number; mood: string; moodId: string; talksLeft: number; petsLeft: number; treatsLeft?: number; playsLeft?: number; overjoyedToday: boolean }
 /** What one action did to its happiness. `overjoyed` is the win: the first time in a day it gets there. */
-export type HappyChange = { delta: number; value: number; mood: string; reasons: string[]; overjoyed: boolean; joyBonus: number; joyStreak: number }
+export type HappyChange = { delta: number; value: number; mood: string; reasons: string[]; overjoyed: boolean; joyBonus: number; joyStreak: number; joy?: Joy; newTitle?: { id: string; name: string; line: string } | null }
 export type SnapResult =
   | { kind: 'egg'; snaps: number; odds: Buddy['eggOdds']; canHatch: boolean }
   | {

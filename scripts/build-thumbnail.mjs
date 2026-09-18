@@ -35,9 +35,9 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.
       <path transform="translate(4 6)" d="${STAR}" fill="#B5213B"/><path d="${STAR}" fill="url(#f)"/>
     </g>
   </g>
-  <text x="90" y="468" ${FONT} font-weight="900" font-size="50" fill="${INK}">Your Axie. In your camera.</text>
-  <text x="90" y="528" ${FONT} font-weight="900" font-size="50" fill="${INK}">With opinions.</text>
-  <text x="92" y="584" ${FONT} font-weight="700" font-size="28" fill="#4A6076">Pick one. Take it places. Keep it happy.</text>
+  <text x="90" y="468" ${FONT} font-weight="900" font-size="50" fill="${INK}">Pick a real Axie.</text>
+  <text x="90" y="528" ${FONT} font-weight="900" font-size="50" fill="${INK}">Make it a star.</text>
+  <text x="92" y="584" ${FONT} font-weight="700" font-size="28" fill="#4A6076">In your camera. With opinions. Happier every day.</text>
   <g transform="translate(90 618)">
     <rect width="330" height="52" rx="26" fill="#FF6B2C"/>
     <text x="165" y="35" text-anchor="middle" ${FONT} font-weight="900" font-size="24" fill="#fff">axieidol.com · no wallet</text>

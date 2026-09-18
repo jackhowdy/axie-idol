@@ -11,9 +11,10 @@ export const LADDER = [
   { level: 7, bond: 60, reward: 'First trick', unlock: 'trick-1' },
   { level: 8, bond: 76, reward: 'Crown', unlock: 'crown' },
   { level: 9, bond: 95, reward: 'Second trick', unlock: 'trick-2' },
-  { level: 10, bond: 120, reward: 'Mystic glow and Idol card', unlock: 'glow' },
+  { level: 10, bond: 120, reward: 'Mystic glow', unlock: 'glow' },
 ]
-export const LEVEL_NAMES = { 3: 'Good friends', 7: 'Best friends', 10: 'Idol' }
+// Bond is how close you are. Stardom (Rising Star, Star, Idol) is earned with joy days: STAR_TITLES.
+export const LEVEL_NAMES = { 3: 'Good friends', 7: 'Best friends', 10: 'Soulmates' }
 
 export function levelFor(bond) {
   let lvl = 0
@@ -272,4 +273,30 @@ export function photoJoy({ labels = [], previous = [], recent = [], isNewPlace =
   // A caption is you telling it about the photo; two letters are not a sentence.
   if (String(caption || '').trim().length >= 3) { delta += HAPPY.caption; reasons.push('you told it about the photo') }
   return { delta, reasons }
+}
+
+/**
+ * Stardom: what the name of the game promises. A joy day is a day the Axie reached Overjoyed;
+ * joy days in a row earn titles. A title is for life (it is read off the best streak ever and the
+ * total, neither of which goes down), so a lapsed streak never demotes anyone: the star only stops
+ * shining until the streak is alive again. Idol has two doors, a long streak or a long haul, so
+ * a player who misses a weekend is not locked out.
+ */
+export const STAR_TITLES = [
+  { id: 'newcomer', name: 'Newcomer', streak: 0, total: 0 },
+  { id: 'rising', name: 'Rising Star', streak: 3, total: null },
+  { id: 'star', name: 'Star', streak: 7, total: null },
+  { id: 'idol', name: 'Idol', streak: 14, total: 30 },
+]
+export function titleFor({ best = 0, days = 0 } = {}) {
+  let t = STAR_TITLES[0]
+  for (const row of STAR_TITLES) if (best >= row.streak || (row.total != null && days >= row.total)) t = row
+  return t
+}
+/** The next title and how far away it is, by streak and (for Idol) by total; null at the top. */
+export function nextTitle({ best = 0, days = 0, streak = 0 } = {}) {
+  const at = STAR_TITLES.indexOf(titleFor({ best, days }))
+  const next = STAR_TITLES[at + 1]
+  if (!next) return null
+  return { id: next.id, name: next.name, needStreak: next.streak, haveStreak: Math.min(streak, next.streak), needTotal: next.total, haveTotal: next.total == null ? null : Math.min(days, next.total) }
 }
