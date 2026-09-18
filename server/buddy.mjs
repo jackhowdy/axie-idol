@@ -293,7 +293,8 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
         if (rec) { card.name = rec.name && !/^Axie #\d+$/.test(rec.name) ? String(rec.name).slice(0, 24) : card.name; card.level = Number.isFinite(Number(rec.level)) ? Number(rec.level) : card.level; card.class = rec.class || card.class; Object.assign(card, meetMarks(rec)) }
       } catch { /* the seed's own facts do */ }
     }
-    return picks.map((c) => ({ ...c, image: `/api/image/${c.id}`, rank: coreRank(c.level), loves: c.class && CLASS_LOVES[c.class] ? CLASS_LOVES[c.class].label : null, players: fameOf(store, c.id).players }))
+    // on-chain names are written by anyone: a card shows one only if it would pass as a nickname here
+    return picks.map((c) => ({ ...c, name: validName(String(c.name || '').slice(0, 16)) || `Axie #${c.id}`, image: `/api/image/${c.id}`, rank: coreRank(c.level), loves: c.class && CLASS_LOVES[c.class] ? CLASS_LOVES[c.class].label : null, players: fameOf(store, c.id).players }))
   }
   /** The marks a Meet card shows, from the Sky Mavis record. */
   function meetMarks(rec) {
@@ -565,13 +566,18 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     }
   }
   function wishMatches(id, c) {
+    // When the photo was looked at, a wish for a thing needs the thing in it: stone steps at six
+    // in the evening are not a sunset. With nothing seen (the model was down) the old rules stand.
+    const sees = (re) => !c.labels?.length || c.labels.some((l) => re.test(String(l)))
     switch (id) {
       case 'rain': return c.weather === 'rain'; case 'wind': return c.weather === 'wind'
-      case 'golden': return c.hour >= 17 && c.hour <= 19; case 'night': return c.hour >= 20
+      case 'golden': return c.hour >= 17 && c.hour <= 19 && sees(/sun|sky|cloud|glow|orange|horizon|dusk/i); case 'night': return c.hour >= 20
+      case 'stairs': return sees(/stair|step|escalator|ladder/i); case 'sky': return sees(/sky|cloud|sun|moon|star|rainbow/i)
+      case 'sign': return sees(/sign|board|poster|banner|letter|word|label|neon/i); case 'crowd': return sees(/people|person|crowd|queue|friend|man|woman|child|kid|family/i)
       case 'sea': return c.placeType === 'harbour'; case 'park': return c.placeType === 'park'
       case 'market': return c.placeType === 'market'; case 'peak': case 'high': return c.placeType === 'peak'
       case 'new-place': return c.isNewPlace; case 'food': return c.labels.some((l) => /noodle|food|tart|bun|rice/i.test(l))
-      case 'crowd': case 'quiet': case 'silly': case 'stairs': case 'return': case 'sky': case 'sign': return true
+      case 'quiet': case 'silly': case 'return': return true
       default: return false
     }
   }
@@ -1041,14 +1047,18 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const dayLabel = (iso) => manilaDayKey(new Date(Date.parse(iso)))
     const entries = []
     const createdDay = dayLabel(b.createdAt)
-    entries.push({ day: 1, dayKey: createdDay, title: 'Found', line: 'Someone picked me up. It was warm and bumpy. I think this is my person.', photoId: b.photoIds[0] || null })
-    if (b.hatchedAt) entries.push({ day: Math.max(1, daysSince(b.createdAt) - daysSince(b.hatchedAt) + 1), dayKey: dayLabel(b.hatchedAt), title: 'Hatched', line: pickLine({ traits: b.traits, situation: 'hatch', recent: [], rng }), photoId: b.photoIds[b.egg.snaps] || null })
+    // a real Axie was picked, not found as an egg and hatched
+    const real = b.kind !== 'wild'
+    entries.push(real
+      ? { day: 1, dayKey: createdDay, title: 'We met', line: 'You picked me. Out of every Axie there is, me. I think this is my person.', photoId: b.photoIds[0] || null }
+      : { day: 1, dayKey: createdDay, title: 'Found', line: 'Someone picked me up. It was warm and bumpy. I think this is my person.', photoId: b.photoIds[0] || null })
+    if (b.hatchedAt && !real) entries.push({ day: Math.max(1, daysSince(b.createdAt) - daysSince(b.hatchedAt) + 1), dayKey: dayLabel(b.hatchedAt), title: 'Hatched', line: pickLine({ traits: b.traits, situation: 'hatch', recent: [], rng }), photoId: b.photoIds[b.egg.snaps] || null })
     for (const m of b.moments.slice(-3)) {
       const def = MOMENTS.find((x) => x.id === m.id)
       if (def) entries.push({ day: Math.max(1, daysSince(b.createdAt) - daysSince(m.at) + 1), dayKey: dayLabel(m.at), title: def.title, line: def.line, photoId: m.photoId })
     }
     const dayN = daysSince(b.createdAt)
-    const anniversary = b.hatchedAt && daysSince(b.hatchedAt) === 6 ? 'Tomorrow: one week since you named me.' : null
+    const anniversary = b.hatchedAt && daysSince(b.hatchedAt) === 6 ? (b.kind !== 'wild' ? 'Tomorrow: one week since we met.' : 'Tomorrow: one week since you named me.') : null
     const next = b.hatchGrid ? 'I want to go back to where I hatched.' : pickLine({ traits: b.traits, situation: 'wish', recent: [], rng })
     return { week: Math.ceil(dayN / 7), entries: entries.slice(0, 5), anniversary, next }
   }

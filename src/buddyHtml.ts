@@ -307,7 +307,8 @@ export function topBarHtml(current: string, hatched: boolean, opts: { eggs?: boo
 
 /** " · Axie Core level 60" for a real Axie whose level we know, else nothing. */
 function coreLevel(b: Buddy): string {
-  return b.kind !== 'wild' && b.core?.level ? ` · Axie Core level ${b.core.level}` : ''
+  // when the marks (rank and level) are on screen beside it, saying the level twice is noise
+  return b.kind !== 'wild' && b.core?.level && !b.core?.rank ? ` · Axie Core level ${b.core.level}` : ''
 }
 
 /**
@@ -705,7 +706,7 @@ export function accountHtml(b: Buddy | null, opts: { buddies?: Buddy[]; address?
     : `
       <div class="bd-card bd-wallet">
         <span class="bd-wallet-mark">?</span>
-        <span class="bd-hero-text"><b>Guest on this phone</b><span class="bd-muted">Sign in with Ronin to keep every Axie, wild or owned, on your account for good.</span></span>
+        <span class="bd-hero-text"><b>Guest on this phone</b><span class="bd-muted">Sign in with Ronin to keep every Axie you play on your account, on any phone.</span></span>
       </div>
       <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="ronin-account">Sign in with Ronin</button></div>
       <p class="bd-small bd-center"><a class="bd-link" data-action="claim">Bring an Axie you own</a> · <a class="bd-link" data-action="visit">Play as any real Axie</a> · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
@@ -1153,7 +1154,7 @@ export function claimHtml(axies: OwnedAxie[], selectedId: string | null, address
     <p class="bd-small bd-center"><a class="bd-link" data-action="back">Use a wild Axie instead</a></p>`
 }
 
-export function reactionHtml(r: Snap): string {
+export function reactionHtml(r: Snap, photo: string | null = null): string {
   const chips = r.labels.slice(0, 3).map((l) => chipHtml(l)).join('')
   const bits = [
     r.isNewPlace ? 'New place' : '',
@@ -1162,11 +1163,12 @@ export function reactionHtml(r: Snap): string {
     `${Math.min(r.snapsToday ?? r.bondToday, r.dailyCap)} of ${r.dailyCap} photos today`,
   ].filter(Boolean).join(' · ')
   const happy = r.happy
-    ? `<div class="bd-happy-line"><b>${icon('heartFilled', 14)} ${r.happy.delta > 0 ? `+${r.happy.delta}` : r.happy.delta} happy</b><span>${esc(r.happy.mood)} · ${r.happy.value}${r.happy.reasons.length ? ` · ${esc(r.happy.reasons.join(', '))}` : ''}</span></div>
+    ? `<div class="bd-happy-line"><b>${icon('heartFilled', 14)} ${r.happy.delta > 0 ? `+${r.happy.delta} happy` : r.happy.value >= 100 ? 'Happiness is full' : `${r.happy.delta} happy`}</b><span>${esc(r.happy.mood)} · ${r.happy.value}${r.happy.reasons.length ? ` · ${esc(r.happy.reasons.join(', '))}` : ''}</span></div>
     <div class="bd-meter bd-meter-happy"><i style="width:${Math.max(3, r.happy.value)}%"></i><u style="left:90%"></u></div>`
     : ''
   return `
     <p class="bd-eyebrow">After the shot</p>
+    ${photo ? `<img class="bd-shot" src="${esc(photo)}" alt="Your photo, with what it said">` : ''}
     <div class="bd-speech">${esc(r.line)}</div>
     <div class="bd-chips">${chips}</div>
     ${happy}

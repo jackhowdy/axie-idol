@@ -5606,7 +5606,7 @@ async function submitPost(): Promise<void> {
     if (buddyEnabled) {
       viewfinder.hidden = false
       viewfinder.classList.add('active')
-      await handleBuddySnap(data.buddy ?? null, data.post?.id ?? null)
+      await handleBuddySnap(data.buddy ?? null, data.post?.id ?? null, data.post?.imagePath ?? null)
       return
     }
     await showFeed()
@@ -5666,7 +5666,7 @@ let buddySheetQueue: string[] = []
  */
 let lastPhotoId: string | null = null
 
-async function handleBuddySnap(snap: SnapResult | null, photoId: string | null = null): Promise<void> {
+async function handleBuddySnap(snap: SnapResult | null, photoId: string | null = null, photoPath: string | null = null): Promise<void> {
   buddySheetQueue = []
   lastPhotoId = photoId
   if (!snap) {
@@ -5695,7 +5695,7 @@ async function handleBuddySnap(snap: SnapResult | null, photoId: string | null =
     ]
   }
   await buddyUi?.show('home')
-  buddyUi?.sheet(reactionHtml(snap))
+  buddyUi?.sheet(reactionHtml(snap, photoPath))
 }
 
 function advanceBuddySheet(): void {

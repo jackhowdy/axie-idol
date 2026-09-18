@@ -4061,7 +4061,7 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 /* ---- Care buttons and the catching game ---- */
 .bd-happy-acts { flex-wrap: wrap; }
 .bd-happy-acts .bd-btn { flex: 1 1 28%; white-space: nowrap; }
-.bd-happy-acts .bd-btn small { font-size: 10px; font-weight: 800; opacity: 0.7; margin-left: 2px; }
+.bd-happy-acts .bd-btn small { font-size: 11px; font-weight: 800; opacity: 0.7; margin-left: 2px; }
 .bd-happy-acts .bd-btn[disabled] { opacity: 0.45; cursor: default; }
 .bd-play { position: relative; height: 84px; margin: 10px 0 6px; border-radius: 18px; background: linear-gradient(180deg, #CFE9FF 0%, #E8F6FF 100%); border: 2px solid var(--border); overflow: hidden; touch-action: manipulation; }
 .bd-play-zone { position: absolute; left: 50%; top: 0; bottom: 0; width: 26%; transform: translateX(-50%); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; color: var(--accent-hot); background: rgba(255, 255, 255, 0.75); border-left: 2px dashed var(--accent-hot); border-right: 2px dashed var(--accent-hot); }
@@ -4316,3 +4316,18 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
   .lp-class-row { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 8px; }
   .lp-class b { font-size: 13.5px; } .lp-class small { font-size: 11px; }
 }
+
+/* ---- QA pass, 18 Sept: the finished photo in the after-the-shot sheet; phone tap targets; no iOS zoom ---- */
+.bd-shot { display: block; max-width: 100%; max-height: 38vh; margin: 0 auto 10px; border-radius: 16px; object-fit: contain; box-shadow: 0 6px 18px rgba(20, 40, 80, 0.18); }
+.bd-chip, .bd-pill { font-size: 11px; }
+.bd-top .bd-pill-btn { height: 34px; padding: 0 12px; font-size: 12px; }
+@media (max-width: 599px) {
+  .bd-meet-card { grid-template-rows: auto auto auto auto; }
+  .bd-meet-art { grid-row: 1 / span 4; }
+  .bd-meet-card > :not(.bd-meet-art) { grid-column: 2; }
+}
+/* iOS Safari zooms the page when a focused field is under 16px */
+@media (pointer: coarse) {
+  #caption-input { font-size: 16px; }
+}
+.bd-btn > small, .bd-item > small, .bd-thumb > small, .prop-name { font-size: 11px; }

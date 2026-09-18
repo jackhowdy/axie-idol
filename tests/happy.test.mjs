@@ -32,7 +32,7 @@ function rig({ genes = async () => REAL, owned = async () => [], voice = null, e
     for (let i = 0; i < 5; i++) await snap(`egg-${i}`)
     return call('/api/buddy/hatch', { body: { name: 'Sunny' } })
   }
-  return { buddy, call, snap, hatch, clock }
+  return { buddy, call, snap, hatch, clock, state }
 }
 
 test('moods: five bands, and time alone wears happiness down to Bored in about two days', () => {
@@ -278,4 +278,16 @@ test('a real Axie carries its marks, loves what its class loves, has a birthday,
   assert.deepEqual(f.body.titles, { idol: 0, star: 0, rising: 0 })
   r.clock.t += 24 * HOUR
   assert.equal((await r.call('/api/buddy', { method: 'GET' })).body.active.birthday, false, 'the day after is not its birthday')
+})
+
+test('a wish for a thing needs the thing in the photo: steps at six in the evening are not a sunset', async () => {
+  const r = rig({ genes: async () => REAL, env: { BUDDY: '1' } })
+  await r.call('/api/buddy/visit', { body: { axieId: '2660' } })
+  const day = (await r.call('/api/buddy', { method: 'GET' })).body.active.wish.day
+  const b = Object.values(Object.values(r.state).find((x) => x && x.buddies).buddies)[0]
+  b.wish = { day, id: 'stairs', text: 'Take me up some stairs', bonus: 1, done: false }
+  const miss = await r.snap('w1', { labels: ['bench', 'tree'] })
+  assert.equal(miss.wishDone, null); assert.ok(!miss.happy.reasons.includes('its wish came true'))
+  const hit = await r.snap('w2', { labels: ['stone steps', 'rail'] })
+  assert.equal(hit.wishDone?.id, 'stairs'); assert.ok(hit.happy.reasons.includes('its wish came true'))
 })
