@@ -858,6 +858,8 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
     : opts.eggs
       ? `<button type="button" class="bd-btn bd-btn-primary" data-action="start-egg">Find an egg</button>`
       : `<button type="button" class="bd-btn bd-btn-primary" data-action="meet">Meet your Axie</button>`
+  // someone who already has an Axie can meet another from the homepage too; the first one rests
+  const another = about ? `<button type="button" class="bd-btn bd-btn-outline" data-action="meet">Meet another Axie</button>` : ''
   const heroLines = ['That bench is far. Let us climb all those stairs to get to it.', 'We were right here before. What is past the top this time?', 'Grey steps go up. Can we climb every single one?']
   const bubbles = heroLines.map((l, i) => `<div class="bd-w-bubble" style="--i:${i}">${esc(l)}</div>`).join('')
   const said = [
@@ -951,7 +953,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
             <li>${icon('heartFilled', 15)}<span><b>Every day:</b> get its happiness to 90 for a joy day. That is the day's prayer, earned by playing</span></li>
             <li>${icon('star', 15)}<span><b>The long game:</b> 3 joy days in a row is a Rising Star, 7 a Star, 14 an Idol, for as long as you keep the streak</span></li>
           </ul>
-          <div class="lp-cta">${primary}${about ? '' : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
+          <div class="lp-cta">${primary}${another}${about ? `<span class="lp-cta-note">${name} is not lost: it rests, and comes back with one tap in Profile.</span>` : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
           ${about ? '' : `<p class="bd-small lp-alt">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
           <p class="bd-small lp-alt"><b>Have a favourite Axie?</b> <a class="bd-link" data-action="visit">Play as it, by its number</a>. No wallet.</p>`}
         </div>
@@ -1132,7 +1134,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       <footer class="lp-footer">
         <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(26)}${wordmarkSvg(18)}</a>
         <span class="bd-muted">Built for the Axie Vibeathon 2026 · axieidol.com</span>
-        <div class="lp-footer-cta">${primary}</div>
+        <div class="lp-footer-cta">${primary}${another}</div>
       </footer>
     </div>`
 }

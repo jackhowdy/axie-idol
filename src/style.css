@@ -4346,3 +4346,7 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 .lp-vs-new li::before { background: var(--accent-hot); }
 .lp-vs-note { margin-top: 4px; line-height: 1.5; }
 @media (min-width: 768px) { .lp-vs { grid-template-columns: 1fr 1fr; gap: 16px; } .lp-vs-card li { font-size: 15px; } }
+
+/* the homepage, for someone who already has an Axie: back to it, or meet another */
+.lp-cta .bd-btn-outline, .lp-footer-cta .bd-btn-outline { background: var(--bg-2); }
+.lp-footer-cta { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }

@@ -676,7 +676,7 @@ test('the front door: header with the mark, hero with a real photo and line, sec
   assert.doesNotMatch(signed, /ronin-welcome/)
   const about = welcomeHtml({ hasAxie: true, axieName: 'Pip' })
   assert.match(about, /data-action="back">Back to Pip/)
-  assert.doesNotMatch(about, /start-egg|data-action="meet"/, 'no way to start over from the About page')
+  assert.doesNotMatch(about, /start-egg/, 'no egg from the About page'); assert.match(about, /data-action="meet">Meet another Axie/, 'another Axie can be met from here; the first one rests')
   assert.doesNotMatch(about, /ronin-welcome|data-action="recover"/)
   assert.match(accountHtml(miso, { buddies: [miso], address: null }), /data-action="about"/)
 })
@@ -723,4 +723,11 @@ test('a refresh stays where you were: the address remembers the screen', async (
   assert.equal(screenFromHash('#scrapbook'), 'scrapbook'); assert.equal(screenFromHash('#growth'), 'ladder'); assert.equal(screenFromHash('#ladder'), 'monthly')
   assert.equal(screenFromHash('#profile'), 'account'); assert.equal(screenFromHash('#meet'), 'meet'); assert.equal(screenFromHash('#diary'), 'diary')
   assert.equal(screenFromHash('#hatch'), 'auto', 'a step in a flow is never restored'); assert.equal(screenFromHash('#nonsense'), 'auto')
+})
+
+test('the homepage offers another Axie to someone who has one, and says the first is not lost', () => {
+  const has = welcomeHtml({ hasAxie: true, axieName: 'Miso' })
+  assert.equal((has.match(/data-action="meet">Meet another Axie/g) || []).length, 2, 'in the hero and at the foot')
+  assert.match(has, /Miso is not lost: it rests/)
+  assert.doesNotMatch(welcomeHtml({}), /Meet another Axie/, 'a fresh phone is offered its first Axie, not another')
 })
