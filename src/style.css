@@ -4172,7 +4172,9 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 
 /* ---- Real Axies in 2D: a still picture that breathes (scale/translate leave `transform` alone) ---- */
 @keyframes axie-breathe { 0%, 100% { scale: 1 1; translate: 0 0; } 50% { scale: 1.025 0.975; translate: 0 1.2%; } }
-#sticker.sticker-2d { animation: axie-breathe 3.2s ease-in-out infinite; transform-origin: center bottom; }
+/* pivots at its centre, like the photo and the wardrobe overlay do: with the feet as the pivot, zoom and
+   rotate put the live Axie somewhere the photo did not. The 1.2% drop keeps the feet planted as it breathes. */
+#sticker.sticker-2d { animation: axie-breathe 3.2s ease-in-out infinite; transform-origin: center center; }
 .bd-hero-2d { position: absolute; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(26, 43, 60, 0.22)); animation: axie-breathe 3.2s ease-in-out infinite; transform-origin: center bottom; }
 @media (prefers-reduced-motion: reduce) { #sticker.sticker-2d, .bd-hero-2d { animation: none; } }
 
@@ -4350,3 +4352,13 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 /* the homepage, for someone who already has an Axie: back to it, or meet another */
 .lp-cta .bd-btn-outline, .lp-footer-cta .bd-btn-outline { background: var(--bg-2); }
 .lp-footer-cta { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+/* ---- The review shows the photo where the camera showed it: edge to edge, with Retake and Post over
+   its foot the way the camera's controls were. Shrunk into a card, the Axie jumped up the screen. ---- */
+#preview .preview-wrap { inset: 0; padding: 0; background: #0a1520; }
+#preview-img { width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; border-radius: 0; border: 0; box-shadow: none; }
+/* the review's controls stay shorter than the camera's were, so an Axie placed low is never hidden by them */
+#preview .caption-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+#preview .preview-btns { flex-wrap: nowrap; }
+#preview .preview-btns .btn { flex: 1 1 0; min-width: 0; padding-left: 10px; padding-right: 10px; white-space: nowrap; }
+#preview .preview-btns #btn-post { flex: 1.4 1 0; }
