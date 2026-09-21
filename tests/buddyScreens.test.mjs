@@ -105,7 +105,7 @@ test('the hub screens carry a top bar: the logo and a Homepage button lead to th
   const home = homeHtml(miso, null)
   assert.match(home, /<header class="bd-top">/)
   assert.match(home, /class="lp-brand bd-top-brand" data-action="about"/, 'the logo goes to the homepage')
-  assert.match(home, /data-action="about">.*Homepage<\/button>/s, 'and so does an explicit button')
+  assert.doesNotMatch(home, /Homepage<.button>/, 'no separate Homepage button: the logo is the way there')
   assert.match(home, /data-action="account"[^>]*>.*Profile/s)
   assert.match(home, /class="bd-top-link on" data-action="home">My Axie/)
   for (const where of ['scrapbook', 'ladder', 'monthly']) {

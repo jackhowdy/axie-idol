@@ -299,7 +299,6 @@ export function topBarHtml(current: string, hatched: boolean, opts: { eggs?: boo
       <a class="lp-brand bd-top-brand" data-action="about" title="Axie Idol homepage">${logoSvg(30)}${wordmarkSvg(20)}</a>
       <nav class="bd-top-nav" aria-label="Game">${nav}</nav>
       <span class="bd-top-actions">
-        <button type="button" class="bd-pill bd-pill-btn" data-action="about">${icon('home', 14)} Homepage</button>
         <button type="button" class="bd-pill bd-pill-btn${current === 'account' ? ' on' : ''}" data-action="account" aria-label="Profile">${icon('user', 14)} Profile</button>
       </span>
     </header>`
