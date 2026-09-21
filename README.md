@@ -49,7 +49,9 @@ You do not need a phone, a camera or a wallet.
 | **Location** | Optional. If allowed, the Axie knows when it is back somewhere. Refusing changes nothing else. |
 
 Basic play never needs a wallet or an account. A guest gets a recovery code to move to another
-phone. Ronin sign-in is optional and only adds: bring an Axie you own, keep your Axies on an account.
+phone. **Ronin sign-in is switched off in this first prototype**: nothing connects to a wallet, and
+people simply pick any real Axie to play with. "Bring your own Axie" keeps its page, which says it
+is coming next. The code is in the repository behind a flag (`VITE_RONIN=1`).
 
 ## The game
 
@@ -88,7 +90,7 @@ Axie Core is the Axie itself: a creature with real parts, a class, a history and
 gets stronger the more it is cared for. Axie Idol is built on that and nothing else.
 
 - **Every Axie is a real Axie.** The game offers three real, grown Axies to meet (found among the
-  twelve million on Ronin), takes any Axie by number, and takes the ones you own. Each is read-only
+  twelve million on Ronin), and takes any Axie by number. Each is read-only
   from Sky Mavis and shown as its official art (the picture its owner knows), cropped and gently
   animated, with the wardrobe placed on it. Its class, its six parts by name, its special genes,
   its birth year and its **Axie Core level** reach the voice, so a level 60 Beast with a Mystic
@@ -103,8 +105,9 @@ gets stronger the more it is cared for. Axie Idol is built on that and nothing e
 - **Fame belongs to the Axie.** Everyone who plays Axie #2660 adds to the same Axie's name: its
   fame sheet counts the people who play it, their joy days and photos, its best streak, and the
   titles it holds right now. Showing an owner who took their Axie out comes with ownership, next.
-- **Ownership matters.** Ronin sign-in proves an Axie is yours; it is marked Owned on Home
-  and on the ladder, and a visit becomes an owned Axie with everything it earned.
+- **Ownership comes next.** Round two turns on Ronin sign-in: it proves an Axie is yours, marks
+  it Owned on Home and on the ladder, and a visit becomes an owned Axie with everything it earned.
+  It is built and tested, and switched off for this prototype.
 - **Nothing is minted and nothing is sold.** Playing with an Axie you do not own is a visit; a
   Ronin signature is the only thing that marks one Owned. A visit is a reason to want the real
   thing.
@@ -117,8 +120,8 @@ gets stronger the more it is cared for. Axie Idol is built on that and nothing e
 
 | Stage | What |
 |---|---|
-| **Round 1 (live)** | Meet a real Axie (three offered, any by number, your own via Ronin), a nickname, the voice on every photo, memory, happiness (pats, treats, a catching game), stardom (Rising Star, Star, Idol, the Hall of Idols), wishes, growth ladder, scrapbook, monthly Idol ladder. |
-| **Round 2** | Ownership that pays (sign in with Ronin and your Axie's level makes it easier to keep happy; see who took your Axie out), the official Axie Mixer on screen so each Axie moves as itself, new games to play together, duo photos with a friend, your whole Ronin collection playable, a morning nudge. |
+| **Round 1 (live)** | Meet a real Axie (three offered, or any by number), a nickname, the voice on every photo, memory, happiness (pats, treats, a catching game), stardom (Rising Star, Star, Idol, the Hall of Idols), wishes, growth ladder, scrapbook, monthly Idol ladder. |
+| **Round 2** | Bring your own Axie with Ronin sign-in (built, switched off in round one). Ownership that pays (sign in with Ronin and your Axie's level makes it easier to keep happy; see who took your Axie out), the official Axie Mixer on screen so each Axie moves as itself, new games to play together, duo photos with a friend, your whole Ronin collection playable, a morning nudge. |
 | **After** | Axies that stand higher in Axie Core come first: special props only they can wear, chat that opens up for them, a better place on the social wall. The social wall itself. Ladder seasons. Making it official: a joy day pays the daily prayer's rewards, to the Axie that earned them. |
 
 The same roadmap is on the front page of the site.

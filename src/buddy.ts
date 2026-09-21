@@ -6,6 +6,8 @@ export const buddyEnabled = import.meta.env.VITE_BUDDY === '1'
 export const talkEnabled = import.meta.env.VITE_TALK === '1'
 /** Eggs (hatch your own) are off in Round 1: every Axie is a real one. VITE_EGGS=1 brings them back. */
 export const eggsEnabled = import.meta.env.VITE_EGGS === '1'
+/** Ronin sign-in and "bring your own Axie". Off for the first prototype; `VITE_RONIN=1` turns it on. */
+export const roninEnabled = import.meta.env.VITE_RONIN === '1'
 const SESSION_LS = 'axieIdol.buddySession'
 const ADDRESS_LS = 'axieIdol.buddyAddress'
 

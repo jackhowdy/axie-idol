@@ -6,11 +6,11 @@
  * `.buddy` / `#buddy-sheet`, and the API calls from `src/buddy.ts`.
  */
 import {
-  buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone, talkEnabled, eggsEnabled, meetCards, nickname, axieFame,
+  buddyState, buddyHeaders, loadBuddy, startEgg, hatch, retire, switchTo, wear, wishDone, talkEnabled, eggsEnabled, roninEnabled, meetCards, nickname, axieFame,
   roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto, pet, treat, playResult, visitAxie, type HappyChange,
 } from './buddy'
 import {
-  SCREEN_ROUTES as ROUTES, screenFromHash, eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml, topBarHtml, meetHtml, fameHtml, type MeetCardView,
+  SCREEN_ROUTES as ROUTES, screenFromHash, claimSoonHtml, setRoninEnabled, eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml, topBarHtml, meetHtml, fameHtml, type MeetCardView,
   bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
@@ -45,6 +45,9 @@ export type BuddyUi = {
  * `#scrapbook`), and boot reads it back. Home has no hash: it is where `auto` lands anyway.
  * Screens that are a step in a flow (hello, claim, the egg) are never restored.
  */
+// the pure renderers cannot read the build flags themselves: tell them once
+setRoninEnabled(roninEnabled)
+
 function rememberScreen(which: Exclude<BuddyScreen, 'auto'>, hasAxie: boolean): void {
   try {
     if (typeof history === 'undefined' || typeof location === 'undefined') return
@@ -172,6 +175,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       try { cards = await meetCards() } catch (err) { console.warn('[buddy] meet failed', err) }
       html = meetHtml(cards, { address: buddyState.address, hasAxie: Boolean(buddyState.active?.hatchedAt) })
     }
+    else if (which === 'claim' && !roninEnabled) html = claimSoonHtml(Boolean(buddyState.active?.hatchedAt))
     else if (which === 'claim') {
       claimAxies = buddyState.address ? await ownedAxies().catch(() => []) : []
       if (claimPick && !claimAxies.some((a) => a.id === claimPick)) claimPick = null
@@ -361,7 +365,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     }
     if (act === 'talk-send') { await talkSend(); return }
     if (act === 'claim') { await show('claim'); return }
-    if (act === 'ronin') { await roninSignIn(); await show('claim'); return }
+    if (act === 'ronin') { if (roninEnabled) await roninSignIn(); await show('claim'); return }
     if (act === 'account') { await show('account'); return }
     if (act === 'scrapbook') { await show('scrapbook'); return }
     if (act === 'about') { await show('welcome'); return }
@@ -376,7 +380,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       return
     }
     // Sign in from the front door: the account may already hold an Axie, so land wherever it says.
-    if (act === 'ronin-welcome') { await roninSignIn(); await show('auto'); return }
+    if (act === 'ronin-welcome') { if (!roninEnabled) { await show('claim'); return } await roninSignIn(); await show('auto'); return }
     if (act === 'photo') { if (b) sheet(photoViewHtml(b, a.dataset.id || '')); return }
     // From the viewer: the photo leaves the book (bond and snap count stay), and the book redraws.
     if (act === 'unkeep-photo') {
@@ -388,7 +392,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       return
     }
     // Signing in from the Account screen stays on it: the point is to keep what you have, not to pick.
-    if (act === 'ronin-account') { await roninSignIn(); await show('account'); return }
+    if (act === 'ronin-account') { if (!roninEnabled) { await show('claim'); return } await roninSignIn(); await show('account'); return }
     if (act === 'select-axie') { claimPick = a.dataset.id || null; await show('claim'); return }
     if (act === 'pick-axie') {
       // Claiming replaces an unhatched egg, and the snaps already in it are lost work — say so

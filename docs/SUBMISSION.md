@@ -38,7 +38,7 @@ prayer's own rewards for a joy day needs Sky Mavis, and that is the proposal.
 
 **What it is.** Axie Idol turns an Axie into a companion instead of a fighter. Every Axie in it is
 a real Axie. You meet three (found among the millions on Ronin), pick one or shuffle, or type a
-favourite's number, or sign in with Ronin and bring your own. It arrives as its official art, with
+favourite's number. It arrives as its official art, with
 its six parts by name, its class and its Axie Core level, and it knows them. A level 60 Beast with
 a Mystic horn talks like one. Give it a nickname, or keep the name it has on chain.
 
@@ -75,12 +75,13 @@ it happiest (water for an Aquatic, sky for a Bird), so the Axie you pick changes
 Axie Core level, evolved parts, special genes and birthday are marked on it everywhere and reach
 its voice. And fame belongs to the Axie, not to one player: everyone who plays Axie #2660 adds to
 the same Axie's name. Real Axies play as themselves from
-read-only Sky Mavis data, with no wallet. Ronin sign-in is optional and proves ownership: an owned
-Axie is marked as owned, and a visit becomes an owned Axie with everything it earned. Nothing is
-minted and nothing is sold. Playing with an Axie you do not own is a visit, and a reason to want
+read-only Sky Mavis data, with no wallet: in this first prototype nothing connects to a wallet at
+all, and people pick any real Axie to play with. Bringing your own Axie with Ronin sign-in is built
+and switched off; it comes next, and a visit then becomes an owned Axie with everything it earned.
+Nothing is minted and nothing is sold. Playing with an Axie you do not own is a visit, and a reason to want
 the real thing.
 
-**Where it goes.** Round 2: the official Axie Mixer on screen so each Axie moves as itself, new
+**Where it goes.** Round 2: bring your own Axie with Ronin sign-in; the official Axie Mixer on screen so each Axie moves as itself, new
 games to play together, duo photos with a friend, your whole Ronin collection playable. After the Vibeathon: Axies that stand higher in Axie Core come first, with special props
 only they can wear and chat that opens up for them; a social wall to see every Axie out in the
 world; ladder seasons; and making it official: a joy day pays the daily prayer's rewards, to the

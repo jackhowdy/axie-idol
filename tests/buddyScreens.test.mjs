@@ -1,6 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml, topBarHtml, meetHtml, starBadgeHtml, starProgressHtml, coreMarksHtml, fameHtml } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml, topBarHtml, meetHtml, starBadgeHtml, starProgressHtml, coreMarksHtml, fameHtml, claimSoonHtml, setRoninEnabled } from '../src/buddyHtml.ts'
+
+// The older tests describe the game with Ronin sign-in on (VITE_RONIN=1). The first prototype
+// ships with it off; that state has its own test at the foot of this file.
+setRoninEnabled(true)
 
 const egg = {
   id: 'e', kind: 'wild', hatchedAt: null, createdAt: new Date().toISOString(),
@@ -728,4 +732,23 @@ test('the homepage offers another Axie to someone who has one, and says the firs
   assert.equal((has.match(/data-action="meet">Meet another Axie/g) || []).length, 2, 'in the hero and at the foot')
   assert.match(has, /Miso is not lost: it rests/)
   assert.doesNotMatch(welcomeHtml({}), /Meet another Axie/, 'a fresh phone is offered its first Axie, not another')
+})
+
+test('Ronin is off in the first prototype: the page stays and says coming next, nothing offers a sign-in', () => {
+  setRoninEnabled(false)
+  try {
+    const soon = claimSoonHtml(false)
+    assert.match(soon, /Bring your own Axie/); assert.match(soon, /Coming next · round two/); assert.match(soon, /Nothing here connects to a wallet/)
+    assert.match(soon, /<button[^>]*disabled[^>]*>Connect Ronin Wallet · coming next/); assert.match(soon, /data-action="meet">Meet an Axie/)
+    assert.doesNotMatch(soon, /data-action="ronin"/)
+    assert.match(claimSoonHtml(true), /Meet another Axie/)
+    const screens = [welcomeHtml({}), homeHtml(miso, null), accountHtml(miso, { buddies: [miso], address: null }), meetHtml([], { address: null, hasAxie: false })]
+    for (const html of screens) assert.doesNotMatch(html, /data-action="ronin|Sign in with Ronin<\/|Connect wallet/, 'no sign-in on offer')
+    assert.match(screens[1], /Bring your own: coming next/); assert.match(screens[2], /No sign-in in this first prototype/); assert.match(screens[3], /Bring your own: coming next/)
+    const fresh = screens[0]
+    assert.match(fresh, /Coming next: bring your own Axie/, 'the roadmap says so, in round two')
+    assert.ok(fresh.indexOf('Coming next: bring your own Axie') > fresh.indexOf('Round two'))
+    assert.doesNotMatch(fresh, /or bring your own with Ronin/, 'round one no longer claims it')
+    assert.match(fresh, /Nothing in this first prototype connects to a wallet/)
+  } finally { setRoninEnabled(true) }
 })

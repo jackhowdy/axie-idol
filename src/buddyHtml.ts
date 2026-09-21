@@ -500,7 +500,7 @@ export function meetHtml(cards: MeetCardView[], opts: { address?: string | null;
         <b>Have a favourite?</b>
         <div class="bd-input-row"><input id="bd-visit-id" class="bd-input" inputmode="numeric" maxlength="10" placeholder="Axie number, like 2660" autocomplete="off"><button type="button" class="bd-btn bd-btn-primary" data-action="visit-go">Play</button></div>
       </div>
-      <p class="bd-small bd-center">Own Axies on Ronin? ${opts.address ? '<a class="bd-link" data-action="claim">Pick one from your wallet</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
+      <p class="bd-small bd-center">Own Axies on Ronin? ${!roninOn ? '<a class="bd-link" data-action="claim">Bring your own: coming next</a>' : opts.address ? '<a class="bd-link" data-action="claim">Pick one from your wallet</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
     </div>`
 }
 
@@ -510,7 +510,7 @@ export function visitHtml(): string {
   return `
     <p class="bd-eyebrow">Play as a real Axie</p>
     <h2>Any Axie, by its number</h2>
-    <p class="bd-small">It comes in with its real parts, class and Axie Core level, and it knows them. No wallet needed. If it is yours, sign in with Ronin later and it becomes your owned Axie with everything it earned.</p>
+    <p class="bd-small">It comes in with its real parts, class and Axie Core level, and it knows them. No wallet needed. ${roninOn ? 'If it is yours, sign in with Ronin later and it becomes your owned Axie with everything it earned.' : 'Bringing an Axie you own, with Ronin sign-in, comes next stage.'}</p>
     <div class="bd-input-row"><input id="bd-visit-id" class="bd-input" inputmode="numeric" maxlength="10" placeholder="Axie number, like 2660" autocomplete="off"><button type="button" class="bd-btn bd-btn-primary" data-action="visit-go">Play</button></div>
     <div class="bd-chips">${tries.map(([id, what]) => `<button type="button" class="bd-chip bd-chip-btn" data-action="visit-go" data-id="${id}">#${id} · ${esc(what)}</button>`).join('')}</div>
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="close-sheet">Not now</button></div>`
@@ -627,7 +627,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
   // The only wallet entry point once the egg has hatched — the egg screen's version is gone by then.
   const wallet = opts.address
     ? '<a class="bd-link" data-action="claim">Wallet connected · pick another Axie</a>'
-    : 'Own an Axie on Ronin? <a class="bd-link" data-action="claim">Bring it</a> · <a class="bd-link" data-action="visit">Play as any real Axie</a>'
+    : `Own an Axie on Ronin? ${roninOn ? '<a class="bd-link" data-action="claim">Bring it</a>' : '<a class="bd-link" data-action="claim">Bring your own: coming next</a>'} · <a class="bd-link" data-action="visit">Play as any real Axie</a>`
   return `${topBarHtml('home', true)}
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
@@ -706,10 +706,10 @@ export function accountHtml(b: Buddy | null, opts: { buddies?: Buddy[]; address?
     : `
       <div class="bd-card bd-wallet">
         <span class="bd-wallet-mark">?</span>
-        <span class="bd-hero-text"><b>Guest on this phone</b><span class="bd-muted">Sign in with Ronin to keep every Axie you play on your account, on any phone.</span></span>
+        <span class="bd-hero-text"><b>Guest on this phone</b><span class="bd-muted">${roninOn ? 'Sign in with Ronin to keep every Axie you play on your account, on any phone.' : 'No sign-in in this first prototype. A recovery code moves your Axies to another phone. Ronin sign-in comes next stage.'}</span></span>
       </div>
-      <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="ronin-account">Sign in with Ronin</button></div>
-      <p class="bd-small bd-center"><a class="bd-link" data-action="claim">Bring an Axie you own</a> · <a class="bd-link" data-action="visit">Play as any real Axie</a> · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
+      ${roninOn ? '<div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="ronin-account">Sign in with Ronin</button></div>' : ''}
+      <p class="bd-small bd-center">${roninOn ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="claim">Bring your own: coming next</a>'} · <a class="bd-link" data-action="visit">Play as any real Axie</a> · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
       <div class="bd-card">
         <div class="bd-card-head"><span class="bd-label">Moving phones?</span></div>
         <p class="bd-small">A recovery code moves this account to another phone. It works once.</p>
@@ -865,7 +865,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
   // Three parts, in the order people ask: what is real today, what the next round adds, what comes after.
   const road: Array<{ when: string; title: string; state: string; items: string[]; core: string[] }> = [
     { when: 'Done', title: 'Round one', state: 'Live now', items: [
-      'Every Axie is a real Axie: meet three, pick a favourite by its number, or bring your own with Ronin',
+      roninOn ? 'Every Axie is a real Axie: meet three, pick a favourite by its number, or bring your own with Ronin' : 'Every Axie is a real Axie: meet three, or pick a favourite by its number',
       'It arrives as itself, in its official art, and takes a nickname of your choosing',
       'A voice that looks at each photo and writes its line on the picture',
       'Memory: it knows when you are back somewhere, and it answers your caption',
@@ -887,6 +887,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'A morning nudge, when your Axie wants to go out',
     ], core: [
       'The official Axie Mixer on screen, so each Axie moves as itself, not as a picture',
+      ...(roninOn ? [] : ['Coming next: bring your own Axie. Sign in with Ronin, prove it is yours, and it plays as your owned Axie']),
       'Your whole Ronin collection playable, each Axie with its own bond and voice',
       'Ownership: sign in with Ronin and your Axie\'s level makes it easier to keep happy, and you see who took it out',
       'Put the case to Sky Mavis with round one\'s numbers: a joy day in place of the daily tap',
@@ -940,7 +941,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
             <li>${icon('star', 15)}<span><b>The long game:</b> 3 joy days in a row is a Rising Star, 7 a Star, 14 an Idol, for as long as you keep the streak</span></li>
           </ul>
           <div class="lp-cta">${primary}${another}${about ? `<span class="lp-cta-note">${name} is not lost: it rests, and comes back with one tap in Profile.</span>` : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
-          ${about ? '' : `<p class="bd-small lp-alt">Played before? ${opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
+          ${about ? '' : `<p class="bd-small lp-alt">Played before? ${!roninOn ? '' : opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a> · ' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a> · '}<a class="bd-link" data-action="recover">I have a recovery code</a></p>
           <p class="bd-small lp-alt"><b>Have a favourite Axie?</b> <a class="bd-link" data-action="visit">Play as it, by its number</a>. No wallet.</p>`}
         </div>
         <div class="bd-w-shot lp-hero-shot" aria-hidden="true">
@@ -989,7 +990,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
             ? `<li><b>Find an egg</b><span>It rides along in your camera, in every photo you take.</span></li>
           <li><b>Take it places</b><span>Five photos and it can hatch. Carry it further for a rarer Axie.</span></li>
           <li><b>It hatches, and it talks</b><span>A one-of-a-kind Axie with a voice. It says one line after every photo, and its words go on the picture.</span></li>`
-            : `<li><b>Pick a real Axie</b><span>One of three we show you, a favourite by its number, or one you own on Ronin. It arrives as itself, and you can give it a nickname.</span></li>
+            : `<li><b>Pick a real Axie</b><span>One of three we show you, or a favourite by its number${roninOn ? ', or one you own on Ronin' : ''}. It arrives as itself, and you can give it a nickname.</span></li>
           <li><b>Take it places, and it talks</b><span>It rides along in your camera. After every photo it says one line about what it actually sees, and its words go on the picture.</span></li>`}
           <li><b>Keep it happy</b><span>Photos, new places, a pat, a treat, a game of catch. Get it to Overjoyed and the day is won. Leave it alone and it gets bored.</span></li>
           <li><b>Make it a star</b><span>Win the day again and again. Three joy days in a row make a Rising Star, seven a Star, fourteen an Idol. Miss a day and the star goes out.</span></li>
@@ -1045,7 +1046,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <h2 class="lp-h2">The honest rules</h2>
         <dl class="lp-faq">
           <div><dt>Is it free?</dt><dd>Yes. There is nothing to buy and no ads.</dd></div>
-          <div><dt>Do I need a wallet?</dt><dd>No. A wallet only matters if you want to bring an Axie you already own, or keep your Axies on an account across phones.</dd></div>
+          <div><dt>Do I need a wallet?</dt><dd>${roninOn ? 'No. A wallet only matters if you want to bring an Axie you already own, or keep your Axies on an account across phones.' : 'No. Nothing in this first prototype connects to a wallet: you pick any real Axie and play. Bringing an Axie you own, with Ronin sign-in, comes next stage.'}</dd></div>
           <div><dt>How is this an upgrade to the daily prayer?</dt><dd>The prayer is one tap a day. Here the day is earned: you play with an Axie until it is Overjoyed, which takes real photos and a little care. It is the same once-a-day habit, but it is about one Axie and it cannot be done by a script.</dd></div>
           <div><dt>Does a joy day pay the prayer's rewards yet?</dt><dd>Not yet. Today a joy day pays bond, titles and the monthly crown inside Axie Idol. Paying the daily prayer's rewards for it needs Sky Mavis, and that is what we are asking for.</dd></div>
           <div><dt>How do I win?</dt><dd>Get your Axie's happiness to 90 in a day. That is a joy day. Joy days in a row are a streak.</dd></div>
@@ -1063,6 +1064,33 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
         <div class="lp-footer-cta">${primary}${another}</div>
       </footer>
     </div>`
+}
+
+/**
+ * Ronin sign-in is switched off for the first prototype: people pick any real Axie and play.
+ * The page stays, says what is coming, and leads back to meeting an Axie.
+ */
+let roninOn = false
+export function setRoninEnabled(on: boolean): void { roninOn = on }
+export function roninIsEnabled(): boolean { return roninOn }
+
+export function claimSoonHtml(hasAxie: boolean): string {
+  return `
+    <div class="bd-scroll">
+      <header class="bd-head bd-head-row">
+        <button type="button" class="bd-round" data-action="back" aria-label="Back">${icon('back', 18)}</button>
+        <p class="bd-eyebrow">Bring your own Axie</p>
+        <span class="bd-round bd-round-ghost"></span>
+      </header>
+      <div class="bd-head">
+        <span class="bd-pill bd-pill-ok bd-soon">Coming next · round two</span>
+        <h1>Your own Axie, as yours</h1>
+        <p class="bd-muted">Sign in with Ronin, prove an Axie is yours by signing a message, and it plays as your owned Axie: a badge in every photo, its level making it easier to keep happy, and a list of who took it out.</p>
+      </div>
+      <div class="bd-card bd-note">${icon('lock', 18)}<p class="bd-small">It is switched off in this first prototype. Nothing here connects to a wallet. For now, pick any real Axie and play: everything it earns stays with it.</p></div>
+    </div>
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" disabled aria-disabled="true">Connect Ronin Wallet · coming next</button></div>
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="meet">${hasAxie ? 'Meet another Axie' : 'Meet an Axie'}</button></div>`
 }
 
 export function claimHtml(axies: OwnedAxie[], selectedId: string | null, address: string | null): string {

@@ -4362,3 +4362,6 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 #preview .preview-btns { flex-wrap: nowrap; }
 #preview .preview-btns .btn { flex: 1 1 0; min-width: 0; padding-left: 10px; padding-right: 10px; white-space: nowrap; }
 #preview .preview-btns #btn-post { flex: 1.4 1 0; }
+
+.bd-soon { align-self: flex-start; margin-bottom: 6px; }
+.bd-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
