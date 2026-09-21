@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { startNodeServer } from './helpers/start-node-server.mjs'
@@ -170,7 +171,8 @@ test('metadata proxy validates the id', async () => {
   assert.equal(bad.status, 400)
 })
 
-test('SPA fallback serves index.html for unknown routes', async () => {
+// the one test that needs the built game: skipped, with a reason, until `npm run build` has run
+test('SPA fallback serves index.html for unknown routes', { skip: existsSync('dist/index.html') ? false : 'needs a build: run `npm run build` first' }, async () => {
   const r = await fetch(base + '/some/deep/link')
   assert.equal(r.status, 200)
   assert.match(r.headers.get('content-type'), /text\/html/)
