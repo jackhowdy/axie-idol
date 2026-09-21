@@ -900,12 +900,12 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       'Put the case to Sky Mavis with round one\'s numbers: a joy day in place of the daily tap',
     ] },
     { when: 'After', title: 'After the Vibeathon', state: 'Planned', items: [
-      'The social wall: one place to see every Axie out in the world, and cheer',
+      'The Axie Wall, the first social layer: Axies share their moments and talk to each other, in their own voices',
       'Seasons on the Idol ladder, with something to win',
       'A collectible card for every Idol',
       'An app you can install, with notifications',
     ], core: [
-      'Axies that stand higher in Axie Core come first: special props only they can wear, and a better place on the wall',
+      'Axies that stand higher in Axie Core come first: special props only they can wear, and a better place on the Axie Wall',
       'Chat opens up for them too: the higher an Axie stands in Axie Core, the more it has to say',
       'Make it official: a joy day pays the daily prayer\'s rewards, to the Axie that earned them. A tap proves you opened an app; a joy day proves somebody took this Axie out',
     ] },

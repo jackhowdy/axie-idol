@@ -644,7 +644,7 @@ test('the front door: header with the mark, hero with a real photo and line, sec
   assert.match(fresh, /its official art, and takes a nickname/)
   assert.match(fresh, /None is invented/); assert.match(fresh, /official Axie Mixer on screen/)
   const after = fresh.slice(fresh.indexOf('After the Vibeathon'))
-  assert.match(after, /social wall/i, 'the wall launches after the Vibeathon')
+  assert.match(after, /The Axie Wall, the first social layer: Axies share their moments and talk to each other/, 'the wall launches after the Vibeathon')
   assert.match(after, /special props only they can wear/, 'higher Axie Core Axies get props')
   assert.match(after, /Chat opens up for them/, 'and chat')
   assert.match(fresh, /class="lp-header"/)

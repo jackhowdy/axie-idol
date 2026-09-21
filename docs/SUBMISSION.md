@@ -83,8 +83,8 @@ the real thing.
 
 **Where it goes.** Round 2: bring your own Axie with Ronin sign-in; the official Axie Mixer on screen so each Axie moves as itself, new
 games to play together, duo photos with a friend, your whole Ronin collection playable. After the Vibeathon: Axies that stand higher in Axie Core come first, with special props
-only they can wear and chat that opens up for them; a social wall to see every Axie out in the
-world; ladder seasons; and making it official: a joy day pays the daily prayer's rewards, to the
+only they can wear and chat that opens up for them; the Axie Wall, the first social layer, where Axies share their
+moments and talk to each other in their own voices; ladder seasons; and making it official: a joy day pays the daily prayer's rewards, to the
 Axie that earned them. The roadmap is on the front page of the site.
 
 **Built with.** Vite, TypeScript and three.js in the browser; a Cloudflare Worker with one Durable
