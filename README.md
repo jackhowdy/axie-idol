@@ -152,7 +152,7 @@ npm install
 cp .env.example .env        # add your own keys; every key is optional
 npm run build
 npm start                   # http://localhost:5174
-npm test                    # 209 tests, no network or keys needed (also run on every push: .github/workflows/ci.yml)
+npm test                    # 205 tests, no network or keys needed (also run on every push: .github/workflows/ci.yml)
 ```
 
 Keys (all optional, all in `.env`, never committed): `GEMINI_API_KEY` for the voice (without it the
@@ -170,10 +170,10 @@ every wardrobe item on, using the production crop and placement code (`src/qa2d.
 | Path | What is in it |
 |---|---|
 | `src/` | The client. `buddyHtml.ts` (pure screen renderers, unit-tested), `buddyScreens.ts` (mounts screens, handles every button), `main.ts` (camera and photo composite), `axie2d.ts` (official art, cropped and dressed), `axie3d.ts` (the 3D mixer, used only with eggs on), `style.css`. |
-| `server/` | The game, runtime-agnostic. `buddy.mjs` (routes and state), `buddyRules.mjs` (pure rules: happiness, stardom, class loves), `voice*.mjs` (the prompt, the model call, the written library and the rule checker), `core.mjs` (HTTP, storage, image proxy, rate limits). |
+| `server/` | The game, runtime-agnostic. `buddy.mjs` (routes and state), `buddyRules.mjs` (pure rules: happiness, stardom, class loves), `voice*.mjs` (the prompt, the model call, the written library and the rule checker), `core.mjs` (photo posting and uploads, the official-art proxy, Sky Mavis lookups, rate limits). |
 | `worker/` | The Cloudflare Worker and its Durable Object: production hosting for the same `server/` code. |
 | `server.mjs` | The same game under plain Node, for local runs. |
-| `tests/` | 209 tests (`npm test`), no network needed. `happy.test.mjs` plays whole days forward. |
+| `tests/` | 205 tests (`npm test`), no network needed. `happy.test.mjs` plays whole days forward. |
 | `public/` | Static files: icons, the thumbnail, sample photos, wardrobe and frame art. |
 | `docs/` | The submission, the development guide, the voice bible, dated planning notes. Start at `docs/README.md`. |
 | `scripts/` | Build and maintenance scripts; see `scripts/README.md`. |
@@ -206,10 +206,9 @@ Feature flags, all off in the Round 1 build: `VITE_RONIN` (sign-in, Profile, dia
   Agamogenesis parts use an invented palette because reference art could not be reached.
 - The name filter is a short word list. There is no account deletion screen yet: write to the
   address on the submission and the record is removed.
-- The client holds one game: the earlier prototype's screens (a feed, quests, a crew of mascots)
-  were deleted from `src/` and `index.html`. The **server** (`server/core.mjs`) still carries that
-  prototype's routes (feed, likes, follows, quests, burns). The game does not call them; they share
-  the photo-posting path with it, so removing them is the next piece of housekeeping.
+- The repository holds one game. The earlier prototype (a feed, quests, a crew of mascots, SLP
+  burns) was deleted from both the client and the server; it remains in git history, as the
+  disclosures say. Data it left in storage is never read, written or deleted.
 
 ## Disclosures
 

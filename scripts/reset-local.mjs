@@ -2,9 +2,8 @@
 /**
  * Wipe the local Node host's state so the next run starts on a fresh egg.
  *
- * Removes `data/posts.json`, `data/buddies.json`, `data/castCrew.json` and everything inside
- * `data/uploads/`. Nothing else in `data/` is touched (the Axie gene cache, owner names, follows,
- * burns and notifications survive). Stop `node server.mjs` first — it keeps the stores in memory
+ * Removes `data/posts.json`, `data/buddies.json` and everything inside
+ * `data/uploads/`. Nothing else in `data/` is touched (the Axie gene cache survives). Stop `node server.mjs` first — it keeps the stores in memory
  * and would write them back on the next request.
  *
  *   node scripts/reset-local.mjs            # dry run: lists what it would remove
@@ -19,7 +18,7 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DATA_DIR = process.env.DATA_DIR ? resolve(process.env.DATA_DIR) : join(ROOT, 'data')
-const FILES = ['posts.json', 'buddies.json', 'castCrew.json']
+const FILES = ['posts.json', 'buddies.json']
 const UPLOADS = join(DATA_DIR, 'uploads')
 /** How paths are named in the output: "data" for the default, the real path when DATA_DIR is set. */
 const DIR_LABEL = relative(ROOT, DATA_DIR).split('\\').join('/') || DATA_DIR

@@ -31,6 +31,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      # 209 tests, no network and no keys needed (one of them checks the built game is served)
+      # 205 tests, no network and no keys needed (one of them checks the built game is served)
       - name: Test
         run: npm test

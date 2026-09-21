@@ -1,5 +1,5 @@
 # Developer notes (history)
-These are the working notes kept while the project grew. They describe screens and client modules from the earlier prototype (a feed, quests, a mascot crew, `sticker3d.ts`, `propOverlay.ts`, `roninWaypoint.ts`) that have since been **deleted from the client**; the `VITE_BUDDY` flag they mention no longer switches anything in `src/`. The README at the top of the repository is the current description.
+These are the working notes kept while the project grew. They describe screens and client modules from the earlier prototype (a feed, quests, a mascot crew, `sticker3d.ts`, `propOverlay.ts`, `roninWaypoint.ts`) that have since been **deleted from the client, and their routes from the server**; the `VITE_BUDDY` flag they mention no longer switches anything in `src/`. The README at the top of the repository is the current description.
 
 ## Quick start
 
