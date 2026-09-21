@@ -248,6 +248,47 @@ test('buddy posts get a 40/hour ceiling: an 11th snap in the same hour is still 
   assert.equal(eleventh.json.buddy.granted, 0, 'daily bond cap already spent, the photo still goes in the book')
 })
 
+// The whole photo path, with the body shaped the way submitPost() in src/main.ts shapes it for a
+// visiting (wild) Axie: neutral id, the buddy flag, the hour, empty labels, a rounded location.
+test('a buddy photo post, as the client sends it: saved, credited to the Axie, and the upload is served byte for byte', async () => {
+  const d = dev()
+  assert.equal((await api('/api/buddy/visit', { method: 'POST', device: d, body: { axieId: '2660' } })).status, 201)
+  const body = { axieId: 'kotaro', axieLabel: 'Axie #2660', caption: 'by the harbour', authorGuestId: d, authorLabel: 'Guest-TEST', imageBase64: PNG_1x1, buddy: true, hour: 15, labels: [], lat: 22.2935, lng: 114.1712 }
+  const p = await api('/api/posts', { method: 'POST', device: d, body })
+  assert.equal(p.status, 201, p.text)
+  assert.deepEqual(Object.keys(p.json).sort(), ['buddy', 'post'], 'the response is the post and the snap result, nothing else')
+  assert.match(p.json.post.id, /^[0-9a-f-]{36}$/)
+  assert.equal(p.json.post.imagePath, `/uploads/${p.json.post.id}.png`)
+  assert.equal(p.json.post.caption, 'by the harbour')
+  assert.equal(p.json.buddy.kind, 'snap', 'the snap went to the Axie')
+  assert.ok(p.json.buddy.granted > 0, 'and earned bond')
+
+  const img = await fetch(base + p.json.post.imagePath)
+  assert.equal(img.status, 200)
+  assert.match(img.headers.get('content-type'), /image\/png/)
+  const sent = Buffer.from(PNG_1x1.split(',')[1], 'base64')
+  assert.deepEqual(Buffer.from(await img.arrayBuffer()), sent, 'the saved upload is the image that was sent')
+
+  const me = await api('/api/buddy', { device: d })
+  const photo = me.json.active.photos.find((x) => x.id === p.json.post.id)
+  assert.ok(photo, 'the scrapbook points at the post')
+  assert.equal(photo.imagePath, p.json.post.imagePath)
+  assert.equal(me.json.active.snapCount, 1)
+})
+
+test('a photo post is validated before anything is saved: device key, guest id, image', async () => {
+  const d = dev()
+  const noKey = await fetch(base + '/api/posts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d }) })
+  assert.equal(noKey.status, 400)
+  assert.match((await noKey.json()).error, /X-Device-Key/)
+  const noGuest = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1 } })
+  assert.equal(noGuest.status, 400)
+  assert.match(noGuest.json.error, /authorGuestId/)
+  const noImage = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', authorGuestId: d } })
+  assert.equal(noImage.status, 400)
+  assert.match(noImage.json.error, /imageBase64/)
+})
+
 test('legacy (non-buddy) posts keep the 10/hour limit', async () => {
   const d = dev()
   for (let i = 0; i < 10; i++) {
