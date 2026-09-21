@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml, topBarHtml, meetHtml, starBadgeHtml, starProgressHtml, coreMarksHtml, fameHtml, claimSoonHtml, setRoninEnabled } from '../src/buddyHtml.ts'
+import { eggHtml, hatchHtml, homeHtml, claimHtml, reactionHtml, ladderHtml, monthlyHtml, diaryHtml, momentHtml, unlockHtml, suggestName, vfChipHtml, wishPillHtml, talkHtml, wardrobeTrayHtml, bootErrorHtml, monthLabel, restingRowHtml, dayCount, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, eggLine, joyHtml, visitHtml, playHtml, playResultHtml, topBarHtml, meetHtml, starBadgeHtml, starProgressHtml, coreMarksHtml, fameHtml, claimSoonHtml, setRoninEnabled, diarySoonHtml } from '../src/buddyHtml.ts'
 
 // The older tests describe the game with Ronin sign-in on (VITE_RONIN=1). The first prototype
 // ships with it off; that state has its own test at the foot of this file.
@@ -761,4 +761,22 @@ test('the hello screen lets you try another number without leaving', () => {
   assert.match(html, /Not the one\?/); assert.match(html, /id="bd-swap-id"/)
   assert.match(html, /data-action="visit-go" data-replace="1">Show me/); assert.match(html, /data-action="meet">see three more/)
   assert.doesNotMatch(hatchHtml(miso, []), /bd-swap-id/, 'a hatched wild Axie has no number to swap')
+})
+
+test('the first prototype has four pages: no Profile, no recovery code, a diary that says coming soon', () => {
+  setRoninEnabled(false)
+  try {
+    const home = homeHtml(miso, null)
+    assert.doesNotMatch(home, /data-action="account"|Profile/, 'Home does not lead to a Profile')
+    assert.doesNotMatch(topBarHtml('home', true), /Profile/); assert.match(topBarHtml('home', true), /My Axie/)
+    const resting = { ...miso, id: 'rest-1', name: 'Bubbles', class: 'Aquatic' }
+    const meet = meetHtml([], { hasAxie: true, buddies: [miso, resting], activeId: miso.id })
+    assert.match(meet, /data-action="switch" data-id="rest-1"/, 'switching back lives on Meet'); assert.match(meet, /Bubbles/); assert.match(meet, /Nothing they earned is lost/)
+    assert.doesNotMatch(meet, new RegExp(`data-action="switch" data-id="${miso.id}"`), 'the active Axie is not offered to itself')
+    assert.doesNotMatch(meetHtml([], { hasAxie: false, buddies: [] }), /bd-mine/)
+    for (const html of [welcomeHtml({}), welcomeHtml({ hasAxie: true, axieName: 'Miso' }), meet, home]) assert.doesNotMatch(html, /recovery code|data-action="recover"/)
+    assert.match(welcomeHtml({ hasAxie: true, axieName: 'Miso' }), /comes back with one tap, from the same page/)
+    const diary = diarySoonHtml(miso)
+    assert.match(diary, /Coming soon/); assert.match(diary, /Miso's diary/); assert.match(diary, /data-action="scrapbook">Open the scrapbook/); assert.match(diary, /data-action="home"/)
+  } finally { setRoninEnabled(true) }
 })

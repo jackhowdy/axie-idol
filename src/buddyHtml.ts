@@ -305,7 +305,7 @@ export function topBarHtml(current: string, hatched: boolean, opts: { eggs?: boo
       <a class="lp-brand bd-top-brand" data-action="about" title="Axie Idol homepage">${logoSvg(30)}${wordmarkSvg(20)}</a>
       <nav class="bd-top-nav" aria-label="Game">${nav}</nav>
       <span class="bd-top-actions">
-        <button type="button" class="bd-pill bd-pill-btn${current === 'account' ? ' on' : ''}" data-action="account" aria-label="Profile">${icon('user', 14)} Profile</button>
+        ${roninOn ? `<button type="button" class="bd-pill bd-pill-btn${current === 'account' ? ' on' : ''}" data-action="account" aria-label="Profile">${icon('user', 14)} Profile</button>` : ''}
       </span>
     </header>`
 }
@@ -482,7 +482,8 @@ export function fameHtml(f: { axieId: string; players: number; joyDays: number; 
     <p class="bd-small bd-muted">Next stage: if it is yours, signing in with Ronin will show you who took your Axie out.</p>
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="close-sheet">Back to ${esc(b.name)}</button></div>`
 }
-export function meetHtml(cards: MeetCardView[], opts: { address?: string | null; hasAxie?: boolean } = {}): string {
+export function meetHtml(cards: MeetCardView[], opts: { address?: string | null; hasAxie?: boolean; buddies?: Buddy[]; activeId?: string | null } = {}): string {
+  const mine = restingRowHtml(opts.buddies || [], opts.activeId ?? null)
   const cardHtml = cards.map((c) => `
         <button type="button" class="bd-card bd-meet-card" data-action="visit-go" data-id="${esc(c.id)}">
           <span class="bd-meet-art"><img src="${esc(c.image)}" alt="" loading="lazy"></span>
@@ -499,13 +500,14 @@ export function meetHtml(cards: MeetCardView[], opts: { address?: string | null;
         <span class="bd-round bd-round-ghost"></span>
       </header>
       <p class="bd-small bd-center bd-muted">Pick one of these three, shuffle for three more, or type the number of a favourite. It arrives as itself: its official art, its real parts, its Axie Core level. No wallet needed.</p>
+      ${mine ? `<div class="bd-card bd-mine">${mine}<p class="bd-small bd-muted">Axies you have played with rest here. Nothing they earned is lost.</p></div>` : ''}
       <div class="bd-meet">${cardHtml || '<p class="bd-small bd-muted">Could not reach the Axies right now. Type a number below, or try again.</p>'}</div>
       <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="meet-shuffle">${icon('rotateR', 16)} Show me three more</button></div>
       <div class="bd-card">
         <b>Have a favourite?</b>
         <div class="bd-input-row"><input id="bd-visit-id" class="bd-input" inputmode="numeric" maxlength="10" placeholder="Axie number, like 2660" autocomplete="off"><button type="button" class="bd-btn bd-btn-primary" data-action="visit-go">Play</button></div>
       </div>
-      <p class="bd-small bd-center">Own Axies on Ronin? ${!roninOn ? '<a class="bd-link" data-action="claim">Bring your own: coming next</a>' : opts.address ? '<a class="bd-link" data-action="claim">Pick one from your wallet</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'} · <a class="bd-link" data-action="recover">I have a recovery code</a></p>
+      <p class="bd-small bd-center">Own Axies on Ronin? ${!roninOn ? '<a class="bd-link" data-action="claim">Bring your own: coming next</a>' : opts.address ? '<a class="bd-link" data-action="claim">Pick one from your wallet</a>' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a>'}${roninOn ? ' · <a class="bd-link" data-action="recover">I have a recovery code</a>' : ''}</p>
     </div>`
 }
 
@@ -665,7 +667,7 @@ export function homeHtml(b: Buddy, greeting: string | null, opts: { buddies?: Bu
       <div class="bd-card-head"><a class="bd-label bd-link" data-action="scrapbook">Scrapbook · ${kept} ${icon('chevron', 12)}</a><span><a class="bd-link" data-action="diary">Diary</a> <a class="bd-link" data-action="monthly">Idol ladder</a></span></div>
       <div class="bd-book">${book}</div>
       </div></div>
-      <p class="bd-small bd-center">Want another Axie? ${opts.eggs ? '<a class="bd-link" data-action="fresh-egg">Hatch another egg</a>' : '<a class="bd-link" data-action="meet">Meet another Axie</a>'} · ${esc(b.name)} rests, switch back any time in <a class="bd-link" data-action="account">Profile</a></p>
+      <p class="bd-small bd-center">Want another Axie? ${opts.eggs ? '<a class="bd-link" data-action="fresh-egg">Hatch another egg</a>' : '<a class="bd-link" data-action="meet">Meet another Axie</a>'} · ${esc(b.name)} rests, switch back any time ${roninOn ? 'in <a class="bd-link" data-action="account">Profile</a>' : 'from the same page'}</p>
       <p class="bd-small bd-center">${wallet}</p>
     </div>
     <div class="bd-actions">
@@ -942,8 +944,8 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
             <li>${icon('heartFilled', 15)}<span><b>Every day:</b> get its happiness to 90 for a joy day. That is the day's prayer, earned by playing</span></li>
             <li>${icon('star', 15)}<span><b>The long game:</b> 3 joy days in a row is a Rising Star, 7 a Star, 14 an Idol, for as long as you keep the streak</span></li>
           </ul>
-          <div class="lp-cta">${primary}${another}${about ? `<span class="lp-cta-note">${name} is not lost: it rests, and comes back with one tap in Profile.</span>` : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
-          ${about ? '' : `<p class="bd-small lp-alt">Played before? ${!roninOn ? '' : opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a> · ' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a> · '}<a class="bd-link" data-action="recover">I have a recovery code</a></p>
+          <div class="lp-cta">${primary}${another}${about ? `<span class="lp-cta-note">${name} is not lost: it rests, and comes back with one tap${roninOn ? ' in Profile' : ', from the same page'}.</span>` : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
+          ${about || !roninOn ? '' : `<p class="bd-small lp-alt">Played before? ${!roninOn ? '' : opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a> · ' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a> · '}<a class="bd-link" data-action="recover">I have a recovery code</a></p>
           <p class="bd-small lp-alt"><b>Have a favourite Axie?</b> <a class="bd-link" data-action="visit">Play as it, by its number</a>. No wallet.</p>`}
         </div>
         <div class="bd-w-shot lp-hero-shot" aria-hidden="true">
@@ -1359,4 +1361,23 @@ export function screenFromHash(hash: string): RoutedScreen {
   if (slug.startsWith('lp-')) return 'welcome'
   const hit = Object.entries(SCREEN_ROUTES).find(([, s]) => s === slug)
   return hit ? (hit[0] as RoutedScreen) : 'auto'
+}
+
+/** The diary is not in the first prototype: the page stays, and says what it will be. */
+export function diarySoonHtml(b: Buddy): string {
+  return `
+    <div class="bd-scroll">
+      <header class="bd-head bd-head-row">
+        <button type="button" class="bd-round" data-action="home" aria-label="Back">${icon('back', 18)}</button>
+        <p class="bd-eyebrow">${esc(b.name)}'s diary</p>
+        <span class="bd-round bd-round-ghost"></span>
+      </header>
+      <div class="bd-head">
+        <span class="bd-pill bd-pill-ok bd-soon">Coming soon</span>
+        <h1>A diary it writes itself</h1>
+        <p class="bd-muted">A page for every week: where you went together, what ${esc(b.name)} noticed, the moments it collected, and what it wants to do next, in its own words.</p>
+      </div>
+      <div class="bd-card bd-note">${icon('bell', 18)}<p class="bd-small">Until then, every photo and every line it said is in the scrapbook.</p></div>
+    </div>
+    <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="scrapbook">Open the scrapbook</button></div>`
 }

@@ -10,7 +10,7 @@ import {
   roninSignIn, ownedAxies, claim, issueRecovery, redeemRecovery, unkeepPhoto, pet, treat, playResult, visitAxie, type HappyChange,
 } from './buddy'
 import {
-  SCREEN_ROUTES as ROUTES, screenFromHash, claimSoonHtml, setRoninEnabled, eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml, topBarHtml, meetHtml, fameHtml, type MeetCardView,
+  SCREEN_ROUTES as ROUTES, screenFromHash, claimSoonHtml, setRoninEnabled, diarySoonHtml, eggHtml, hatchHtml, homeHtml, claimHtml, ladderHtml, monthlyHtml, diaryHtml, talkHtml, accountHtml, scrapbookHtml, photoViewHtml, welcomeHtml, visitHtml, joyHtml, playHtml, playResultHtml, topBarHtml, meetHtml, fameHtml, type MeetCardView,
   bootErrorHtml, suggestName, esc, type Monthly, type Diary, type OwnedAxie, type TalkExchange,
 } from './buddyHtml.ts'
 
@@ -162,6 +162,8 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     // R1 ships without typed chat: the Axie speaks after photos instead.
     if (which === 'talk' && !talkEnabled) which = 'home'
 
+    // The first prototype has no Profile: its one job, switching back to a resting Axie, lives on Meet.
+    if (which === 'account' && !roninEnabled) which = 'meet'
     // No eggs: the way in is meeting a real Axie, never an egg conjured for a fresh phone.
     if (which === 'egg' && !buddyState.active && !eggsEnabled) which = 'meet'
     if (which === 'egg' && !buddyState.active) await startEgg()
@@ -173,7 +175,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     else if (which === 'meet') {
       let cards: MeetCardView[] = []
       try { cards = await meetCards() } catch (err) { console.warn('[buddy] meet failed', err) }
-      html = meetHtml(cards, { address: buddyState.address, hasAxie: Boolean(buddyState.active?.hatchedAt) })
+      html = meetHtml(cards, { address: buddyState.address, hasAxie: Boolean(buddyState.active?.hatchedAt), buddies: buddyState.buddies, activeId: buddyState.active?.id ?? null })
     }
     else if (which === 'claim' && !roninEnabled) html = claimSoonHtml(Boolean(buddyState.active?.hatchedAt))
     else if (which === 'claim') {
@@ -182,7 +184,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       html = claimHtml(claimAxies, claimPick, buddyState.address)
     } else if (which === 'ladder') html = ladderHtml(buddyState.active!)
     else if (which === 'monthly') html = monthlyHtml(await getJson<Monthly>('/api/ladder/monthly'))
-    else if (which === 'diary') html = diaryHtml(await getJson<Diary>('/api/buddy/diary'), buddyState.active!)
+    else if (which === 'diary') html = roninEnabled ? diaryHtml(await getJson<Diary>('/api/buddy/diary'), buddyState.active!) : diarySoonHtml(buddyState.active!)
     else if (which === 'talk') html = talkHtml(buddyState.active!, exchanges)
     else if (which === 'account') html = accountHtml(buddyState.active, { buddies: buddyState.buddies, address: buddyState.address, eggs: eggsEnabled })
     else if (which === 'scrapbook') html = scrapbookHtml(buddyState.active!)
