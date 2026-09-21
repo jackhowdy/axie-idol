@@ -11,11 +11,13 @@ Axie, not an account; the Axie's class and level shape the day; and it takes rea
 looked at, so a script cannot do it. The loop is live and pays bond, titles and the monthly crown.
 Paying the daily prayer's own rewards for a joy day needs Sky Mavis, and that is the proposal.
 
-Axie Idol is a pet game. You pick a real Axie (any Axie, by its number, or one you own), it rides
+Axie Idol is a pet game. You pick a real Axie (one of three offered, or any Axie by its number), it rides
 along in your camera, and it talks: one line on every photo, about what it actually sees. The game is to **keep it
 happy**. Photos, new places, a caption, a pat, a treat and a game of catch lift its happiness; time alone
 wears it down. Get it to Overjoyed and the day is won. Win enough days in a row and it becomes a
 Rising Star, a Star, then an Idol. Leave it and it gets bored.
+
+**Contents:** [Try it](#try-it-in-five-minutes) · [Controls and devices](#controls-and-supported-devices) · [The game](#the-game) · [Axie Core fit](#axie-core-fit) · [Product vision](#product-vision) · [How it is built](#how-it-is-built) · [Repository map](#repository-map) · [Known issues](#known-issues) · [Disclosures](#disclosures)
 
 ---
 
@@ -161,6 +163,25 @@ for Axies hatched while eggs were on; real Axies never need it. More in `docs/DE
 QA helper: `/?qa2d=2660,80,1234567` draws a contact sheet of real Axies in their official art with
 every wardrobe item on, using the production crop and placement code (`src/qa2d.ts`).
 
+## Repository map
+
+| Path | What is in it |
+|---|---|
+| `src/` | The client. `buddyHtml.ts` (pure screen renderers, unit-tested), `buddyScreens.ts` (mounts screens, handles every button), `main.ts` (camera and photo composite), `axie2d.ts` (official art, cropped and dressed), `style.css`. |
+| `server/` | The game, runtime-agnostic. `buddy.mjs` (routes and state), `buddyRules.mjs` (pure rules: happiness, stardom, class loves), `voice*.mjs` (the prompt, the model call, the written library and the rule checker), `core.mjs` (HTTP, storage, image proxy, rate limits). |
+| `worker/` | The Cloudflare Worker and its Durable Object: production hosting for the same `server/` code. |
+| `server.mjs` | The same game under plain Node, for local runs. |
+| `tests/` | 215 tests (`npm test`), no network needed. `happy.test.mjs` plays whole days forward. |
+| `public/` | Static files: icons, the thumbnail, sample photos, wardrobe and frame art, kit models. |
+| `docs/` | The submission, the development guide, the voice bible, dated planning notes. Start at `docs/README.md`. |
+| `scripts/` | Build and maintenance scripts; see `scripts/README.md`. |
+| `design/` | Design explorations. Not the shipped UI; see `design/README.md`. |
+| `vendor/` | Sky Mavis's Three.js Axie Mixer (public alpha) with its own notices. |
+| `RIGHTS.md` | The limited-use permission that covers the Sky Mavis assets here. |
+
+Feature flags, all off in the Round 1 build: `VITE_RONIN` (sign-in, Profile, diary), `VITE_EGGS` /
+`EGGS` (hatching), `VITE_TALK` / `TALK` (typed chat). The code behind them is tested and kept.
+
 ## Known issues
 
 - This first prototype has no sign-in, so a player's Axies live in the browser they were picked
@@ -218,6 +239,8 @@ Git history shows all of it.
 - Kit mascots and equipment models from the Animated Axie 3D assets (`public/models/`), with
   upstream notices under `vendor/`.
 - Axie data (genes, parts, class, level) read-only from the Sky Mavis API.
+- Each real Axie's official art, fetched read-only from the Axie image CDN by its number and
+  passed through the game's own server (`/api/image/:id`); it is never stored or altered beyond a crop.
 - No Spine runtime is shipped or used.
 - The Axie Idol logo is an original drawing inspired by the Axie Infinity logo's style; it reuses
   none of its letterforms. Axie names, characters and marks belong to Sky Mavis.

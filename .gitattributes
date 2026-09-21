@@ -1,0 +1,20 @@
+# One line ending everywhere, whatever the machine.
+* text=auto eol=lf
+
+# Binary assets: never touched, never diffed as text.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.ico  binary
+*.glb  binary
+*.gltf binary
+*.bin  binary
+*.woff2 binary
+*.ktx2 binary
+
+# Generated or vendored: keep them out of language stats and collapsed in diffs.
+package-lock.json linguist-generated
+vendor/**        linguist-vendored
+design/**        linguist-documentation
+docs/**          linguist-documentation

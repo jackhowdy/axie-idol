@@ -14,3 +14,11 @@ scripts/.seed-devices.json
 
 # subagent-driven-development scratch
 .superpowers/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+coverage/

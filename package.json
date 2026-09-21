@@ -1,7 +1,16 @@
 {
-  "name": "axie-idol-composer",
+  "name": "axie-idol",
   "private": true,
   "version": "0.1.0",
+  "description": "Axie Idol: pick a real Axie, take it out in your camera, keep it happy. An entry for Axie Vibeathon 2026.",
+  "homepage": "https://axieidol.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jackhowdy/axie-idol.git"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
