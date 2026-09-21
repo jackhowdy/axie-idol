@@ -49,7 +49,7 @@ You do not need a phone, a camera or a wallet.
 | **Location** | Optional. If allowed, the Axie knows when it is back somewhere. Refusing changes nothing else. |
 
 Basic play never needs a wallet or an account. This first prototype is four pages: the homepage, picking an Axie, saying hello to it, and the Axie's own page (camera, happiness, wardrobe, scrapbook, ladders). There is no Profile and no diary yet (the diary page says coming soon); Axies you have played with rest on the pick-an-Axie page, one tap from coming back.
-phone. **Ronin sign-in is switched off in this first prototype**: nothing connects to a wallet, and
+**Ronin sign-in is switched off in this first prototype**: nothing connects to a wallet, and
 people simply pick any real Axie to play with. "Bring your own Axie" keeps its page, which says it
 is coming next. The code is in the repository behind a flag (`VITE_RONIN=1`).
 
