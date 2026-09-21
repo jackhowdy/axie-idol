@@ -1,4 +1,6 @@
-import { existsSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { startNodeServer } from './helpers/start-node-server.mjs'
@@ -104,4 +106,32 @@ test('GET /api/axie/:id validates the id and reports a missing API key clearly',
   const nokey = await api('/api/axie/4154')
   assert.equal(nokey.status, 502)
   assert.match(nokey.json.error, /SKYMAVIS_API_KEY/)
+})
+
+// A deployed store still holds what the earlier feed app wrote. None of it may be read, changed or
+// dropped, and none of it may get in the way of a new photo.
+test('a store left behind by the earlier product is carried through untouched, and posting still works', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'axie-idol-legacy-'))
+  const oldPost = { id: 'old-1', createdAt: 1, axieId: 'bing', axieLabel: 'Bing', caption: 'hi', authorGuestId: 'cast:bing', castAuthor: true, seed: true, golden: true, shiny: ['kotaro'], imagePath: '/uploads/old-1.png', likes: 3, likedByDevice: ['x'], comments: [{ id: 'c1', text: 'yo' }] }
+  const legacy = { posts: [oldPost, { id: 'old-2' }], axieScores: { bing: 7 }, dailyScores: { '2026-09-01': { bing: 2 } } }
+  writeFileSync(join(dir, 'posts.json'), JSON.stringify(legacy))
+  const castCrew = JSON.stringify({ byPoster: { 'guest:abc': { level: 4 } } })
+  writeFileSync(join(dir, 'castCrew.json'), castCrew)
+  writeFileSync(join(dir, 'burns.json'), 'not json at all')
+  const s = await startNodeServer({ DATA_DIR: dir })
+  try {
+    const d = 'dev-legacy-store'
+    const r = await fetch(s.baseUrl + '/api/posts', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Device-Key': d }, body: JSON.stringify({ axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d }) })
+    assert.equal(r.status, 201)
+    const made = (await r.json()).post
+    const saved = JSON.parse(readFileSync(join(dir, 'posts.json'), 'utf8'))
+    assert.equal(saved.posts[0].id, made.id, 'the new photo is first')
+    assert.deepEqual(saved.posts.slice(1), legacy.posts, 'the old records are exactly as they were')
+    assert.deepEqual(saved.axieScores, legacy.axieScores)
+    assert.deepEqual(saved.dailyScores, legacy.dailyScores)
+    assert.equal(readFileSync(join(dir, 'castCrew.json'), 'utf8'), castCrew, 'a collection nothing uses is not rewritten')
+    assert.equal(readFileSync(join(dir, 'burns.json'), 'utf8'), 'not json at all', 'nor even parsed')
+  } finally {
+    await s.stop()
+  }
 })
