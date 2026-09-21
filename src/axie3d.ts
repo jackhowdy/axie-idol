@@ -1,7 +1,6 @@
 /**
  * Animated 3D Axie sticker backed by the Three.js Axie Mixer 3D (Sky Mavis, public alpha).
  * One renderer + one mixer for the app; one live character at a time on Snap.
- * Same surface as sticker3d.ts so main.ts can treat both alike.
  *
  * Downgrade policy (never 2D, never a missing part): if a part variant is not in
  * the pack, use the same part in normal skin; if only stage 2 is missing, use stage 1.
