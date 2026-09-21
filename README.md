@@ -150,7 +150,7 @@ npm install
 cp .env.example .env        # add your own keys; every key is optional
 npm run build
 npm start                   # http://localhost:5174
-npm test                    # 215 tests, no network needed
+npm test                    # 215 tests, no network or keys needed (also run on every push: .github/workflows/ci.yml)
 ```
 
 Keys (all optional, all in `.env`, never committed): `GEMINI_API_KEY` for the voice (without it the
