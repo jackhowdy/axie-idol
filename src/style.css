@@ -4403,3 +4403,9 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 #boot-splash { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); z-index: 1; }
 #boot-splash img { opacity: 0.9; animation: bd-wait 0.9s ease-in-out infinite alternate; }
 @media (prefers-reduced-motion: reduce) { #boot-splash img { animation: none; } }
+
+/* the whole height of the row is the field, so a tap anywhere in it lands in the box */
+.bd-input-row .bd-input { align-self: stretch; height: auto; }
+.bd-tile small { font-size: 11px; }
+/* on a wide screen the review buttons get room */
+@media (min-width: 768px) { #preview .preview-btns { justify-content: center; } #preview .preview-btns .btn, #preview .preview-btns #btn-post { flex: 0 0 auto; min-width: 140px; } }
