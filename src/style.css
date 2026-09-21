@@ -4365,3 +4365,6 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 
 .bd-soon { align-self: flex-start; margin-bottom: 6px; }
 .bd-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+/* the happiness pill sat on top of the photo's tag; it goes to the foot of the photo, clear of the Axie */
+.lp-hero-happy { top: auto; right: auto; left: 12px; bottom: 12px; }
+@media (min-width: 900px) { .lp-hero-happy { top: auto; right: auto; left: 16px; bottom: 16px; } }

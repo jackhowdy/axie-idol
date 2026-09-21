@@ -108,11 +108,13 @@ test('the hub screens carry a top bar: the logo and a Homepage button lead to th
   assert.match(home, /data-action="about">.*Homepage<\/button>/s, 'and so does an explicit button')
   assert.match(home, /data-action="account"[^>]*>.*Profile/s)
   assert.match(home, /class="bd-top-link on" data-action="home">My Axie/)
-  for (const where of ['scrapbook', 'ladder', 'monthly']) assert.match(home, new RegExp(`bd-top-link" data-action="${where}"`), where)
+  for (const where of ['scrapbook', 'ladder', 'monthly']) {
+    assert.doesNotMatch(home, new RegExp(`bd-top-link[^"]*" data-action="${where}"`), `${where} is not in the header`)
+    assert.match(home, new RegExp(`data-action="${where}"`), `${where} is still opened from Home`)
+  }
   // the other screens get the same bar from the screen mounter, with their own link lit
-  assert.match(topBarHtml('scrapbook', true), /class="bd-top-link on" data-action="scrapbook"/)
-  assert.match(topBarHtml('ladder', true), /class="bd-top-link on" data-action="ladder">Growth/)
-  assert.match(topBarHtml('monthly', false), /class="bd-top-link on" data-action="monthly"/)
+  assert.match(topBarHtml('scrapbook', true), /class="bd-top-link" data-action="home">My Axie/, 'every other screen keeps the way back')
+  assert.doesNotMatch(topBarHtml('monthly', false), /data-action="monthly"/)
   assert.doesNotMatch(topBarHtml('diary', true), /bd-top-link on/, 'a screen with no link of its own lights none')
   assert.match(topBarHtml('account', true), /bd-pill-btn on" data-action="account"/)
   const eggScreen = eggHtml(egg)

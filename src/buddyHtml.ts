@@ -291,9 +291,9 @@ const WEARABLES = ['hat', 'scarf', 'shades', 'cape', 'crown']
 export function topBarHtml(current: string, hatched: boolean, opts: { eggs?: boolean } = {}): string {
   const link = (action: string, label: string, on = false) => `<a class="bd-top-link${on ? ' on' : ''}" data-action="${action}">${label}</a>`
   const first = current === 'egg' || opts.eggs ? link('back', 'My egg', current === 'egg') : link('meet', 'Meet an Axie', current === 'meet')
-  const nav = hatched
-    ? `${link('home', 'My Axie', current === 'home')}${link('scrapbook', 'Scrapbook', current === 'scrapbook')}${link('ladder', 'Growth', current === 'ladder')}${link('monthly', 'Idol ladder', current === 'monthly')}`
-    : `${first}${link('monthly', 'Idol ladder', current === 'monthly')}`
+  // One link: the way back to your Axie. The scrapbook, the growth ladder and the Idol ladder are
+  // opened from Home, where they sit beside what they are about.
+  const nav = hatched ? link('home', 'My Axie', current === 'home') : first
   return `
     <header class="bd-top">
       <a class="lp-brand bd-top-brand" data-action="about" title="Axie Idol homepage">${logoSvg(30)}${wordmarkSvg(20)}</a>
@@ -924,9 +924,6 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
     <div class="bd-scroll bd-welcome lp">
       <header class="lp-header">
         <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(34)}${wordmarkSvg(24)}</a>
-        <nav class="lp-nav" aria-label="Sections">
-          <a href="#lp-prayer">The idea</a><a href="#lp-how">How it works</a><a href="#lp-happy">Happiness</a><a href="#lp-road">Roadmap</a><a href="#lp-faq">Questions</a>
-        </nav>
         <div class="lp-header-cta">${primary}</div>
       </header>
 
