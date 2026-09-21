@@ -148,7 +148,7 @@ npm install
 cp .env.example .env        # add your own keys; every key is optional
 npm run build
 npm start                   # http://localhost:5174
-npm test                    # 207 tests, no network needed
+npm test                    # 215 tests, no network needed
 ```
 
 Keys (all optional, all in `.env`, never committed): `GEMINI_API_KEY` for the voice (without it the
@@ -163,8 +163,10 @@ every wardrobe item on, using the production crop and placement code (`src/qa2d.
 
 ## Known issues
 
-- The first 3D Axie on a phone can take 30 to 50 seconds on a cold cache (about 200 files). A 2D
-  stand-in shows after 15 seconds and the game is playable meanwhile. Later loads are under a second.
+- This first prototype has no sign-in, so a player's Axies live in the browser they were picked
+  in. Clearing site data or changing phones starts again. Ronin sign-in (built, switched off, see
+  above) is what fixes this in round two.
+- Errors (a number that is not a grown Axie, an hourly limit) appear as the browser's own pop-up.
 - Losing takes real time (about two days alone). That is the design, but it means a short session
   only ever sees happiness go up.
 - The voice model has a daily request cap. Past it, and whenever the model is slow or down, the
@@ -174,8 +176,8 @@ every wardrobe item on, using the production crop and placement code (`src/qa2d.
 - Real Axies are 2D on purpose: the public 3D mixer is an alpha and its proportions and some part
   variants are not yet faithful enough for an Axie whose owner knows exactly how it looks. The
   official art cannot be animated beyond a breathing motion without a Spine licence.
-- A real Axie played by number is a visit, not proof of ownership; several people can play the
-  same Axie. Only a Ronin signature marks one Owned.
+- Several people can play the same Axie at once: each has their own bond and happiness with it,
+  and its fame adds them all up. Ownership arrives with Ronin sign-in in round two.
 - Thirty part variants missing from the public mixer pack are approximations built by
   `scripts/build_missing_parts.py` (listed in the pack's `provenance/derived-parts.json`). The six
   Agamogenesis parts use an invented palette because reference art could not be reached.
