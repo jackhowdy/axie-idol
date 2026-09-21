@@ -771,7 +771,8 @@ test('the first prototype has four pages: no Profile, no recovery code, a diary 
     assert.doesNotMatch(topBarHtml('home', true), /Profile/); assert.match(topBarHtml('home', true), /My Axie/)
     const resting = { ...miso, id: 'rest-1', name: 'Bubbles', class: 'Aquatic' }
     const meet = meetHtml([], { hasAxie: true, buddies: [miso, resting], activeId: miso.id })
-    assert.match(meet, /data-action="switch" data-id="rest-1"/, 'switching back lives on Meet'); assert.match(meet, /Bubbles/); assert.match(meet, /Nothing they earned is lost/)
+    assert.match(meet, /data-action="switch" data-id="rest-1"/, 'switching back lives on Meet');
+    assert.match(meetHtml([], { hasAxie: true, buddies: [miso, { ...resting, kind: 'visit', axieId: '80' }], activeId: miso.id }), /bd-rest-art[^>]*><img src="[^"]*image.80"/, 'a resting real Axie shows its picture')
     assert.doesNotMatch(meet, new RegExp(`data-action="switch" data-id="${miso.id}"`), 'the active Axie is not offered to itself')
     assert.doesNotMatch(meetHtml([], { hasAxie: false, buddies: [] }), /bd-mine/)
     for (const html of [welcomeHtml({}), welcomeHtml({ hasAxie: true, axieName: 'Miso' }), meet, home]) assert.doesNotMatch(html, /recovery code|data-action="recover"/)

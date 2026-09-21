@@ -84,7 +84,7 @@ export function restingRowHtml(buddies: Buddy[], activeId: string | null): strin
   const resting = (buddies || []).filter((b) => b && b.hatchedAt && b.id !== activeId)
   if (!resting.length) return ''
   const chips = resting.map((b) => `<button type="button" class="bd-rest" data-action="switch" data-id="${esc(b.id)}">
-      <span class="bd-rest-art bd-class-${esc(String(b.class || 'wild').toLowerCase())}"></span>
+      <span class="bd-rest-art bd-class-${esc(String(b.class || 'wild').toLowerCase())}">${b.kind !== 'wild' && b.axieId ? `<img src="/api/image/${esc(b.axieId)}" alt="" loading="lazy">` : ''}</span>
       <span class="bd-hero-text"><b>${esc(b.name || 'Axie')}</b><span class="bd-muted">${esc(b.class || 'Wild')} · Bond ${b.level}</span></span>
       <span class="bd-pill bd-pill-ok">Come back</span>
     </button>`).join('')
