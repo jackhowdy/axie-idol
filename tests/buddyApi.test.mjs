@@ -117,12 +117,13 @@ test('a buddy post records the photo path so the scrapbook can render a real thu
   assert.ok(typeof photos[0].at === 'string' && photos[0].at.length > 0)
 })
 
-test('un-keeping a photo drops it from the scrapbook and the feed, but never the bond it earned', async () => {
+test('un-keeping a photo drops it from the scrapbook and deletes the post and its upload, but never the bond it earned', async () => {
   const d = dev()
   await api('/api/buddy/egg', { method: 'POST', device: d })
   const p = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
   assert.equal(p.status, 201, p.text)
   const photoId = p.json.post.id
+  assert.equal((await fetch(base + p.json.post.imagePath)).status, 200, 'the upload is served while the photo is kept')
   const before = await api('/api/buddy', { device: d })
   assert.equal(before.json.active.photos.length, 1)
   const snapCount = before.json.active.snapCount
@@ -136,8 +137,7 @@ test('un-keeping a photo drops it from the scrapbook and the feed, but never the
   assert.equal(after.json.active.photoCount, snapCount - 1, 'but the book holds one photo fewer')
   assert.equal(after.json.active.egg.snaps, before.json.active.egg.snaps, 'egg progress is not taken back')
 
-  const feed = await api('/api/feed')
-  assert.ok(!(feed.json.posts || []).some((x) => x.id === photoId), 'the post left the feed too')
+  assert.equal((await fetch(base + p.json.post.imagePath)).status, 404, 'the post and its upload are gone too')
 
   const missing = await api('/api/buddy/photo/unkeep', { method: 'POST', device: d, body: { photoId } })
   assert.equal(missing.status, 404, 'un-keeping the same photo twice is a 404')
@@ -248,6 +248,47 @@ test('buddy posts get a 40/hour ceiling: an 11th snap in the same hour is still 
   assert.equal(eleventh.json.buddy.granted, 0, 'daily bond cap already spent, the photo still goes in the book')
 })
 
+// The whole photo path, with the body shaped the way submitPost() in src/main.ts shapes it for a
+// visiting (wild) Axie: neutral id, the buddy flag, the hour, empty labels, a rounded location.
+test('a buddy photo post, as the client sends it: saved, credited to the Axie, and the upload is served byte for byte', async () => {
+  const d = dev()
+  assert.equal((await api('/api/buddy/visit', { method: 'POST', device: d, body: { axieId: '2660' } })).status, 201)
+  const body = { axieId: 'kotaro', axieLabel: 'Axie #2660', caption: 'by the harbour', authorGuestId: d, authorLabel: 'Guest-TEST', imageBase64: PNG_1x1, buddy: true, hour: 15, labels: [], lat: 22.2935, lng: 114.1712 }
+  const p = await api('/api/posts', { method: 'POST', device: d, body })
+  assert.equal(p.status, 201, p.text)
+  assert.deepEqual(Object.keys(p.json).sort(), ['buddy', 'post'], 'the response is the post and the snap result, nothing else')
+  assert.match(p.json.post.id, /^[0-9a-f-]{36}$/)
+  assert.equal(p.json.post.imagePath, `/uploads/${p.json.post.id}.png`)
+  assert.equal(p.json.post.caption, 'by the harbour')
+  assert.equal(p.json.buddy.kind, 'snap', 'the snap went to the Axie')
+  assert.ok(p.json.buddy.granted > 0, 'and earned bond')
+
+  const img = await fetch(base + p.json.post.imagePath)
+  assert.equal(img.status, 200)
+  assert.match(img.headers.get('content-type'), /image\/png/)
+  const sent = Buffer.from(PNG_1x1.split(',')[1], 'base64')
+  assert.deepEqual(Buffer.from(await img.arrayBuffer()), sent, 'the saved upload is the image that was sent')
+
+  const me = await api('/api/buddy', { device: d })
+  const photo = me.json.active.photos.find((x) => x.id === p.json.post.id)
+  assert.ok(photo, 'the scrapbook points at the post')
+  assert.equal(photo.imagePath, p.json.post.imagePath)
+  assert.equal(me.json.active.snapCount, 1)
+})
+
+test('a photo post is validated before anything is saved: device key, guest id, image', async () => {
+  const d = dev()
+  const noKey = await fetch(base + '/api/posts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d }) })
+  assert.equal(noKey.status, 400)
+  assert.match((await noKey.json()).error, /X-Device-Key/)
+  const noGuest = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1 } })
+  assert.equal(noGuest.status, 400)
+  assert.match(noGuest.json.error, /authorGuestId/)
+  const noImage = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', authorGuestId: d } })
+  assert.equal(noImage.status, 400)
+  assert.match(noImage.json.error, /imageBase64/)
+})
+
 test('legacy (non-buddy) posts keep the 10/hour limit', async () => {
   const d = dev()
   for (let i = 0; i < 10; i++) {
@@ -313,10 +354,13 @@ test('with ADMIN_KEY set, the seed hook writes bond and the monthly ladder shows
   assert.equal(row.level, 10)
 })
 
-test('buddy posts still respect the cast lock for non-neutral cast ids', async () => {
+test('a buddy post under an id that is neither neutral nor numeric is refused, and earns nothing', async () => {
   const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
   const p = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'bing', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
-  assert.equal(p.status, 403, p.text)
+  assert.equal(p.status, 400, p.text)
+  const me = await api('/api/buddy', { device: d })
+  assert.equal(me.json.active.egg.snaps, 0, 'a refused post is not a snap')
 })
 
 test('monthly ladder ranks by bond this month and includes your row', async () => {
@@ -763,7 +807,7 @@ test('without a model, talk still answers the things people type, in voice and w
 })
 
 
-test('an operator can remove any post from the feed with the admin key; without it the route does not exist', async () => {
+test('an operator can remove any post with the admin key; without it the route does not exist', async () => {
   const adminBase = adminServer ? adminServer.baseUrl : (adminServer = await startNodeServer({ BUDDY: '1', BUDDY_TEST_SKIP_CHAIN: '1', ADMIN_KEY: 'test-key' })).baseUrl
   const d = dev()
   const post = async (path, body, headers = {}) => {
@@ -779,11 +823,13 @@ test('an operator can remove any post from the feed with the admin key; without 
   assert.equal(noKey.status, 404, 'no key: not a route')
   const wrongKey = await post('/api/admin/remove-post', { id }, { 'X-Admin-Key': 'nope' })
   assert.equal(wrongKey.status, 404, 'wrong key: not a route')
+  assert.equal((await fetch(adminBase + made.json.post.imagePath)).status, 200, 'the upload is still served')
   const gone = await post('/api/admin/remove-post', { id }, { 'X-Admin-Key': 'test-key' })
   assert.equal(gone.status, 200, JSON.stringify(gone.json))
   assert.equal(gone.json.removed, true)
-  const feed = await (await fetch(adminBase + '/api/feed')).json()
-  assert.ok(!(feed.posts || []).some((p) => p.id === id), 'the post left the feed')
+  assert.equal((await fetch(adminBase + made.json.post.imagePath)).status, 404, 'its upload is gone')
+  const again = await post('/api/admin/remove-post', { id }, { 'X-Admin-Key': 'test-key' })
+  assert.equal(again.json.removed, false, 'the post record is gone: there is nothing left to remove')
 })
 
 

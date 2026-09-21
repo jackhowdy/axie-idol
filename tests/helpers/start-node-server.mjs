@@ -14,12 +14,13 @@ function freePort() {
   })
 }
 
+/** Any HTTP answer means the server is listening; which routes exist depends on the flags it got. */
 async function waitFor(url, ms = 15000) {
   const until = Date.now() + ms
   while (Date.now() < until) {
     try {
-      const r = await fetch(url)
-      if (r.ok) return
+      await fetch(url)
+      return
     } catch {
       /* not up yet */
     }
@@ -38,7 +39,6 @@ export async function startNodeServer(extraEnv = {}) {
       PORT: String(port),
       HOST: '127.0.0.1',
       DATA_DIR: dataDir,
-      SEED_POSTS: '0',
       SKYMAVIS_API_KEY: '',
       // never let a developer's .env key send test photos to the voice model
       GEMINI_API_KEY: '',
@@ -53,7 +53,7 @@ export async function startNodeServer(extraEnv = {}) {
   child.stderr.on('data', (d) => (log += d))
   const baseUrl = `http://127.0.0.1:${port}`
   try {
-    await waitFor(`${baseUrl}/api/cast`)
+    await waitFor(`${baseUrl}/api/buddy`)
   } catch (err) {
     child.kill()
     throw new Error(`${err.message}\n${log}`)

@@ -2,7 +2,12 @@ import { DurableObject } from 'cloudflare:workers'
 import { Buffer } from 'node:buffer'
 import { createCore } from '../server/core.mjs'
 
-const STORE_NAMES = ['posts', 'castCrew', 'follows', 'notifications', 'owners', 'burns', 'axies', 'buddies', 'diag']
+/**
+ * The stores the game uses. The object may also hold `store:castCrew`, `store:follows`,
+ * `store:notifications`, `store:owners` and `store:burns` from an earlier product: they are never
+ * loaded, written or deleted.
+ */
+const STORE_NAMES = ['posts', 'axies', 'buddies', 'diag']
 const SMALL_STORES = STORE_NAMES.filter((n) => n !== 'posts')
 const PUT_BATCH = 128
 
@@ -10,7 +15,8 @@ const PUT_BATCH = 128
  * One instance ("main") holds the whole app state and runs the core handlers.
  * Small stores are one key each: `store:<name>`.
  * Posts are split so no key+value exceeds the 2 MB SQLite-backed limit:
- *   `posts:meta` = { order: [ids], axieScores, dailyScores }
+ *   `posts:meta` = { order: [ids], axieScores, dailyScores } (the two score tables are the earlier
+ *                  product's: carried through as stored, never read)
  *   `post:<id>`  = the post object
  */
 export class IdolStore extends DurableObject {
@@ -31,9 +37,7 @@ export class IdolStore extends DurableObject {
         delete: (name) => this.deleteBlob(name),
       },
       env: {
-        SEED_POSTS: env.SEED_POSTS || '0',
         SKYMAVIS_API_KEY: env.SKYMAVIS_API_KEY || '',
-        GOLDEN_ODDS: env.GOLDEN_ODDS || '',
         // Buddy flags have to cross the Durable Object boundary too: without these the Worker
         // build ran with BUDDY undefined (on by default) and no admin key at all.
         BUDDY: env.BUDDY ?? '1',

@@ -1,4 +1,6 @@
-import { existsSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { startNodeServer } from './helpers/start-node-server.mjs'
@@ -44,90 +46,41 @@ async function post(g, axieId = 'kotaro', caption = 'hello') {
   return api('/api/posts', { method: 'POST', body: { ...g, axieId, caption, imageBase64: PNG_1x1 } })
 }
 
-test('GET /api/cast returns the 18 faces plus the secret Golden Axie, Kotaro first', async () => {
-  const r = await api('/api/cast')
-  assert.equal(r.status, 200)
-  assert.equal(r.json.cast.length, 19)
-  assert.equal(r.json.cast[0].id, 'kotaro')
-  assert.equal(r.json.cast.at(-2).id, 'agonia-echo')
-  assert.equal(r.json.cast.at(-1).id, 'golden')
-})
-
-test('first guest post as Kotaro unlocks Bing (L1) and Bing welcomes the post', async () => {
+test('a guest post under the neutral id saves the photo and serves the upload', async () => {
   const g = guest('first')
   const r = await post(g)
   assert.equal(r.status, 201, r.text)
   assert.equal(r.json.post.axieId, 'kotaro')
   assert.match(r.json.post.imagePath, /^\/uploads\/[0-9a-f-]+\.png$/)
-  assert.equal(r.json.castCrew.level, 1)
-  assert.ok(r.json.castCrew.unlockedCast.includes('bing'))
-  const welcome = r.json.post.comments.find((c) => c.cast && c.castId === 'bing')
-  assert.ok(welcome, 'Bing welcome comment present')
+  assert.equal(r.json.buddy, null, 'no buddy flag, so no snap is credited')
   const img = await fetch(base + r.json.post.imagePath)
   assert.equal(img.status, 200)
   assert.match(img.headers.get('content-type'), /image\/png/)
 })
 
-test('posting as a locked cast face is refused with 403', async () => {
-  const g = guest('locked')
+test('a post under an id that is neither the neutral one nor a numeric Axie id is refused', async () => {
+  const g = guest('badid')
   const r = await post(g, 'bing')
+  assert.equal(r.status, 400)
+  assert.match(r.json.error, /axieId/)
+})
+
+test('a post under a numeric Axie id needs an owner address', async () => {
+  const g = guest('noowner')
+  const r = await post(g, '4154')
   assert.equal(r.status, 403)
-  assert.match(r.json.error, /locked/)
+  assert.match(r.json.error, /ownerAddress required/)
 })
 
-test("one comment reaches L2 and unlocks Kotaro's sword", async () => {
-  const g = guest('cmt')
-  const p = await post(g)
-  const c = await api(`/api/posts/${p.json.post.id}/comments`, {
-    method: 'POST',
-    body: { ...g, text: 'hi crew' },
-  })
-  assert.equal(c.status, 201, c.text)
-  assert.equal(c.json.comment.text, 'hi crew')
-  assert.equal(c.json.castCrew.level, 2)
-  assert.ok(c.json.castCrew.unlockedProps.includes('kotaro-sword'))
-})
-
-test('like is idempotent per device and counts once', async () => {
-  const g = guest('like')
-  const p = await post(g)
-  const other = guest('liker')
-  const a = await api(`/api/posts/${p.json.post.id}/like`, { method: 'POST', body: { ...other } })
-  assert.equal(a.status, 200, a.text)
-  assert.equal(a.json.liked, true)
-  assert.equal(a.json.post.likes, 1)
-  const b = await api(`/api/posts/${p.json.post.id}/like`, { method: 'POST', body: { ...other } })
-  assert.equal(b.json.post.likes, 1)
-  const u = await api(`/api/posts/${p.json.post.id}/like`, {
-    method: 'POST',
-    body: { ...other, unlike: true },
-  })
-  assert.equal(u.json.liked, false)
-  assert.equal(u.json.post.likes, 0)
-})
-
-test('global feed lists the post and reports warm rank; seeds are absent', async () => {
-  const g = guest('feed')
-  const p = await post(g, 'kotaro', 'feed me')
-  const r = await api(`/api/feed?deviceKey=${g.deviceKey}&guestId=${g.authorGuestId}`)
-  assert.equal(r.status, 200)
-  assert.equal(r.json.rank, 'warm')
-  assert.ok(r.json.posts.some((x) => x.id === p.json.post.id))
-  assert.ok(r.json.posts.every((x) => !x.seed))
-})
-
-test('quest endpoint and board agree on the poster level', async () => {
-  const g = guest('board')
-  await post(g)
-  const q = await api(`/api/quests?guestId=${g.authorGuestId}&deviceKey=${g.deviceKey}`)
-  assert.equal(q.status, 200)
-  assert.equal(q.json.level, 1)
-  assert.equal(q.json.nextQuest.level, 2)
-  const b = await api('/api/board?range=daily')
-  assert.equal(b.status, 200)
-  assert.equal(b.json.sortBy, 'questLevel')
-  assert.ok(b.json.rankings.length >= 1)
-  assert.ok(b.json.rankings.every((r, i, a) => i === 0 || a[i - 1].level >= r.level))
+test('the routes of the earlier feed app are gone', async () => {
+  for (const path of ['/api/feed', '/api/board', '/api/quests', '/api/cast', '/api/cast-crew', '/api/follows', '/api/followers/count', '/api/notifications', '/api/profile', '/api/owner', '/api/inventory', '/api/burns/today', '/api/metadata/1', '/api/posts']) {
+    const r = await api(path)
+    assert.equal(r.status, 404, path)
+  }
+  for (const path of ['/api/follow', '/api/unfollow', '/api/follow/toggle', '/api/notifications/read', '/api/owner/sync', '/api/burns/boost', '/api/burns/settle-day', '/api/posts/x/like', '/api/posts/x/comments']) {
+    const r = await api(path, { method: 'POST', body: { deviceKey: 'dev-gone' } })
+    assert.equal(r.status, 404, path)
+  }
 })
 
 test('11th post in an hour from one device is rate limited', async () => {
@@ -138,37 +91,6 @@ test('11th post in an hour from one device is rate limited', async () => {
   }
   const r = await post(g, 'kotaro', 'p10')
   assert.equal(r.status, 429)
-})
-
-test('follow needs an address, is stored per address, and counts followers', async () => {
-  const address = '0x' + 'a'.repeat(40)
-  const no = await api('/api/follow', { method: 'POST', body: { axieId: 'kotaro' } })
-  assert.equal(no.status, 401)
-  const f = await api('/api/follow', {
-    method: 'POST',
-    body: { address, axieId: 'kotaro', deviceKey: 'dev-follow' },
-  })
-  assert.equal(f.status, 200, f.text)
-  assert.equal(f.json.following, true)
-  assert.ok(f.json.follows.includes('kotaro'))
-  const list = await api(`/api/follows?address=${address}`)
-  assert.ok(list.json.follows.includes('kotaro'))
-  const count = await api('/api/followers/count?axieId=kotaro')
-  assert.ok(count.json.followerCount >= 1)
-})
-
-test('profile for an address returns level, follows and burns', async () => {
-  const address = '0x' + 'b'.repeat(40)
-  const r = await api(`/api/profile?address=${address}`)
-  assert.equal(r.status, 200)
-  assert.equal(r.json.timezone, 'Asia/Manila')
-  assert.ok('level' in r.json)
-  assert.ok(Array.isArray(r.json.follows))
-})
-
-test('metadata proxy validates the id', async () => {
-  const bad = await api('/api/metadata/abc')
-  assert.equal(bad.status, 400)
 })
 
 // the one test that needs the built game: skipped, with a reason, until `npm run build` has run
@@ -184,4 +106,32 @@ test('GET /api/axie/:id validates the id and reports a missing API key clearly',
   const nokey = await api('/api/axie/4154')
   assert.equal(nokey.status, 502)
   assert.match(nokey.json.error, /SKYMAVIS_API_KEY/)
+})
+
+// A deployed store still holds what the earlier feed app wrote. None of it may be read, changed or
+// dropped, and none of it may get in the way of a new photo.
+test('a store left behind by the earlier product is carried through untouched, and posting still works', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'axie-idol-legacy-'))
+  const oldPost = { id: 'old-1', createdAt: 1, axieId: 'bing', axieLabel: 'Bing', caption: 'hi', authorGuestId: 'cast:bing', castAuthor: true, seed: true, golden: true, shiny: ['kotaro'], imagePath: '/uploads/old-1.png', likes: 3, likedByDevice: ['x'], comments: [{ id: 'c1', text: 'yo' }] }
+  const legacy = { posts: [oldPost, { id: 'old-2' }], axieScores: { bing: 7 }, dailyScores: { '2026-09-01': { bing: 2 } } }
+  writeFileSync(join(dir, 'posts.json'), JSON.stringify(legacy))
+  const castCrew = JSON.stringify({ byPoster: { 'guest:abc': { level: 4 } } })
+  writeFileSync(join(dir, 'castCrew.json'), castCrew)
+  writeFileSync(join(dir, 'burns.json'), 'not json at all')
+  const s = await startNodeServer({ DATA_DIR: dir })
+  try {
+    const d = 'dev-legacy-store'
+    const r = await fetch(s.baseUrl + '/api/posts', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Device-Key': d }, body: JSON.stringify({ axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d }) })
+    assert.equal(r.status, 201)
+    const made = (await r.json()).post
+    const saved = JSON.parse(readFileSync(join(dir, 'posts.json'), 'utf8'))
+    assert.equal(saved.posts[0].id, made.id, 'the new photo is first')
+    assert.deepEqual(saved.posts.slice(1), legacy.posts, 'the old records are exactly as they were')
+    assert.deepEqual(saved.axieScores, legacy.axieScores)
+    assert.deepEqual(saved.dailyScores, legacy.dailyScores)
+    assert.equal(readFileSync(join(dir, 'castCrew.json'), 'utf8'), castCrew, 'a collection nothing uses is not rewritten')
+    assert.equal(readFileSync(join(dir, 'burns.json'), 'utf8'), 'not json at all', 'nor even parsed')
+  } finally {
+    await s.stop()
+  }
 })
