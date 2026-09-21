@@ -24,31 +24,6 @@
   </head>
   <body>
     <div id="app">
-      <!-- First minute: shown once to new guests -->
-      <section id="onboard" class="screen onboard" aria-label="Welcome" hidden>
-        <svg class="onboard-hills" viewBox="0 0 375 200" fill="none" aria-hidden="true" preserveAspectRatio="none">
-          <ellipse cx="60" cy="150" rx="190" ry="70" fill="#CDEFB0"></ellipse>
-          <ellipse cx="330" cy="170" rx="210" ry="80" fill="#BFE79E"></ellipse>
-          <ellipse cx="200" cy="215" rx="260" ry="80" fill="#DFF5C8"></ellipse>
-        </svg>
-        <div class="onboard-copy">
-          <div class="onboard-kicker">Axie Idol</div>
-          <h1 class="onboard-title">Take Kotaro somewhere today.</h1>
-          <p class="onboard-sub">Snap him into your world, post the moment, and the rest of the cast will start following you.</p>
-        </div>
-        <div class="onboard-hero">
-          <img src="/stickers/kotaro.png" alt="Kotaro" class="onboard-kotaro" />
-          <div class="onboard-hints">
-            <div class="onboard-hint"><span data-icon="lock"></span>Bing · after your first post</div>
-            <div class="onboard-hint"><span data-icon="lock"></span>Kibo · 10 likes given</div>
-          </div>
-        </div>
-        <div class="onboard-sheet">
-          <button type="button" id="btn-onboard-snap" class="btn primary onboard-cta"><span data-icon="camera"></span>Open the camera</button>
-          <button type="button" id="btn-onboard-feed" class="btn secondary onboard-secondary">See what the cast is up to</button>
-          <p class="onboard-note">No account needed. Bring your own Axies any time.</p>
-        </div>
-      </section>
       <!-- Live / upload viewfinder -->
       <section id="viewfinder" class="screen" aria-label="Viewfinder" hidden>
         <video id="video" playsinline autoplay muted></video>
@@ -76,54 +51,17 @@
 
         <div class="chrome top vf-top">
           <button type="button" id="btn-vf-back" class="btn icon vf-round" title="Home" aria-label="Home"><span data-icon="back"></span></button>
-          <div id="vf-quest-chip" class="vf-quest-chip"><span class="vf-dot"></span><span id="vf-quest-text">Post to unlock Bing</span></div>
-          <!-- One-Axie loop HUD (VITE_BUDDY=1): replaces the quest chip, filled by syncQuestHud() -->
+          <!-- Camera HUD: the buddy chip, filled by syncCameraHud() -->
           <div id="bd-chip" class="bd-chip-vf" hidden></div>
           <button type="button" id="btn-flip" class="btn icon vf-round" title="Flip camera" aria-label="Flip camera"><span data-icon="flip"></span></button>
           <!-- after the flip button so it wraps onto its own row instead of pushing the chrome down -->
           <div id="bd-wish-pill" class="bd-wish-pill" hidden></div>
-          <button type="button" id="btn-to-feed" class="btn nav-chip" hidden>Feed</button>
-          <button type="button" id="btn-to-profile" class="btn nav-chip" hidden>Profile</button>
-          <div id="auth-bar" class="auth-bar" hidden>
-            <p id="guest-badge" class="guest-badge auth-identity" hidden></p>
-            <button type="button" id="btn-connect-ronin" class="btn auth-btn" hidden>Bring your Axies</button>
-            <button type="button" id="btn-disconnect-ronin" class="btn auth-btn auth-disconnect" hidden>Disconnect</button>
-          </div>
+          <!-- ?dev=1 only: put any numeric Axie on the camera -->
           <form id="axie-id-form" class="axie-id-bar" autocomplete="off" hidden>
             <label for="axie-id-input" class="axie-id-label">Axie ID</label>
             <input id="axie-id-input" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 90" enterkeyhint="go" />
             <button type="submit" id="btn-axie-id" class="btn secondary axie-id-go">Go</button>
           </form>
-        </div>
-
-        <!-- Paste Ronin address (iPhone Safari fallback — no extension) -->
-        <div id="ronin-modal" class="ronin-modal" hidden>
-          <div class="ronin-modal-card" role="dialog" aria-modal="true" aria-labelledby="ronin-modal-title">
-            <h2 id="ronin-modal-title" class="ronin-modal-title">Connect Ronin</h2>
-            <p class="ronin-modal-sub">
-              Paste your <strong>0x</strong> or <strong>ronin:</strong> address.
-              Works on iPhone Safari without a wallet extension.
-            </p>
-            <label class="ronin-modal-label" for="ronin-address-input">Address</label>
-            <input
-              id="ronin-address-input"
-              type="text"
-              inputmode="text"
-              autocomplete="off"
-              autocapitalize="off"
-              spellcheck="false"
-              placeholder="0x… or ronin:…"
-            />
-            <p id="ronin-modal-error" class="ronin-modal-error" hidden></p>
-            <div class="ronin-modal-actions">
-              <button type="button" id="btn-ronin-cancel" class="btn secondary">Cancel</button>
-              <button type="button" id="btn-ronin-save" class="btn primary">Save</button>
-            </div>
-            <p class="ronin-modal-todo">
-              Paste works anytime. Prefer <strong>Connect Waypoint</strong> when
-              <code>VITE_WAYPOINT_CLIENT_ID</code> is set (popup / redirect).
-            </p>
-          </div>
         </div>
 
         <!-- Camera permission / iOS gate (getUserMedia only on tap) -->
@@ -147,29 +85,7 @@
         <div id="live-toast" class="toast live-toast" hidden></div>
 
         <div class="chrome bottom">
-          <!-- Legacy crew tray head: hidden under the one-Axie flag (see syncCameraTrays) -->
-          <div id="tray-head" class="tray-head">
-            <span class="tray-label">Your crew <span id="tray-photo-count" class="tray-photo-count"></span></span>
-            <span class="tray-head-actions">
-              <button type="button" id="btn-tray-clear" class="tray-link" hidden>Clear photo</button>
-              <button type="button" id="btn-tray-connect" class="tray-link">Bring my Axies</button>
-            </span>
-          </div>
-          <div id="inventory-tray" class="inventory-tray" role="toolbar" aria-label="Owned Axies" hidden>
-            <div class="inventory-label">Inventory</div>
-            <div id="inventory-scroll" class="inventory-scroll"></div>
-            <p id="inventory-empty" class="inventory-empty" hidden>No Axies found for this address</p>
-            <p id="inventory-loading" class="inventory-loading" hidden>Loading inventory…</p>
-          </div>
-          <div id="cast-tray" class="cast-tray" role="toolbar" aria-label="Vibeathon kit mascots">
-            <button type="button" class="cast-chip" data-cast="kotaro" aria-pressed="true" title="Kotaro">
-              <img class="cast-thumb" src="/previews/kotaro.png" alt="" draggable="false" />
-              <span class="cast-name">Kotaro</span>
-            </button>
-          </div>
-          <div id="prop-tray" class="prop-tray" role="toolbar" aria-label="Vibeathon equipment props">
-          </div>
-          <!-- One-Axie loop: the wardrobe replaces the crew tray; frames unlock with the cape at bond 5 -->
+          <!-- The wardrobe; frames unlock with the cape at bond 5 -->
           <div id="wardrobe-tray" class="prop-tray wardrobe-tray" role="toolbar" aria-label="Wardrobe" hidden></div>
           <div id="frame-tray" class="prop-tray frame-tray" role="toolbar" aria-label="Photo frames" hidden></div>
           <div class="toolbar vf-toolbar">
@@ -233,164 +149,9 @@
         <div id="post-toast" class="toast" hidden>Posted</div>
       </section>
 
-      <!-- Idol feed -->
-      <!-- Nothing but the mark shows until the game has decided which screen is yours: the old feed
-           used to sit here "active" and flashed up for a moment on every first load. -->
+      <!-- Nothing but the mark shows until the game has decided which screen is yours. -->
       <div id="boot-splash" aria-hidden="true"><img src="/icon.svg" alt="" width="72" height="72"></div>
-      <section id="feed" class="screen" aria-label="Idol Feed" hidden>
-        <header class="feed-header">
-          <button type="button" id="btn-feed-back" class="btn feed-back feed-create-btn" title="Create a moment" hidden>Create</button>
-          <div class="feed-title">Feed</div>
-          <button type="button" id="btn-feed-refresh" class="btn nav-chip feed-refresh-btn" title="Refresh feed" aria-label="Refresh feed"><span data-icon="rotateR"></span></button>
-          <button type="button" id="btn-to-board" class="btn nav-chip feed-board-btn" title="Quest Ladder" hidden>Board</button>
-          <button type="button" id="btn-feed-connect" class="btn feed-connect-btn" title="Optional: bring owned Axies">Bring Axies</button>
-          <button type="button" id="btn-feed-to-profile" class="btn nav-chip" title="Profile" hidden>Me</button>
-          <div id="feed-guest" class="feed-guest"></div>
-        </header>
-        <div id="feed-golden-banner" class="golden-banner-slot"></div>
-        <div id="feed-quest-hud" class="quest-hud-slot"></div>
-        <div id="feed-mode-bar" class="feed-mode-bar" hidden>
-          <button type="button" id="btn-feed-global" class="feed-mode-chip is-active" aria-pressed="true">Global</button>
-          <button type="button" id="btn-feed-following" class="feed-mode-chip" aria-pressed="false">Following</button>
-        </div>
-        <div id="feed-timeline-bar" class="feed-timeline-bar" hidden>
-          <button type="button" id="btn-follow-axie" class="btn follow-btn" data-axie-id="">Follow</button>
-          <button type="button" id="btn-timeline-owner" class="btn owner-chip" hidden title="Open house">Owner</button>
-          <button type="button" id="btn-boost-axie" class="btn boost-btn" hidden title="Demo burn (ledger)">🔥 Boost</button>
-          <span id="feed-follower-count" class="follower-count"></span>
-          <span id="feed-burn-meter" class="burn-meter" hidden></span>
-        </div>
-        <div id="feed-scores" class="feed-scores" aria-label="Today Idol scores"></div>
-        <div id="feed-list" class="feed-list" role="feed"></div>
-        <div id="feed-empty" class="feed-empty" hidden>
-          Sunny skies — capture a cast moment and Post!
-        </div>
-        <div id="feed-error" class="feed-error" hidden></div>
-      </section>
-
-      <!-- Idol Board (Daily + All-time, Asia/Manila) -->
-      <section id="board" class="screen" aria-label="Quest Ladder" hidden>
-        <header class="feed-header board-header">
-          <button type="button" id="btn-board-back" class="btn secondary feed-back" hidden>← Feed</button>
-          <div class="feed-title" id="board-title">Ladder</div>
-          <p id="board-meta" class="board-meta">Resets midnight PH</p>
-        </header>
-        <div class="board-range-tabs" role="tablist" aria-label="Ladder range">
-          <button type="button" class="board-range-tab is-active" data-range="daily" role="tab" aria-selected="true">Today</button>
-          <button type="button" class="board-range-tab" data-range="all" role="tab" aria-selected="false">All time</button>
-        </div>
-        <p id="board-burn-meta" class="board-burn-meta" hidden></p>
-        <div id="board-hof" class="board-hof"></div>
-        <div id="board-podium" class="board-podium" aria-label="Top 3"></div>
-        <div id="board-you-row" class="quest-hud-slot"></div>
-        <div id="board-list" class="board-list" role="list"></div>
-        <div id="board-error" class="feed-error" hidden></div>
-      </section>
-
-      <!-- Profile (Ronin connected) -->
-      <section id="profile" class="screen" aria-label="Profile" hidden>
-        <header class="feed-header profile-header">
-          <button type="button" id="btn-profile-back" class="btn secondary feed-back" hidden>Back</button>
-          <div class="crew-avatar"><span data-icon="user"></span></div>
-          <div class="crew-identity">
-            <p id="profile-address" class="profile-address">—</p>
-            <p id="profile-today-points" class="profile-today-points">Lv 0</p>
-          </div>
-          <button type="button" id="btn-profile-bell" class="btn icon profile-bell" title="Inbox" aria-label="Notifications"><span data-icon="bell"></span><span id="profile-bell-badge" class="bell-badge" hidden>0</span></button>
-        </header>
-        <div id="crew-connect-card" class="crew-connect">
-          <div class="crew-connect-text">
-            <strong>Own Axies on Ronin?</strong>
-            <span>Connect once and they join the crew tray. Posts show their real name.</span>
-          </div>
-          <button type="button" id="btn-crew-connect" class="btn primary crew-connect-btn">Connect</button>
-        </div>
-        <div id="crew-wallet-row" class="crew-wallet" hidden>
-          <button type="button" id="btn-profile-post" class="btn primary crew-wallet-post">Snap with an Axie I own</button>
-          <button type="button" id="btn-profile-disconnect" class="btn secondary">Disconnect</button>
-        </div>
-        <div id="profile-cast-crew" class="cast-crew-strip" hidden>
-          <div class="crew-section-head">
-            <span class="crew-section-label">Crew · <span id="profile-cast-crew-count"></span></span>
-            <span class="crew-section-hint">Quests unlock faces</span>
-          </div>
-          <div id="profile-cast-crew-grid" class="cast-crew-grid" role="list"></div>
-          <div class="crew-section-head crew-section-head-props">
-            <span class="crew-section-label">Props · <span id="crew-props-count"></span></span>
-          </div>
-          <div id="crew-props" class="crew-props"></div>
-          <p id="profile-cast-crew-hint" class="cast-crew-hint" hidden></p>
-        </div>
-        <div class="profile-tabs" role="tablist">
-          <button type="button" class="profile-tab is-active" data-tab="axies" role="tab" aria-selected="true">My Axies</button>
-          <button type="button" class="profile-tab" data-tab="posts" role="tab" aria-selected="false">My moments</button>
-          <button type="button" class="profile-tab" data-tab="board" role="tab" aria-selected="false">My ladder</button>
-        </div>
-        <div id="profile-tab-axies" class="profile-panel" data-panel="axies">
-          <div class="profile-axies-tools">
-            <input id="profile-axie-search" type="search" placeholder="Search Axies…" autocomplete="off" />
-            <div class="profile-axie-filters">
-              <button type="button" class="filter-chip is-active" data-filter="all">All</button>
-              <button type="button" class="filter-chip" data-filter="used">Used today</button>
-              <button type="button" class="filter-chip" data-filter="never">Never posted</button>
-            </div>
-          </div>
-          <div id="profile-axie-grid" class="profile-axie-grid"></div>
-          <button type="button" id="btn-profile-axie-more" class="btn secondary profile-load-more" hidden>Load more</button>
-          <p id="profile-axie-empty" class="feed-empty" hidden>No Axies in this wallet — sunny day to find some!</p>
-        </div>
-        <div id="profile-tab-posts" class="profile-panel" data-panel="posts" hidden>
-          <div id="profile-posts-list" class="feed-list profile-posts-list"></div>
-          <p id="profile-posts-empty" class="feed-empty" hidden>No moments yet. Snap one with Kotaro.</p>
-        </div>
-        <div id="profile-tab-board" class="profile-panel" data-panel="board" hidden>
-          <div id="profile-board-list" class="board-list profile-board-list" role="list"></div>
-          <p id="profile-board-empty" class="feed-empty" hidden>Post &amp; play quests to climb the Quest Ladder!</p>
-        </div>
-        <div id="profile-bell-panel" class="profile-bell-panel" hidden>
-          <div class="bell-panel-head">
-            <strong>Inbox</strong>
-            <button type="button" id="btn-bell-close" class="btn secondary">Close</button>
-          </div>
-          <p class="bell-panel-sub">Follows, likes &amp; comments on Axies you own</p>
-          <div id="profile-bell-list" class="bell-list"></div>
-          <p id="profile-bell-empty" class="feed-empty" hidden>Inbox clear — enjoy the sunshine!</p>
-        </div>
-      </section>
-
-      <!-- Public house (owner) — guests can open; posted Axies only -->
-      <section id="owner" class="screen" aria-label="House" hidden>
-        <header class="feed-header owner-header">
-          <button type="button" id="btn-owner-back" class="btn secondary feed-back">← Feed</button>
-          <div class="feed-title" id="owner-title">House</div>
-        </header>
-        <div class="profile-strip owner-strip">
-          <div class="profile-strip-main">
-            <p id="owner-name" class="profile-address">—</p>
-            <p id="owner-address" class="owner-subtitle">—</p>
-            <p id="owner-today-points" class="profile-today-points">Quest Lv 0</p>
-          </div>
-        </div>
-        <div class="profile-tabs" role="tablist">
-          <button type="button" class="owner-tab is-active" data-tab="axies" role="tab" aria-selected="true">Their Axies</button>
-          <button type="button" class="owner-tab" data-tab="posts" role="tab" aria-selected="false">House feed</button>
-          <button type="button" class="owner-tab" data-tab="board" role="tab" aria-selected="false">House board</button>
-        </div>
-        <div id="owner-tab-axies" class="profile-panel" data-panel="axies">
-          <div id="owner-axie-grid" class="profile-axie-grid"></div>
-          <p id="owner-axie-empty" class="feed-empty" hidden>No posted Axies yet — this house is still waiting for a first owned moment!</p>
-        </div>
-        <div id="owner-tab-posts" class="profile-panel" data-panel="posts" hidden>
-          <div id="owner-posts-list" class="feed-list owner-posts-list"></div>
-          <p id="owner-posts-empty" class="feed-empty" hidden>No house posts yet — sunny skies until they capture one!</p>
-        </div>
-        <div id="owner-tab-board" class="profile-panel" data-panel="board" hidden>
-          <div id="owner-board-list" class="board-list owner-board-list" role="list"></div>
-          <p id="owner-board-empty" class="feed-empty" hidden>No quest progress on the ladder yet.</p>
-        </div>
-      </section>
-
-      <!-- One-Axie loop (VITE_BUDDY=1): rendered from src/buddyScreens.ts -->
+      <!-- The game's screens, rendered from src/buddyScreens.ts -->
       <section id="buddy-egg" class="screen buddy" aria-label="Your egg" hidden></section>
       <section id="buddy-hatch" class="screen buddy" aria-label="Hatch" hidden></section>
       <section id="buddy-home" class="screen buddy" aria-label="Your Axie" hidden></section>
@@ -405,111 +166,11 @@
       <section id="buddy-meet" class="screen buddy" aria-label="Meet your Axie" hidden></section>
       <div id="buddy-sheet" class="buddy-sheet" hidden></div>
     </div>
-      <nav id="tabbar" class="tabbar" aria-label="Main">
-        <button type="button" class="tab" data-tab="feed" aria-current="page">
-          <span class="tab-ico" data-icon="home"></span><span class="tab-label">Feed</span>
-        </button>
-        <button type="button" class="tab tab-snap" data-tab="snap">
-          <span class="tab-shutter" data-icon="camera"></span><span class="tab-label">Snap</span>
-        </button>
-        <button type="button" class="tab" data-tab="ladder">
-          <span class="tab-ico" data-icon="trophy"></span><span class="tab-label">Ladder</span>
-        </button>
-        <button type="button" class="tab" data-tab="crew">
-          <span class="tab-ico" data-icon="user"></span><span class="tab-label">Crew</span>
-        </button>
-      </nav>
-    <div id="img-lightbox" class="img-lightbox" hidden>
-      <button type="button" id="img-lightbox-close" class="img-lightbox-close" aria-label="Close photo">Close</button>
-      <img id="img-lightbox-img" alt="" />
-    </div>
     <script type="module" src="/src/main.ts"></script>
     <noscript>
       <p style="padding:1rem;color:#1A2B3C;background:#E8F6FF;text-align:center;font-family:system-ui,sans-serif">
         JavaScript is required for Axie Idol. Enable JS, then reload — or use Enable Camera / Use iPhone Camera once the page loads.
       </p>
     </noscript>
-  
-      <!-- Fan boost sheet (ledger mode) -->
-      <div id="boost-sheet" class="boost-sheet" hidden>
-        <div class="boost-sheet-card" role="dialog" aria-label="Demo burn boost">
-          <header class="boost-sheet-head">
-            <strong>🔥 Boost burn</strong>
-            <button type="button" id="btn-boost-close" class="btn secondary boost-close" aria-label="Close">✕</button>
-          </header>
-          <p id="boost-sheet-target" class="boost-sheet-target">Axie</p>
-          <p class="boost-sheet-mode">Demo burn (ledger) · no on-chain SLP yet</p>
-          <div class="boost-chips" role="group" aria-label="Amount">
-            <button type="button" class="boost-chip" data-amount="50">50</button>
-            <button type="button" class="boost-chip" data-amount="100">100</button>
-            <button type="button" class="boost-chip" data-amount="500">500</button>
-          </div>
-          <label class="boost-custom">
-            <span>Custom</span>
-            <input id="boost-amount-input" type="number" min="1" max="10000" step="1" value="100" inputmode="numeric" />
-          </label>
-          <button type="button" id="btn-boost-confirm" class="btn boost-confirm">Burn SLP (ledger)</button>
-        </div>
-      </div>
-
-
-    <!-- Spark prestige victory (owned Axie post burn) -->
-    <div id="spark-victory" class="spark-victory" hidden>
-      <canvas id="spark-victory-confetti" class="spark-victory-confetti" aria-hidden="true"></canvas>
-      <div
-        class="spark-victory-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="spark-victory-title"
-        aria-describedby="spark-victory-body"
-      >
-        <div class="spark-victory-sunburst" aria-hidden="true"></div>
-        <p id="spark-victory-kicker" class="spark-victory-kicker">SLP SPARK</p>
-        <img id="spark-victory-avatar" class="spark-victory-avatar" src="" alt="" hidden />
-        <h2 id="spark-victory-title" class="spark-victory-title">Prestige!</h2>
-        <p id="spark-victory-amount" class="spark-victory-amount" aria-live="polite">50 $SLP</p>
-        <p id="spark-victory-body" class="spark-victory-body">
-          Thanks for posting. You just burned <strong>50 $SLP</strong> and earned prestige.
-          Your Axie is climbing the social ladder.
-        </p>
-        <p id="spark-victory-sub" class="spark-victory-sub">
-          Likes and comments climb the ladder.
-        </p>
-        <p id="spark-victory-next" class="spark-victory-next" hidden><strong>Next up:</strong> <span id="spark-victory-next-text"></span></p>
-        <p id="spark-victory-demo" class="spark-victory-demo" hidden>Demo burn (ledger)</p>
-        <div class="spark-victory-actions">
-          <button type="button" id="btn-spark-victory-ok" class="btn primary spark-victory-cta">
-            Back to the feed
-          </button>
-        </div>
-      </div>
-    </div>
-
-
-    <!-- Cast crew unlock celebration -->
-    <div id="cast-unlock" class="cast-unlock" hidden>
-      <canvas id="cast-unlock-confetti" class="cast-unlock-confetti" aria-hidden="true"></canvas>
-      <div
-        class="cast-unlock-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="cast-unlock-title"
-        aria-describedby="cast-unlock-body"
-      >
-        <div class="cast-unlock-sunburst" aria-hidden="true"></div>
-        <p class="cast-unlock-kicker">CAST CREW</p>
-        <img id="cast-unlock-avatar" class="cast-unlock-avatar" src="" alt="" />
-        <h2 id="cast-unlock-title" class="cast-unlock-title">Followed you!</h2>
-        <p id="cast-unlock-body" class="cast-unlock-body">
-          Keep posting to unlock the whole free cast.
-        </p>
-        <div class="cast-unlock-actions">
-          <button type="button" id="btn-cast-unlock-ok" class="btn primary cast-unlock-cta">
-            Back to the feed
-          </button>
-        </div>
-      </div>
-    </div>
-
 </body>
 </html>
