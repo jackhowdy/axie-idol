@@ -862,19 +862,6 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
   const another = about ? `<button type="button" class="bd-btn bd-btn-outline" data-action="meet">Meet another Axie</button>` : ''
   const heroLines = ['That bench is far. Let us climb all those stairs to get to it.', 'We were right here before. What is past the top this time?', 'Grey steps go up. Can we climb every single one?']
   const bubbles = heroLines.map((l, i) => `<div class="bd-w-bubble" style="--i:${i}">${esc(l)}</div>`).join('')
-  const said = [
-    { photo: '/welcome/playground.jpg', who: 'Miso, at the playground', line: 'That yellow slide goes very high. Can we climb up?' },
-    { photo: '/welcome/rug.jpg', who: 'Happy, at home', line: 'That white shoe is neat. Can I poke it?' },
-    { photo: '/welcome/aisle.jpg', who: 'In a shop', line: 'So many yellow bags. Can we open one?' },
-  ]
-  const saidCards = said.map((c) => `
-        <figure class="lp-said">
-          <img src="${c.photo}" alt="" loading="lazy">
-          <figcaption><span class="lp-said-line">${esc(c.line)}</span><span class="lp-said-who">${esc(c.who)}</span></figcaption>
-        </figure>`).join('')
-  const wardrobe: Array<[string, string]> = [['hat', 'Party hat'], ['scarf', 'Scarf'], ['shades', 'Shades'], ['cape', 'Cape'], ['crown', 'Crown']]
-  const wearRow = wardrobe.map(([id, label]) => `<span class="lp-wear">${icon(id, 22)}<small>${label}</small></span>`).join('')
-  const odds = [['5', 'photos', 'A common Axie, any class'], ['20', 'photos', 'One rare part, guaranteed'], ['50', 'photos', 'Two rare parts'], ['100', 'photos', 'A shot at Mystic']]
   // Three parts, in the order people ask: what is real today, what the next round adds, what comes after.
   const road: Array<{ when: string; title: string; state: string; items: string[]; core: string[] }> = [
     { when: 'Done', title: 'Round one', state: 'Live now', items: [
@@ -926,7 +913,6 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
               <ul>${r.core.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
             </div>
           </li>`).join('')
-  const oddsRow = odds.map(([n, unit, what]) => `<div class="lp-odd"><b>${n}</b><small>${unit}</small><span>${what}</span></div>`).join('')
   // The game in one glance: the same five moods and the same numbers the server plays by.
   const moods: Array<[string, string, string]> = [['bored', 'Bored', '0'], ['restless', 'Restless', '20'], ['content', 'Content', '45'], ['happy', 'Happy', '70'], ['overjoyed', 'Overjoyed', '90']]
   const moodRow = moods.map(([id, label, from]) => `<span class="lp-mood lp-mood-${id}"><b>${label}</b><small>from ${from}</small></span>`).join('')
@@ -938,7 +924,7 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
       <header class="lp-header">
         <a class="lp-brand" data-action="${about ? 'back' : 'about'}">${logoSvg(34)}${wordmarkSvg(24)}</a>
         <nav class="lp-nav" aria-label="Sections">
-          <a href="#lp-prayer">The idea</a><a href="#lp-how">How it works</a><a href="#lp-happy">Happiness</a><a href="#lp-why">Why an Idol</a><a href="#lp-voice">The voice</a><a href="#lp-grow">Grow</a><a href="#lp-road">Roadmap</a><a href="#lp-faq">Questions</a>
+          <a href="#lp-prayer">The idea</a><a href="#lp-how">How it works</a><a href="#lp-happy">Happiness</a><a href="#lp-road">Roadmap</a><a href="#lp-faq">Questions</a>
         </nav>
         <div class="lp-header-cta">${primary}</div>
       </header>
@@ -1042,66 +1028,6 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
               <span>Happiness falls a little every hour you are apart. A day away and it is still fine. Two days and it is bored, and the streak is gone. It never blames you. It just wants to go out.</span>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section class="lp-section" id="lp-why">
-        <p class="bd-eyebrow">Why an Idol</p>
-        <h2 class="lp-h2">Who cares if an Axie is an Idol? Everyone who sees it.</h2>
-        <p class="lp-sub">In most games an Axie is somebody because it wins fights. Here it is somebody because someone shows up for it, every day, and the whole game can see that.</p>
-        <div class="lp-why">
-          <div class="bd-card lp-why-card"><span class="lp-why-ico">${icon('star', 20)}</span><b>It cannot be bought, only kept</b><span>An Idol is fourteen happy days in a row, and it is only an Idol while the streak lasts. Every Idol you see is being looked after right now. That is why there are so few.</span></div>
-          <div class="bd-card lp-why-card"><span class="lp-why-ico">${icon('user', 20)}</span><b>Everyone sees it</b><span>The Hall of Idols sits on top of the ladder. An Idol's name is gold wherever it appears, and every photo it is in carries a gold star, so the status travels with every picture you share.</span></div>
-          <div class="bd-card lp-why-card"><span class="lp-why-ico">${icon('trophy', 20)}</span><b>Stars win the month</b><span>A joy day is worth three bond to a Newcomer, four to a Rising Star, five to a Star and six to an Idol. The monthly crown goes to the most bond, so the Axies that are cared for best are the ones that win it.</span></div>
-          <div class="bd-card lp-why-card"><span class="lp-why-ico">${icon('heartFilled', 20)}</span><b>It makes a real Axie somebody</b><span>Every Axie here exists on Ronin. If it is yours, its name in the Hall is your Axie's fame, earned outside battle. Next: Idols first on the social wall, seasons with something to win, and an Idol card.</span></div>
-        </div>
-      </section>
-
-      <section class="lp-section" id="lp-voice">
-        <p class="bd-eyebrow">The voice</p>
-        <h2 class="lp-h2">It sees. It remembers. It wants things.</h2>
-        <p class="lp-sub">Every line is about the photo it is on. It names what it can see, notices when you are somewhere again, and asks for the next place. Write a caption and it answers that too.</p>
-        <div class="lp-said-row">${saidCards}</div>
-      </section>
-
-      <section class="lp-section" id="lp-grow">
-        <p class="bd-eyebrow">Grow</p>
-        <h2 class="lp-h2">Every photo builds bond. Bond opens the wardrobe.</h2>
-        <div class="lp-grow">
-          <div class="bd-card lp-grow-card">
-            <b>Ten steps on the growth ladder</b>
-            <div class="lp-wear-row">${wearRow}</div>
-            <span>A name and a voice first. Then the hat, the scarf, the shades, a signature pose, the cape, a trick, the crown, another trick, and the Mystic glow at the top.</span>
-          </div>
-          <div class="bd-card lp-grow-card">
-            <b>The Idol ladder</b>
-            <span>Bond earned this month ranks every Axie in the game. The crown rotates monthly, so a new Axie is never out of the race.</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="lp-section" id="lp-hatch">
-        ${opts.eggs ? `<p class="bd-eyebrow">What hatches</p>
-        <h2 class="lp-h2">The longer you carry the egg, the rarer the Axie</h2>
-        <div class="lp-odds">${oddsRow}</div>
-        <p class="lp-sub">No two hatched Axies share the same parts. Already own one on Ronin? Sign in and bring it instead of an egg.</p>`
-        : `<p class="bd-eyebrow">Real Axies</p>
-        <h2 class="lp-h2">Every Axie here is a real Axie</h2>
-        <div class="lp-odds">
-          <div class="lp-odd"><b>3</b><small>to meet</small><span>We show you three real Axies. Pick one, or shuffle for three more.</span></div>
-          <div class="lp-odd"><b>#</b><small>by number</small><span>Type a favourite's number and it comes as itself.</span></div>
-          <div class="lp-odd"><b>60</b><small>levels</small><span>Its Axie Core level, evolved parts and special genes are marked on it everywhere, and it knows them.</span></div>
-          <div class="lp-odd"><b>0</b><small>wallets needed</small><span>Ronin sign-in is only for bringing the Axies you own.</span></div>
-        </div>`}
-        <div class="bd-card lp-classes">
-          <b>Its class decides what makes it happiest</b>
-          <span>Pick an Aquatic and you will be looking for water. Pick a Bird and you will be looking up. A photo with the thing its class loves is worth more happiness, so the Axie you choose changes where you go.</span>
-          <div class="lp-class-row">${([['Beast', 'open ground'], ['Aquatic', 'water'], ['Plant', 'growing things'], ['Bird', 'sky and high places'], ['Bug', 'small things'], ['Reptile', 'warm, sunny spots'], ['Dawn', 'morning light'], ['Dusk', 'evening light'], ['Mech', 'machines']] as Array<[string, string]>).map(([c, l]) => `<span class="lp-class bd-class-${c.toLowerCase()}"><b>${c}</b><small>${l}</small></span>`).join('')}</div>
-        </div>
-        <div class="bd-card lp-real">
-          <div><b>${opts.eggs ? 'Already love an Axie? Play as it.' : 'Its official art, its real self.'}</b>
-          <span>${opts.eggs ? "Type any real Axie's number. It" : 'A real Axie'} arrives as itself, in its official art, with its real parts, its class and its Axie Core level, and it knows them. No wallet. If it is yours, sign in with Ronin later and it becomes your owned Axie with everything it earned.</span></div>
-          ${about ? '' : `<button type="button" class="bd-btn bd-btn-ghost" data-action="${opts.eggs ? 'visit' : 'meet'}">${opts.eggs ? 'Play as a real Axie' : 'Meet your Axie'}</button>`}
         </div>
       </section>
 
