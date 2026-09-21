@@ -171,10 +171,8 @@ function serveStatic(pathname, res) {
   )
 }
 
-if (!existsSync(DIST)) {
-  console.error('[server] Missing dist/ — run the build first')
-  process.exit(1)
-}
+// No build yet: the API still runs (the tests need nothing else); pages answer 404 until `npm run build`.
+if (!existsSync(DIST)) console.warn('[server] No dist/ yet: the API is up, but run `npm run build` to serve the game')
 
 const server = http.createServer(async (req, res) => {
   try {
