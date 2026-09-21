@@ -4368,3 +4368,9 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 /* the happiness pill sat on top of the photo's tag; it goes to the foot of the photo, clear of the Axie */
 .lp-hero-happy { top: auto; right: auto; left: 12px; bottom: 12px; }
 @media (min-width: 900px) { .lp-hero-happy { top: auto; right: auto; left: 16px; bottom: 16px; } }
+
+/* the hello screen: try another number without leaving */
+.bd-swap { gap: 8px; margin: 16px 0 8px; padding: 14px; }
+.bd-swap > b { font-family: var(--font-display); font-weight: 900; font-size: 15px; }
+.bd-swap .bd-btn { flex: 0 0 auto; }
+@media (min-width: 768px) { .bd-swap { max-width: 560px; margin-left: auto; margin-right: auto; } }

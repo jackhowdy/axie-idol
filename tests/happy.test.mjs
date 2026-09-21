@@ -291,3 +291,22 @@ test('a wish for a thing needs the thing in the photo: steps at six in the eveni
   const hit = await r.snap('w2', { labels: ['stone steps', 'rail'] })
   assert.equal(hit.wishDone?.id, 'stairs'); assert.ok(hit.happy.reasons.includes('its wish came true'))
 })
+
+test('only a grown Axie can be played: an egg or a capsule is turned away kindly', async () => {
+  const r = rig({ genes: async () => ({ ...REAL, stage: 1, class: null }), env: { BUDDY: '1' } })
+  const v = await r.call('/api/buddy/visit', { body: { axieId: '1' } })
+  assert.equal(v.status, 400); assert.match(v.body.error, /not hatched/)
+  assert.equal((await r.call('/api/buddy', { method: 'GET' })).body.active, null)
+})
+
+test('not the one: from the hello screen another number replaces an Axie that was only looked at, never one that was played', async () => {
+  const r = rig({ genes: async (id) => ({ ...REAL, id: String(id) }), env: { BUDDY: '1' } })
+  await r.call('/api/buddy/visit', { body: { axieId: '2660' } })
+  const second = await r.call('/api/buddy/visit', { body: { axieId: '80', replace: true } })
+  assert.equal(second.body.active.axieId, '80'); assert.equal(second.body.buddies.length, 1, 'the one only looked at is let go')
+  await r.snap('kept-1', { labels: ['bench'] })
+  const third = await r.call('/api/buddy/visit', { body: { axieId: '7', replace: true } })
+  assert.equal(third.body.active.axieId, '7'); assert.equal(third.body.buddies.length, 2, 'an Axie with a photo rests, it is never deleted')
+  const plain = await r.call('/api/buddy/visit', { body: { axieId: '9' } })
+  assert.equal(plain.body.buddies.length, 3, 'without the flag nothing is let go')
+})

@@ -868,12 +868,19 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
       const axieId = String(body.axieId || '').replace(/^#/, '').trim()
       if (!/^\d{1,9}$/.test(axieId)) { sendJson(res, 400, { error: 'Type an Axie number, like 2660' }); return true }
       const existing = acc.buddyIds.map((id) => store.buddies[id]).find((x) => x && x.kind !== 'wild' && x.axieId === axieId)
-      if (existing) { existing.retiredAt = null; acc.activeBuddyId = existing.id; save(store); sendJson(res, 200, payload(store, ownerKey)); return true }
-      if (acc.buddyIds.length >= BUDDY_CAP) { sendJson(res, 409, { error: 'Too many Axies in the scrapbook' }); return true }
+      // "Not the one?" on the hello screen: an Axie that was only looked at (no photo, no care, no
+      // joy day) is let go when another is picked, so trying a few numbers leaves no clutter behind.
+      const untouched = (x) => x && x.kind === 'visit' && !x.snapCount && !(x.photoIds || []).length && !(x.joy?.days) && !(x.happy?.pets) && !(x.happy?.treats) && !(x.happy?.plays)
+      const letGo = () => { if (body.replace && active && untouched(active) && active.axieId !== axieId) { acc.buddyIds = acc.buddyIds.filter((id) => id !== active.id); delete store.buddies[active.id] } }
+      if (existing) { letGo(); existing.retiredAt = null; acc.activeBuddyId = existing.id; save(store); sendJson(res, 200, payload(store, ownerKey)); return true }
+      if (acc.buddyIds.length >= BUDDY_CAP && !(body.replace && untouched(active))) { sendJson(res, 409, { error: 'Too many Axies in the scrapbook' }); return true }
       let rec
       if (env.BUDDY_TEST_SKIP_CHAIN === '1') rec = { id: axieId, name: `Axie #${axieId}`, class: 'Beast', level: 42, birthDate: 1523510193, breedCount: 1, parts: [{ type: 'horn', name: 'Ronin', class: 'Beast' }, { type: 'tail', name: 'Hatsune', class: 'Plant' }], genes: '0x0' }
       else { try { rec = await fetchAxieGenes(axieId) } catch { rec = null } }
       if (!rec) { sendJson(res, 404, { error: 'No Axie with that number' }); return true }
+      // an egg or a capsule has no body, no class and no parts to play as: only a grown Axie comes out
+      if ((rec.stage != null && Number(rec.stage) !== 4) || !rec.class) { sendJson(res, 400, { error: 'That one has not hatched into an Axie yet. Try another number, like 2660' }); return true }
+      letGo()
       const b = realBuddy(ownerKey, rec, 'visit')
       const nickname = body.nickname == null ? null : validName(body.nickname)
       if (nickname) b.name = nickname

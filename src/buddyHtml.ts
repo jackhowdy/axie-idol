@@ -274,9 +274,15 @@ export function hatchHtml(b: Buddy, lines: string[]): string {
         ${b.kind !== 'wild' && b.loves ? `<p class="bd-small bd-muted">${esc(b.class ?? 'It')}s love ${esc(b.loves)}: photos with some make it extra happy.</p>` : ''}
       </div>
       ${real ? nicknaming : hatched ? '' : naming}
+      ${real && b.kind === 'visit' ? `
+    <div class="bd-card bd-swap">
+      <b>Not the one?</b>
+      <div class="bd-input-row"><input id="bd-swap-id" class="bd-input" inputmode="numeric" maxlength="10" placeholder="Another Axie number" autocomplete="off" aria-label="Another Axie number"><button type="button" class="bd-btn bd-btn-outline" data-action="visit-go" data-replace="1">Show me</button></div>
+      <p class="bd-small bd-muted">Or <a class="bd-link" data-action="meet">see three more to choose from</a>. Only one Axie is active at a time.</p>
+    </div>` : `<p class="bd-small bd-center">Not the one? ${real ? 'Meet another Axie any time from Home.' : 'You can start a fresh egg any time from Home.'} Only one Axie is active.</p>`}
     </div>
     <div class="bd-actions">${cta}</div>
-    <p class="bd-small bd-center">Not the one? ${real ? 'Meet another Axie any time from Home.' : 'You can start a fresh egg any time from Home.'} Only one Axie is active.</p>`
+`
 }
 
 const WEARABLES = ['hat', 'scarf', 'shades', 'cape', 'crown']

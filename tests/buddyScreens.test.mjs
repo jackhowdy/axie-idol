@@ -204,7 +204,7 @@ test('hello: a real Axie can take a nickname and keeps its name on chain', () =>
   const html = hatchHtml(real, ['Out. Finally.'])
   assert.match(html, /What will you call it\?/); assert.match(html, /id="bd-name"[^>]*value="Axie #80"/)
   assert.match(html, /data-action="nickname-confirm">Hello, <span data-name-echo>Axie #80/)
-  assert.match(html, /Meet another Axie any time from Home/)
+  assert.match(html, /Not the one?/)
   assert.match(hatchHtml({ ...real, name: 'Bubbles', realName: 'Bubbles' }, []), /On chain it is Bubbles/)
   assert.doesNotMatch(hatchHtml(miso, []), /nickname-confirm/, 'a hatched wild Axie was named at the hatch')
 })
@@ -753,4 +753,12 @@ test('Ronin is off in the first prototype: the page stays and says coming next, 
     assert.doesNotMatch(fresh, /or bring your own with Ronin/, 'round one no longer claims it')
     assert.match(fresh, /Nothing in this first prototype connects to a wallet/)
   } finally { setRoninEnabled(true) }
+})
+
+test('the hello screen lets you try another number without leaving', () => {
+  const real = { ...miso, kind: 'visit', axieId: '80', class: 'Aquatic' }
+  const html = hatchHtml(real, ['Hello.'])
+  assert.match(html, /Not the one\?/); assert.match(html, /id="bd-swap-id"/)
+  assert.match(html, /data-action="visit-go" data-replace="1">Show me/); assert.match(html, /data-action="meet">see three more/)
+  assert.doesNotMatch(hatchHtml(miso, []), /bd-swap-id/, 'a hatched wild Axie has no number to swap')
 })

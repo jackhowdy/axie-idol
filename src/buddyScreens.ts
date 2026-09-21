@@ -354,11 +354,13 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     }
     if (act === 'visit') { sheet(visitHtml()); document.querySelector<HTMLInputElement>('#bd-visit-id')?.focus(); return }
     if (act === 'visit-go') {
-      const id = (a.dataset.id || document.querySelector<HTMLInputElement>('#bd-visit-id')?.value || '').replace(/[^0-9]/g, '')
+      // the box beside the button that was pressed (the hello screen has its own), else the sheet's
+      const near = a.closest('.bd-input-row')?.querySelector<HTMLInputElement>('input')
+      const id = (a.dataset.id || near?.value || document.querySelector<HTMLInputElement>('#bd-visit-id')?.value || '').replace(/[^0-9]/g, '')
       if (!id) throw new Error('Type an Axie number first, like 2660')
       const pendingSnaps = b && !b.hatchedAt ? b.egg.snaps : 0
       if (pendingSnaps >= 1 && !confirm(`Your egg with ${pendingSnaps} snaps will be set aside. Continue?`)) return
-      const r = await visitAxie(id)
+      const r = await visitAxie(id, undefined, a.dataset.replace === '1')
       pendingLines = r.lines
       await show('hatch')
       return

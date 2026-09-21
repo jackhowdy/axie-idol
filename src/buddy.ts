@@ -154,7 +154,7 @@ export async function playResult(catches: number): Promise<{ line: string; happy
   return { line: p.line, happy: p.happy, catches: p.catches, rounds: p.rounds, counted: p.counted }
 }
 /** Play as any real Axie by its number. No wallet: it is a visit until a Ronin sign-in proves it is yours. */
-export async function visitAxie(axieId: string, nickname?: string): Promise<{ lines: string[] }> { const p = await call<Payload>('/api/buddy/visit', nickname ? { axieId, nickname } : { axieId }); apply(p); return { lines: p.lines || [] } }
+export async function visitAxie(axieId: string, nickname?: string, replace = false): Promise<{ lines: string[] }> { const p = await call<Payload>('/api/buddy/visit', { axieId, ...(nickname ? { nickname } : {}), ...(replace ? { replace: true } : {}) }); apply(p); return { lines: p.lines || [] } }
 export type MeetCard = { id: string; name: string; class: string | null; level: number | null; image: string; rank?: string | null; evolved?: number; special?: string[]; loves?: string | null; players?: number }
 /** Fame belongs to the Axie: everyone who plays this Axie number adds to the same name. */
 export type Fame = { axieId: string; players: number; joyDays: number; photos: number; bestStreak: number; titles: { idol: number; star: number; rising: number }; names: string[] }
