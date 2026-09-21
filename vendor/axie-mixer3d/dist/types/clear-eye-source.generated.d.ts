@@ -1,0 +1,10 @@
+/** Generated from an approved Axie eye source. Do not hand-edit. */
+export declare const AXIE_CLEAR_EYE_L1_SVG_SHA256: "c431d5623d4d267501761c22a521137f3947ae79f4864ab79c08bcb7aaf39f82";
+export declare const AXIE_CLEAR_EYE_L1_SOURCE_PNG_SHA256: "32adf17e155390eaf96693e45db2c8b7252b086a5a3a44d142d95bbd7ce92111";
+export declare const AXIE_CLEAR_EYE_L1_PUPIL_FREE_SVG_SHA256: "9425889489f416f0b69948f8719fc477b90c7ca282095e4a3b3e36dd5367b0ad";
+export declare const AXIE_CLEAR_EYE_L1_MASTER_PATH_COUNT: 67;
+export declare const AXIE_CLEAR_EYE_L1_PUPIL_FREE_PATH_COUNT: 62;
+export declare const AXIE_CLEAR_EYE_L1_REMOVED_PUPIL_PATH_SHA256: readonly ["df0822d174a77b143c0c656aab3fc0fac46364fb2c84cad3b05cc8166682f82c", "e64f295c7d59be3811633e61fa5c0a9516572df8e4829bf9d971e0ac8d78fdde", "7980f1566c3abb34edcdce3cada8ff8f12680aeba5b958bfe5e13eb4a07627cd", "2f93d096e53f6fe33f30eddfc96bec5c755b36302a306b5612d49da693e49760", "703548577ac90769b1594266c187d9111bf09f865b4b8a7916cb3391924ef2f8"];
+export declare const AXIE_CLEAR_EYE_L1_SVG: string;
+export declare const AXIE_CLEAR_EYE_L1_PUPIL_FREE_SVG: string;
+//# sourceMappingURL=clear-eye-source.generated.d.ts.map

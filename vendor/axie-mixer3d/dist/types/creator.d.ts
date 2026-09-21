@@ -1,0 +1,114 @@
+import { type AxieCreatorCatalog, type AxieCreatorController, type AxieCreatorOptions, type AxieCreatorState } from './creator-state.js';
+export declare const AXIE_CREATOR_CHANGE_EVENT: "axiecreatorchange";
+export declare const AXIE_CREATOR_OPEN_EVENT: "axiecreatoropenchange";
+export type AxieCreatorStatusTone = 'neutral' | 'success' | 'warning' | 'error';
+export interface AxieCreatorViewOptions extends AxieCreatorOptions {
+    readonly trigger?: HTMLButtonElement;
+    readonly title?: string;
+    readonly keyboardShortcut?: string | false;
+    readonly postprocess?: {
+        readonly enabled: boolean;
+        readonly supported: boolean;
+        readonly onChange?: (enabled: boolean) => void;
+    };
+}
+export interface AxieCreatorViewController extends AxieCreatorController {
+    readonly host: HTMLDivElement;
+    readonly panel: HTMLElement;
+    readonly trigger: HTMLButtonElement;
+    setPostprocessEnabled(enabled: boolean): void;
+    setLoading(loading: boolean, message?: string): void;
+    setStatus(message: string, tone?: AxieCreatorStatusTone): void;
+}
+export declare class AxieCreator implements AxieCreatorViewController {
+    readonly host: HTMLDivElement;
+    readonly panel: HTMLElement;
+    readonly trigger: HTMLButtonElement;
+    readonly catalog: AxieCreatorCatalog;
+    private currentState;
+    private readonly resetState;
+    private readonly options;
+    private readonly ownsTrigger;
+    private readonly abort;
+    private readonly scrim;
+    private readonly closeButton;
+    private readonly doneButton;
+    private readonly content;
+    private readonly status;
+    private readonly statusText;
+    private readonly statusSpinner;
+    private readonly announcer;
+    private currentBadge;
+    private readonly manualPanel;
+    private readonly genesPanel;
+    private geneForm;
+    private geneInput;
+    private geneFeedback;
+    private geneResolution;
+    private searchInput;
+    private classFilter;
+    private skinFilter;
+    private levelFilter;
+    private qualitySelect;
+    private postprocessToggle;
+    private readonly modeButtons;
+    private readonly bodyButtons;
+    private readonly colorButtons;
+    private readonly artButtons;
+    private readonly partGroups;
+    private openState;
+    private disabledState;
+    private loadingState;
+    private destroyed;
+    private viewMode;
+    private postprocessEnabled;
+    private readonly postprocessSupported;
+    private lastFocused?;
+    private geneTimer?;
+    constructor(options: AxieCreatorViewOptions);
+    get isOpen(): boolean;
+    get state(): AxieCreatorState;
+    open(): void;
+    close(options?: {
+        readonly restoreFocus?: boolean;
+    }): void;
+    setState(state: AxieCreatorState, options?: {
+        readonly notify?: boolean;
+    }): void;
+    setDisabled(disabled: boolean): void;
+    setPostprocessEnabled(enabled: boolean): void;
+    setLoading(loading: boolean, message?: string): void;
+    setStatus(message: string, tone?: AxieCreatorStatusTone): void;
+    destroy(): void;
+    private configureTrigger;
+    private createBodySection;
+    private createColorSection;
+    private createFilters;
+    private createFilterSelect;
+    private createPartGroup;
+    private createGenesPanel;
+    private createRenderSection;
+    private bindEvents;
+    private selectMode;
+    private selectBody;
+    private selectColor;
+    private selectPart;
+    private applyGenes;
+    private commit;
+    private notify;
+    private syncAll;
+    private syncMode;
+    private syncSelections;
+    private syncGeneResolution;
+    private syncGeneFeedback;
+    private applyPartFilters;
+    private updateInteractivity;
+    private syncPostprocess;
+    private handleDocumentKeydown;
+    private handleTabArrows;
+    private handleRadioArrows;
+    private assertAlive;
+}
+export declare function createAxieCreator(options: AxieCreatorViewOptions): AxieCreatorViewController;
+export { createAxieCreatorCatalog, createAxieCreatorStateCodec, createDefaultAxieCreatorState } from './creator-model.js';
+//# sourceMappingURL=creator.d.ts.map

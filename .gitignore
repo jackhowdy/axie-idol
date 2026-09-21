@@ -1,5 +1,7 @@
 node_modules/
-dist/
+# the app's own build output (the vendored mixer's dist/ IS tracked: a fresh clone needs it to build)
+/dist/
+vendor/**/*.map
 .env
 .env.local
 data/uploads/
