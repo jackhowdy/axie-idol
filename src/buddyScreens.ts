@@ -70,6 +70,9 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   let pendingLines: string[] = []
   let claimAxies: OwnedAxie[] = []
   let claimPick: string | null = null
+  // where "Bring your own Axie" was opened from, so its back arrow goes back there
+  let claimFrom: Exclude<BuddyScreen, 'auto'> | null = null
+  const shown = (): Exclude<BuddyScreen, 'auto'> | null => KEYS.find((k) => !sections[k].hidden) ?? null
   let exchanges: TalkExchange[] = []
   let busy = false
 
@@ -376,7 +379,8 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
       return
     }
     if (act === 'talk-send') { await talkSend(); return }
-    if (act === 'claim') { await show('claim'); return }
+    if (act === 'claim') { claimFrom = shown(); await show('claim'); return }
+    if (act === 'claim-back') { const to = claimFrom && claimFrom !== 'claim' ? claimFrom : 'auto'; claimFrom = null; await show(to); return }
     if (act === 'ronin') { if (roninEnabled) await roninSignIn(); await show('claim'); return }
     if (act === 'account') { await show('account'); return }
     if (act === 'scrapbook') { await show('scrapbook'); return }

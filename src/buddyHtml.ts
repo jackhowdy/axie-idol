@@ -1084,7 +1084,7 @@ export function claimSoonHtml(hasAxie: boolean): string {
   return `
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
-        <button type="button" class="bd-round" data-action="${hasAxie ? 'home' : 'meet'}" aria-label="Back">${icon('back', 18)}</button>
+        <button type="button" class="bd-round" data-action="claim-back" aria-label="Back">${icon('back', 18)}</button>
         <p class="bd-eyebrow">Bring your own Axie</p>
         <span class="bd-round bd-round-ghost"></span>
       </header>
