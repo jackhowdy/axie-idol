@@ -4,7 +4,6 @@
  */
 
 import { icon } from './icons'
-import { rollShiny, SHINY_FILTER, makeGlint, drawGlint } from './groupPhoto'
 import { createAxie3D, getAxieMixer, isAxieMixerReady, parsePartId, type Axie3D, type Axie3DSpec } from './axie3d'
 import {
   bindDeviceKey, loadBuddy, buddyState, faceIdForBuddy, snapContext, beforeLine,
@@ -653,7 +652,6 @@ function applyStickerTransform(): void {
   stickerTarget.style.left = `${state.x + gx}px`
   stickerTarget.style.top = `${state.y + gy}px`
   stickerTarget.style.transform = `translate(-50%, -50%) rotate(${state.rotation}deg) scale(${state.scale})`
-  syncLeadShinyClass()
   positionWardrobeOverlay()
 }
 
@@ -1378,7 +1376,6 @@ async function captureComposite(): Promise<void> {
       ctx.restore()
     }
     ctx.save()
-    if (leadShiny && !customAxieId) ctx.filter = SHINY_FILTER
     ctx.translate(cx, cy)
     ctx.rotate((state.rotation * Math.PI) / 180)
     ctx.scale(state.scale, state.scale)
@@ -1433,17 +1430,12 @@ async function captureComposite(): Promise<void> {
       ctx.restore()
     }
     ctx.save()
-    if (leadShiny && !customAxieId) ctx.filter = SHINY_FILTER
     ctx.translate(cx, cy)
     ctx.rotate((state.rotation * Math.PI) / 180)
     ctx.scale(state.scale, state.scale)
     ctx.drawImage(stickerImg, -baseW / 2, -baseH / 2, baseW, baseH)
     ctx.restore()
     if (!wornBehind) drawWorn2D()
-  }
-
-  if (leadShiny && !customAxieId && leadGlint) {
-    await drawGlint(ctx, leadGlint, state.x + state.gyroX, state.y + state.gyroY, state.scale, state.rotation, scaleX)
   }
 
   // Photo frame last, over the whole capture (same-origin SVG, so the canvas stays untainted).
@@ -1554,59 +1546,6 @@ function showLiveToast(message: string, ms = 2200): void {
   window.setTimeout(() => {
     if (liveToast.textContent === message) liveToast.hidden = true
   }, ms)
-}
-
-/** The Axie on the camera rolled shiny for the current photo? (1 in 256, see groupPhoto.ts) */
-let leadShiny = false
-const SHINIES_LS = 'axieIdol.shinies'
-function loadSeenShinies(): Set<string> {
-  try {
-    const raw = localStorage.getItem(SHINIES_LS)
-    const arr = raw ? (JSON.parse(raw) as unknown) : []
-    return new Set(Array.isArray(arr) ? arr.map(String) : [])
-  } catch {
-    return new Set()
-  }
-}
-function rememberShiny(id: string): void {
-  try {
-    const seen = loadSeenShinies()
-    seen.add(id)
-    localStorage.setItem(SHINIES_LS, JSON.stringify([...seen]))
-  } catch {
-    /* ignore */
-  }
-}
-function announceShiny(id: string): void {
-  rememberShiny(id)
-  showLiveToast(`Shiny ${id}! 1 in 256`, 2400)
-}
-let leadGlint: HTMLImageElement | null = null
-function syncLeadShinyClass(): void {
-  const on = leadShiny && !customAxieId
-  stickerTarget.classList.toggle('is-shiny', on)
-  if (on && !leadGlint) {
-    leadGlint = makeGlint()
-    stickerLayer.appendChild(leadGlint)
-  } else if (!on && leadGlint) {
-    leadGlint.remove()
-    leadGlint = null
-  }
-  if (leadGlint) {
-    leadGlint.style.left = stickerTarget.style.left
-    leadGlint.style.top = stickerTarget.style.top
-    leadGlint.style.width = `${stickerTarget.offsetWidth || 220}px`
-    leadGlint.style.transform = stickerTarget.style.transform
-  }
-}
-/** Dev hook (?dev=1 only): <html data-force-shiny="1"> makes every roll shiny for QA. */
-function shinyRandom(): () => number {
-  return isDevMode() && document.documentElement.dataset.forceShiny === '1' ? () => 0 : Math.random
-}
-function rollLeadShiny(id: string): void {
-  leadShiny = rollShiny(shinyRandom())
-  syncLeadShinyClass()
-  if (leadShiny) announceShiny(id)
 }
 
 function setMascotLoading(show: boolean, label?: string): void {
@@ -1736,7 +1675,6 @@ async function selectCast(id: FaceId): Promise<void> {
   customAxieId = null
   ownedAuthorLabel = null
   activeCast = id
-  rollLeadShiny(id)
   await initSticker3D()
 }
 
@@ -2161,8 +2099,6 @@ async function submitPost(): Promise<void> {
       throw new Error(data.error || `Post failed (${res.status})`)
     }
     if (ownedBadgeLost) showLiveToast('Posted without the owned badge (wallet check failed)', 2800)
-    leadShiny = false
-    syncLeadShinyClass()
     previewScreen.classList.remove('active')
     previewScreen.hidden = true
     if (captureUrl) URL.revokeObjectURL(captureUrl)

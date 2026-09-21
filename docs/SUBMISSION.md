@@ -145,7 +145,7 @@ npm start
 npm test
 ```
 
-`npm start` serves http://localhost:5174. `npm test` runs 215 tests with no network. Every key in
+`npm start` serves http://localhost:5174. `npm test` runs 209 tests with no network. Every key in
 `.env` is optional: without `GEMINI_API_KEY` the hand-written lines speak; `SKYMAVIS_API_KEY` is
 needed to look up real Axies by number. Production is a Cloudflare Worker with one Durable Object
 (`wrangler.toml`).
