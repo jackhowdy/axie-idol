@@ -89,10 +89,9 @@ Playable link: **https://axieidol.com** (opens directly in a new tab; no sign-in
 
 ## GitHub repository URL
 
-`https://github.com/<your-username>/axie-idol`
+https://github.com/jackhowdy/axie-idol
 
-The repository can stay private. If it does, add the judges' GitHub accounts as collaborators when
-the organisers name them.
+The repository is public: anyone can read it, and the test run on every push is on its Actions tab.
 
 ## Full review commit SHA
 
