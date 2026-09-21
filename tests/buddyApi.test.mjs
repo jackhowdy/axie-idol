@@ -313,10 +313,13 @@ test('with ADMIN_KEY set, the seed hook writes bond and the monthly ladder shows
   assert.equal(row.level, 10)
 })
 
-test('buddy posts still respect the cast lock for non-neutral cast ids', async () => {
+test('a buddy post under an id that is neither neutral nor numeric is refused, and earns nothing', async () => {
   const d = dev()
+  await api('/api/buddy/egg', { method: 'POST', device: d })
   const p = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'bing', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
-  assert.equal(p.status, 403, p.text)
+  assert.equal(p.status, 400, p.text)
+  const me = await api('/api/buddy', { device: d })
+  assert.equal(me.json.active.egg.snaps, 0, 'a refused post is not a snap')
 })
 
 test('monthly ladder ranks by bond this month and includes your row', async () => {
