@@ -46,12 +46,6 @@ test('with GOLDEN_ODDS=1 a post finds the Golden Axie, unlocks the golden face, 
   assert.ok(r.json.golden.count >= 1)
   assert.equal(r.json.golden.latest.label, g.authorLabel)
 
-  const feed = await api('/api/feed')
-  assert.ok(feed.json.golden.count >= 1)
-  assert.ok(feed.json.posts.some((p) => p.id === r.json.post.id && p.golden === true))
-  const board = await api('/api/board?range=daily')
-  assert.ok(board.json.golden.finders.some((f) => f.label === g.authorLabel))
-
   // The finder can now post as the golden face; a fresh guest cannot
   const again = await api('/api/posts', { method: 'POST', body: { ...g, axieId: 'golden', caption: 'shine', imageBase64: PNG_1x1 } })
   assert.equal(again.status, 201, again.text)

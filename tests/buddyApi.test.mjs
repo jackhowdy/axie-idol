@@ -117,12 +117,13 @@ test('a buddy post records the photo path so the scrapbook can render a real thu
   assert.ok(typeof photos[0].at === 'string' && photos[0].at.length > 0)
 })
 
-test('un-keeping a photo drops it from the scrapbook and the feed, but never the bond it earned', async () => {
+test('un-keeping a photo drops it from the scrapbook and deletes the post and its upload, but never the bond it earned', async () => {
   const d = dev()
   await api('/api/buddy/egg', { method: 'POST', device: d })
   const p = await api('/api/posts', { method: 'POST', device: d, body: { axieId: 'kotaro', imageBase64: PNG_1x1, authorGuestId: d, buddy: true } })
   assert.equal(p.status, 201, p.text)
   const photoId = p.json.post.id
+  assert.equal((await fetch(base + p.json.post.imagePath)).status, 200, 'the upload is served while the photo is kept')
   const before = await api('/api/buddy', { device: d })
   assert.equal(before.json.active.photos.length, 1)
   const snapCount = before.json.active.snapCount
@@ -136,8 +137,7 @@ test('un-keeping a photo drops it from the scrapbook and the feed, but never the
   assert.equal(after.json.active.photoCount, snapCount - 1, 'but the book holds one photo fewer')
   assert.equal(after.json.active.egg.snaps, before.json.active.egg.snaps, 'egg progress is not taken back')
 
-  const feed = await api('/api/feed')
-  assert.ok(!(feed.json.posts || []).some((x) => x.id === photoId), 'the post left the feed too')
+  assert.equal((await fetch(base + p.json.post.imagePath)).status, 404, 'the post and its upload are gone too')
 
   const missing = await api('/api/buddy/photo/unkeep', { method: 'POST', device: d, body: { photoId } })
   assert.equal(missing.status, 404, 'un-keeping the same photo twice is a 404')
@@ -763,7 +763,7 @@ test('without a model, talk still answers the things people type, in voice and w
 })
 
 
-test('an operator can remove any post from the feed with the admin key; without it the route does not exist', async () => {
+test('an operator can remove any post with the admin key; without it the route does not exist', async () => {
   const adminBase = adminServer ? adminServer.baseUrl : (adminServer = await startNodeServer({ BUDDY: '1', BUDDY_TEST_SKIP_CHAIN: '1', ADMIN_KEY: 'test-key' })).baseUrl
   const d = dev()
   const post = async (path, body, headers = {}) => {
@@ -779,11 +779,13 @@ test('an operator can remove any post from the feed with the admin key; without 
   assert.equal(noKey.status, 404, 'no key: not a route')
   const wrongKey = await post('/api/admin/remove-post', { id }, { 'X-Admin-Key': 'nope' })
   assert.equal(wrongKey.status, 404, 'wrong key: not a route')
+  assert.equal((await fetch(adminBase + made.json.post.imagePath)).status, 200, 'the upload is still served')
   const gone = await post('/api/admin/remove-post', { id }, { 'X-Admin-Key': 'test-key' })
   assert.equal(gone.status, 200, JSON.stringify(gone.json))
   assert.equal(gone.json.removed, true)
-  const feed = await (await fetch(adminBase + '/api/feed')).json()
-  assert.ok(!(feed.posts || []).some((p) => p.id === id), 'the post left the feed')
+  assert.equal((await fetch(adminBase + made.json.post.imagePath)).status, 404, 'its upload is gone')
+  const again = await post('/api/admin/remove-post', { id }, { 'X-Admin-Key': 'test-key' })
+  assert.equal(again.json.removed, false, 'the post record is gone: there is nothing left to remove')
 })
 
 

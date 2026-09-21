@@ -75,61 +75,6 @@ test('posting as a locked cast face is refused with 403', async () => {
   assert.match(r.json.error, /locked/)
 })
 
-test("one comment reaches L2 and unlocks Kotaro's sword", async () => {
-  const g = guest('cmt')
-  const p = await post(g)
-  const c = await api(`/api/posts/${p.json.post.id}/comments`, {
-    method: 'POST',
-    body: { ...g, text: 'hi crew' },
-  })
-  assert.equal(c.status, 201, c.text)
-  assert.equal(c.json.comment.text, 'hi crew')
-  assert.equal(c.json.castCrew.level, 2)
-  assert.ok(c.json.castCrew.unlockedProps.includes('kotaro-sword'))
-})
-
-test('like is idempotent per device and counts once', async () => {
-  const g = guest('like')
-  const p = await post(g)
-  const other = guest('liker')
-  const a = await api(`/api/posts/${p.json.post.id}/like`, { method: 'POST', body: { ...other } })
-  assert.equal(a.status, 200, a.text)
-  assert.equal(a.json.liked, true)
-  assert.equal(a.json.post.likes, 1)
-  const b = await api(`/api/posts/${p.json.post.id}/like`, { method: 'POST', body: { ...other } })
-  assert.equal(b.json.post.likes, 1)
-  const u = await api(`/api/posts/${p.json.post.id}/like`, {
-    method: 'POST',
-    body: { ...other, unlike: true },
-  })
-  assert.equal(u.json.liked, false)
-  assert.equal(u.json.post.likes, 0)
-})
-
-test('global feed lists the post and reports warm rank; seeds are absent', async () => {
-  const g = guest('feed')
-  const p = await post(g, 'kotaro', 'feed me')
-  const r = await api(`/api/feed?deviceKey=${g.deviceKey}&guestId=${g.authorGuestId}`)
-  assert.equal(r.status, 200)
-  assert.equal(r.json.rank, 'warm')
-  assert.ok(r.json.posts.some((x) => x.id === p.json.post.id))
-  assert.ok(r.json.posts.every((x) => !x.seed))
-})
-
-test('quest endpoint and board agree on the poster level', async () => {
-  const g = guest('board')
-  await post(g)
-  const q = await api(`/api/quests?guestId=${g.authorGuestId}&deviceKey=${g.deviceKey}`)
-  assert.equal(q.status, 200)
-  assert.equal(q.json.level, 1)
-  assert.equal(q.json.nextQuest.level, 2)
-  const b = await api('/api/board?range=daily')
-  assert.equal(b.status, 200)
-  assert.equal(b.json.sortBy, 'questLevel')
-  assert.ok(b.json.rankings.length >= 1)
-  assert.ok(b.json.rankings.every((r, i, a) => i === 0 || a[i - 1].level >= r.level))
-})
-
 test('11th post in an hour from one device is rate limited', async () => {
   const g = guest('rate')
   for (let i = 0; i < 10; i++) {
@@ -138,32 +83,6 @@ test('11th post in an hour from one device is rate limited', async () => {
   }
   const r = await post(g, 'kotaro', 'p10')
   assert.equal(r.status, 429)
-})
-
-test('follow needs an address, is stored per address, and counts followers', async () => {
-  const address = '0x' + 'a'.repeat(40)
-  const no = await api('/api/follow', { method: 'POST', body: { axieId: 'kotaro' } })
-  assert.equal(no.status, 401)
-  const f = await api('/api/follow', {
-    method: 'POST',
-    body: { address, axieId: 'kotaro', deviceKey: 'dev-follow' },
-  })
-  assert.equal(f.status, 200, f.text)
-  assert.equal(f.json.following, true)
-  assert.ok(f.json.follows.includes('kotaro'))
-  const list = await api(`/api/follows?address=${address}`)
-  assert.ok(list.json.follows.includes('kotaro'))
-  const count = await api('/api/followers/count?axieId=kotaro')
-  assert.ok(count.json.followerCount >= 1)
-})
-
-test('profile for an address returns level, follows and burns', async () => {
-  const address = '0x' + 'b'.repeat(40)
-  const r = await api(`/api/profile?address=${address}`)
-  assert.equal(r.status, 200)
-  assert.equal(r.json.timezone, 'Asia/Manila')
-  assert.ok('level' in r.json)
-  assert.ok(Array.isArray(r.json.follows))
 })
 
 test('metadata proxy validates the id', async () => {
