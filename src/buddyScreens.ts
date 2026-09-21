@@ -174,6 +174,12 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     else if (which === 'home') html = homeHtml(buddyState.active!, buddyState.greeting, { buddies: buddyState.buddies, address: buddyState.address, talk: talkEnabled, eggs: eggsEnabled })
     else if (which === 'meet') {
       let cards: MeetCardView[] = []
+      // finding three real Axies can take a few seconds: show the page at once, fill the cards in after
+      const meetOpts = { address: buddyState.address, hasAxie: Boolean(buddyState.active?.hatchedAt), buddies: buddyState.buddies, activeId: buddyState.active?.id ?? null }
+      hideSheet(); hideAll(); document.body.classList.remove('bd-wide')
+      sections.meet.innerHTML = topBarHtml('meet', Boolean(buddyState.active?.hatchedAt), { eggs: eggsEnabled }) + meetHtml([], { ...meetOpts, loading: true })
+      sections.meet.hidden = false
+      document.getElementById('boot-splash')?.remove()
       try { cards = await meetCards() } catch (err) { console.warn('[buddy] meet failed', err) }
       html = meetHtml(cards, { address: buddyState.address, hasAxie: Boolean(buddyState.active?.hatchedAt), buddies: buddyState.buddies, activeId: buddyState.active?.id ?? null })
     }
@@ -200,6 +206,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
     document.body.classList.toggle('bd-wide', which === 'welcome')
     el.innerHTML = html
     el.hidden = false
+    document.getElementById('boot-splash')?.remove()
     rememberScreen(which, Boolean(buddyState.active))
     const scroller = el.querySelector<HTMLElement>('.bd-scroll')
     if (scroller) scroller.scrollTop = which === 'talk' ? scroller.scrollHeight : 0
@@ -216,6 +223,7 @@ export function mountBuddyScreens(nav: BuddyNav): BuddyUi {
   function showBootError(): void {
     hideSheet()
     hideAll()
+    document.getElementById('boot-splash')?.remove()
     const el = sections.egg
     el.innerHTML = bootErrorHtml()
     el.hidden = false

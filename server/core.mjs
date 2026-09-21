@@ -1915,7 +1915,9 @@ function rateLimitFor(kind, opts = {}) {
   if (kind === 'boosts') return MAX_FAN_BOOSTS_PER_HOUR
   // The buddy module names its own ceiling per route (egg/retire 5, recovery 10, ronin 20) and
   // they share one bucket, so a device cannot walk around one limit by spending another.
-  if (kind === 'buddy') return Number.isFinite(opts.limit) ? opts.limit : MAX_BUDDY_ROUTES_PER_HOUR
+  // Play routes (a pat, a game, meeting an Axie) each count on their own: `buddy:<route>`. Sharing
+  // one bucket meant ten pats and shuffles used up the ten "pick an Axie" of the hour.
+  if (kind === 'buddy' || String(kind).startsWith('buddy:')) return Number.isFinite(opts.limit) ? opts.limit : MAX_BUDDY_ROUTES_PER_HOUR
   return MAX_LIKES_PER_HOUR
 }
 
@@ -1926,6 +1928,7 @@ function rateArr(bucket, kind) {
   if (kind === 'sparks') return bucket.sparks
   if (kind === 'boosts') return bucket.boosts
   if (kind === 'buddy') return bucket.buddy
+  if (String(kind).startsWith('buddy:')) { bucket.routes ||= {}; return (bucket.routes[kind] ||= []) }
   return bucket.likes
 }
 

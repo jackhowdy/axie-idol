@@ -45,7 +45,7 @@ const RATE_LIMITS = {
   'POST /api/buddy/pet': 60,
   'POST /api/buddy/treat': 20,
   'POST /api/buddy/play': 60,
-  'POST /api/buddy/visit': 10,
+  'POST /api/buddy/visit': 30,
   'GET /api/buddy/meet': 60,
   'POST /api/buddy/nickname': 20,
   'POST /api/buddy/talk': 40,
@@ -702,9 +702,13 @@ export function createBuddyModule({ storage, helpers, env = {}, catalogue = cata
     const rateLimit = RATE_LIMITS[`${req.method} ${url.pathname}`]
     if (rateLimit && typeof checkRate === 'function' && typeof recordRate === 'function') {
       const rateKey = deviceKeyFrom(req, body) || ownerKey
-      const r = checkRate(rateKey, 'buddy', { limit: rateLimit })
-      if (!r.ok) { sendJson(res, 429, { error: `Rate limit: max ${rateLimit}/hour`, limit: rateLimit }); return true }
-      recordRate(rateKey, 'buddy')
+      // account routes share one bucket (so one limit cannot be walked around by spending another);
+      // play routes each count on their own, or ten pats would use up the hour's "pick an Axie"
+      const shared = /\/(egg|retire)$|\/api\/(account|ronin)\//.test(url.pathname)
+      const kind = shared ? 'buddy' : `buddy:${url.pathname}`
+      const r = checkRate(rateKey, kind, { limit: rateLimit })
+      if (!r.ok) { sendJson(res, 429, { error: 'That is a lot for one hour. Give it a little while and try again.', limit: rateLimit }); return true }
+      recordRate(rateKey, kind)
     }
     const store = load()
     const acc = accountFor(store, ownerKey)

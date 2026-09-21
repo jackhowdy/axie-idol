@@ -234,7 +234,10 @@
       </section>
 
       <!-- Idol feed -->
-      <section id="feed" class="screen active" aria-label="Idol Feed">
+      <!-- Nothing but the mark shows until the game has decided which screen is yours: the old feed
+           used to sit here "active" and flashed up for a moment on every first load. -->
+      <div id="boot-splash" aria-hidden="true"><img src="/icon.svg" alt="" width="72" height="72"></div>
+      <section id="feed" class="screen" aria-label="Idol Feed" hidden>
         <header class="feed-header">
           <button type="button" id="btn-feed-back" class="btn feed-back feed-create-btn" title="Create a moment" hidden>Create</button>
           <div class="feed-title">Feed</div>

@@ -482,7 +482,7 @@ export function fameHtml(f: { axieId: string; players: number; joyDays: number; 
     <p class="bd-small bd-muted">Next stage: if it is yours, signing in with Ronin will show you who took your Axie out.</p>
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="close-sheet">Back to ${esc(b.name)}</button></div>`
 }
-export function meetHtml(cards: MeetCardView[], opts: { address?: string | null; hasAxie?: boolean; buddies?: Buddy[]; activeId?: string | null } = {}): string {
+export function meetHtml(cards: MeetCardView[], opts: { address?: string | null; hasAxie?: boolean; buddies?: Buddy[]; activeId?: string | null; loading?: boolean } = {}): string {
   const mine = restingRowHtml(opts.buddies || [], opts.activeId ?? null)
   const cardHtml = cards.map((c) => `
         <button type="button" class="bd-card bd-meet-card" data-action="visit-go" data-id="${esc(c.id)}">
@@ -501,7 +501,9 @@ export function meetHtml(cards: MeetCardView[], opts: { address?: string | null;
       </header>
       <p class="bd-small bd-center bd-muted">Pick one of these three, shuffle for three more, or type the number of a favourite. It arrives as itself: its official art, its real parts, its Axie Core level. No wallet needed.</p>
       ${mine ? `<div class="bd-card bd-mine">${mine}<p class="bd-small bd-muted">Axies you have played with rest here. Nothing they earned is lost.</p></div>` : ''}
-      <div class="bd-meet">${cardHtml || '<p class="bd-small bd-muted">Could not reach the Axies right now. Type a number below, or try again.</p>'}</div>
+      <div class="bd-meet">${cardHtml || (opts.loading
+        ? Array.from({ length: 3 }, () => '<div class="bd-card bd-meet-card bd-meet-wait" aria-hidden="true"><span class="bd-meet-art"></span><b>&nbsp;</b><span class="bd-muted">Finding a real Axie…</span></div>').join('')
+        : '<p class="bd-small bd-muted">Could not reach the Axies right now. Type a number below, or try again.</p>')}</div>
       <div class="bd-actions"><button type="button" class="bd-btn bd-btn-ghost bd-grow" data-action="meet-shuffle">${icon('rotateR', 16)} Show me three more</button></div>
       <div class="bd-card">
         <b>Have a favourite?</b>
@@ -945,8 +947,8 @@ export function welcomeHtml(opts: { hasAxie?: boolean; axieName?: string | null;
             <li>${icon('star', 15)}<span><b>The long game:</b> 3 joy days in a row is a Rising Star, 7 a Star, 14 an Idol, for as long as you keep the streak</span></li>
           </ul>
           <div class="lp-cta">${primary}${another}${about ? `<span class="lp-cta-note">${name} is not lost: it rests, and comes back with one tap${roninOn ? ' in Profile' : ', from the same page'}.</span>` : '<span class="lp-cta-note">Free. No wallet needed.</span>'}</div>
-          ${about || !roninOn ? '' : `<p class="bd-small lp-alt">Played before? ${!roninOn ? '' : opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a> · ' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a> · '}<a class="bd-link" data-action="recover">I have a recovery code</a></p>
-          <p class="bd-small lp-alt"><b>Have a favourite Axie?</b> <a class="bd-link" data-action="visit">Play as it, by its number</a>. No wallet.</p>`}
+          ${about || !roninOn ? '' : `<p class="bd-small lp-alt">Played before? ${!roninOn ? '' : opts.address ? '<a class="bd-link" data-action="claim">Bring an Axie you own</a> · ' : '<a class="bd-link" data-action="ronin-welcome">Sign in with Ronin</a> · '}<a class="bd-link" data-action="recover">I have a recovery code</a></p>`}
+          ${about ? '' : `<p class="bd-small lp-alt"><b>Have a favourite Axie?</b> <a class="bd-link" data-action="visit">Play as it, by its number</a>. No wallet.</p>`}
         </div>
         <div class="bd-w-shot lp-hero-shot" aria-hidden="true">
           <img class="bd-w-photo" src="/welcome/stairs.jpg" alt="">
@@ -1082,7 +1084,7 @@ export function claimSoonHtml(hasAxie: boolean): string {
   return `
     <div class="bd-scroll">
       <header class="bd-head bd-head-row">
-        <button type="button" class="bd-round" data-action="back" aria-label="Back">${icon('back', 18)}</button>
+        <button type="button" class="bd-round" data-action="${hasAxie ? 'home' : 'meet'}" aria-label="Back">${icon('back', 18)}</button>
         <p class="bd-eyebrow">Bring your own Axie</p>
         <span class="bd-round bd-round-ghost"></span>
       </header>
@@ -1234,7 +1236,7 @@ export function ladderHtml(b: Buddy): string {
       <div class="bd-card">
         <div class="bd-card-head"><span class="bd-label">Rules</span></div>
         <p class="bd-small">One photo is one bond, and only the first ${b.dailyCap} photos of a day count, so nobody grinds to the top in an afternoon. Wishes add one or two and moments add two, on top.</p>
-        <p class="bd-small">Wallet owners skip the egg and start at Hatch with their own Axie.</p>
+        <p class="bd-small">${b.kind === 'wild' ? 'Wallet owners skip the egg and start at Hatch with their own Axie.' : 'A joy day adds bond too: three for a Newcomer, up to six for an Idol.'}</p>
       </div>
     </div>
     <div class="bd-actions"><button type="button" class="bd-btn bd-btn-primary bd-grow" data-action="snap">${icon('camera', 20)} Snap with ${esc(b.name || 'your Axie')}</button></div>`

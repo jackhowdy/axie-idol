@@ -4383,3 +4383,23 @@ button.bd-thumb, .bd-tile { border: 0; padding: 0; cursor: pointer; font: inheri
 .bd-rest-art { overflow: hidden; display: inline-flex; align-items: center; justify-content: center; }
 .bd-rest-art img { width: 100%; height: 100%; object-fit: contain; transform: scale(1.35); }
 .bd-mine .bd-rest-art { width: 48px; height: 48px; border-radius: 12px; }
+
+/* QA 21 Sept: nothing on a phone under 11px */
+.lp-mood b, .lp-mood small, .lp-star-step small { font-size: 11px; }
+.lp-mood small { font-size: 11px; letter-spacing: -0.01em; }
+@media (min-width: 900px) { .lp-mood b { font-size: 13px; } }
+
+/* the toast belongs to the whole app, above sheets */
+#app > .live-toast { position: fixed; z-index: 80; }
+
+/* Meet, while the three Axies are being found */
+.bd-meet-wait { cursor: default; pointer-events: none; }
+.bd-meet-wait .bd-meet-art { animation: bd-wait 1.1s ease-in-out infinite alternate; }
+@keyframes bd-wait { from { opacity: 0.45; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .bd-meet-wait .bd-meet-art { animation: none; } }
+.bd-badge { font-size: 11px; }
+
+/* first paint: the mark, quietly, until the right screen is ready */
+#boot-splash { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); z-index: 1; }
+#boot-splash img { opacity: 0.9; animation: bd-wait 0.9s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { #boot-splash img { animation: none; } }

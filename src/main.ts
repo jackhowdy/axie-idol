@@ -511,6 +511,9 @@ const btnDownload = document.querySelector<HTMLAnchorElement>('#btn-download')!
 const btnPost = document.querySelector<HTMLButtonElement>('#btn-post')!
 const postToast = document.querySelector<HTMLElement>('#post-toast')!
 const liveToast = document.querySelector<HTMLElement>('#live-toast')!
+// The toast was born inside the camera screen, which is hidden everywhere else: a pat on Home said
+// "+2 happy" to nobody. It belongs to the whole app.
+document.querySelector('#app')?.appendChild(liveToast)
 const feedScreen = document.querySelector<HTMLElement>('#feed')!
 const feedList = document.querySelector<HTMLElement>('#feed-list')!
 const feedEmpty = document.querySelector<HTMLElement>('#feed-empty')!
@@ -3772,6 +3775,7 @@ async function showFeed(mode: 'global' | 'following' = 'global'): Promise<void> 
   updateFeedChrome()
   hideAllScreens()
   setActiveTab('feed')
+  document.getElementById('boot-splash')?.remove()
   feedScreen.hidden = false
   feedScreen.classList.add('active')
   feedGuest.textContent = roninAddress
